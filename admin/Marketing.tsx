@@ -1,17 +1,54 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Campaign } from '../types';
 import { COLORS } from '../constants';
 
-const MOCK_CAMPAIGNS: Campaign[] = [
-    { id: '1', name: 'Black Friday Sale', type: 'Email', status: 'Sent', sentCount: 1200, openRate: 45, clickRate: 12 },
-    { id: '2', name: 'Abandoned Cart Recovery', type: 'SMS', status: 'Scheduled', sentCount: 0, openRate: 0, clickRate: 0 },
-    { id: '3', name: 'New Collection Drop', type: 'WhatsApp', status: 'Draft', sentCount: 0, openRate: 0, clickRate: 0 },
-];
-
 const Marketing: React.FC<{token: string | null}> = ({token}) => {
-    const [campaigns, setCampaigns] = useState<Campaign[]>(MOCK_CAMPAIGNS);
+    const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+    const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [newCampaign, setNewCampaign] = useState({ name: '', type: 'Email' });
+
+    const fetchCampaigns = async () => {
+        try {
+            const response = await fetch('/api/campaigns', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) throw new Error('Failed to fetch');
+            const data = await response.json();
+            setCampaigns(data);
+        } catch (error) {
+            console.error("Error fetching campaigns", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchCampaigns();
+    }, [token]);
+
+    const handleCreate = async () => {
+        try {
+            const response = await fetch('/api/campaigns', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(newCampaign)
+            });
+            if (response.ok) {
+                setIsModalOpen(false);
+                fetchCampaigns();
+                setNewCampaign({ name: '', type: 'Email' });
+            }
+        } catch (error) {
+            console.error('Error creating campaign', error);
+        }
+    };
+
+    if (loading) return <div>Loading campaigns...</div>;
 
     return (
         <div className="space-y-6">
@@ -54,36 +91,36 @@ const Marketing: React.FC<{token: string | null}> = ({token}) => {
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Performance</th>
-                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                        {campaigns.map(campaign => (
-                            <tr key={campaign.id}>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{campaign.name}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{campaign.type}</td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                        campaign.status === 'Sent' ? 'bg-green-100 text-green-800' :
-                                        campaign.status === 'Scheduled' ? 'bg-blue-100 text-blue-800' :
-                                        'bg-gray-100 text-gray-800'
-                                    }`}>
-                                        {campaign.status}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {campaign.status === 'Sent' ? (
-                                        <div className="flex space-x-4">
-                                            <div><span className="font-bold">{campaign.openRate}%</span> Open</div>
-                                            <div><span className="font-bold">{campaign.clickRate}%</span> Click</div>
-                                        </div>
-                                    ) : '-'}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <button className="text-indigo-600 hover:text-indigo-900">Edit</button>
-                                </td>
-                            </tr>
-                        ))}
+                        {campaigns.length === 0 ? (
+                            <tr><td colSpan={4} className="text-center py-4 text-gray-500">No campaigns found.</td></tr>
+                        ) : (
+                            campaigns.map(campaign => (
+                                <tr key={campaign.id}>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{campaign.name}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{campaign.type}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                            campaign.status === 'Sent' ? 'bg-green-100 text-green-800' :
+                                            campaign.status === 'Scheduled' ? 'bg-blue-100 text-blue-800' :
+                                            'bg-gray-100 text-gray-800'
+                                        }`}>
+                                            {campaign.status}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {campaign.status === 'Sent' ? (
+                                            <div className="flex space-x-4">
+                                                <div><span className="font-bold">{campaign.openRate}%</span> Open</div>
+                                                <div><span className="font-bold">{campaign.clickRate}%</span> Click</div>
+                                            </div>
+                                        ) : '-'}
+                                    </td>
+                                </tr>
+                            ))
+                        )}
                     </tbody>
                 </table>
             </div>
@@ -95,25 +132,30 @@ const Marketing: React.FC<{token: string | null}> = ({token}) => {
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Campaign Name</label>
-                                <input type="text" className="mt-1 block w-full border border-gray-300 rounded-md py-2 px-3"/>
+                                <input 
+                                    type="text" 
+                                    className="mt-1 block w-full border border-gray-300 rounded-md py-2 px-3"
+                                    value={newCampaign.name}
+                                    onChange={e => setNewCampaign({...newCampaign, name: e.target.value})}
+                                />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Channel</label>
-                                <select className="mt-1 block w-full border border-gray-300 rounded-md py-2 px-3">
-                                    <option>Email Broadcast</option>
-                                    <option>SMS Blast</option>
-                                    <option>WhatsApp Message</option>
-                                    <option>Mobile Push Notification</option>
+                                <select 
+                                    className="mt-1 block w-full border border-gray-300 rounded-md py-2 px-3"
+                                    value={newCampaign.type}
+                                    onChange={e => setNewCampaign({...newCampaign, type: e.target.value})}
+                                >
+                                    <option value="Email">Email Broadcast</option>
+                                    <option value="SMS">SMS Blast</option>
+                                    <option value="WhatsApp">WhatsApp Message</option>
+                                    <option value="Push">Mobile Push Notification</option>
                                 </select>
-                            </div>
-                             <div>
-                                <label className="block text-sm font-medium text-gray-700">AI Prompt (Optional)</label>
-                                <textarea placeholder="Describe your campaign, e.g., 'Summer sale 50% off for loyal customers'" className="mt-1 block w-full border border-gray-300 rounded-md py-2 px-3" rows={3}></textarea>
                             </div>
                         </div>
                         <div className="mt-6 flex justify-end space-x-3">
                             <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sm bg-gray-200 rounded-md">Cancel</button>
-                            <button className="px-4 py-2 text-sm text-white rounded-md" style={{backgroundColor: COLORS.accent}}>Draft Campaign</button>
+                            <button onClick={handleCreate} className="px-4 py-2 text-sm text-white rounded-md" style={{backgroundColor: COLORS.accent}}>Draft Campaign</button>
                         </div>
                     </div>
                 </div>

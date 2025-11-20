@@ -14,13 +14,7 @@ const Customers: React.FC<{token: string | null}> = ({token}) => {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
-        // Mock segment data since backend doesn't have it yet
-        const augmentedData = data.map((u: User) => ({
-            ...u, 
-            role: u.role || 'User',
-            segment: Math.random() > 0.7 ? 'VIP' : Math.random() > 0.5 ? 'Returning' : 'New'
-        }));
-        setUsers(augmentedData);
+        setUsers(data);
       } catch (error) {
         console.error("Failed to fetch users", error);
       } finally {
@@ -59,6 +53,7 @@ const Customers: React.FC<{token: string | null}> = ({token}) => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Segment</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Join Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Orders</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
             </thead>
@@ -84,15 +79,17 @@ const Customers: React.FC<{token: string | null}> = ({token}) => {
                     <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                             user.segment === 'VIP' ? 'bg-purple-100 text-purple-800' : 
-                            user.segment === 'New' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                            user.segment === 'High-Value' ? 'bg-yellow-100 text-yellow-800' :
+                            user.segment === 'Returning' ? 'bg-blue-100 text-blue-800' :
+                            'bg-green-100 text-green-800'
                         }`}>
                             {user.segment}
                         </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(user.joinDate).toLocaleDateString()}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium text-center">{user.totalOrders}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button className="text-indigo-600 hover:text-indigo-900 mr-4">Details</button>
-                    <button className="text-gray-600 hover:text-gray-900">History</button>
                     </td>
                 </tr>
                 ))}

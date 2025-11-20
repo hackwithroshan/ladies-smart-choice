@@ -15,9 +15,7 @@ const UserList: React.FC<{token: string | null}> = ({token}) => {
           }
         });
         const data = await response.json();
-        // Mocking totalOrders as it's not in the User model
-        const usersWithOrders = data.map((u: User) => ({...u, totalOrders: Math.floor(Math.random() * 5) + 1}));
-        setUsers(usersWithOrders);
+        setUsers(data);
       } catch (error) {
         console.error("Failed to fetch users", error);
       } finally {
@@ -39,7 +37,7 @@ const UserList: React.FC<{token: string | null}> = ({token}) => {
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Join Date</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Orders</th>
+              <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Total Orders</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">

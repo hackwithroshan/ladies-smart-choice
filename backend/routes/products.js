@@ -1,3 +1,4 @@
+
 const express = require('express');
 const Product = require('../models/Product');
 const Category = require('../models/Category');
@@ -11,7 +12,7 @@ router.get('/', async (req, res) => {
     res.json(products);
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).json({ message: 'Server Error' });
   }
 });
 
@@ -22,7 +23,7 @@ router.get('/categories', async (req, res) => {
     res.json(categories);
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).json({ message: 'Server Error' });
   }
 });
 
@@ -34,7 +35,7 @@ router.post('/', authMiddleware(true), async (req, res) => {
     res.status(201).json(product);
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).json({ message: 'Server Error' });
   }
 });
 
@@ -46,7 +47,7 @@ router.put('/:id', authMiddleware(true), async (req, res) => {
     res.json(product);
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).json({ message: 'Server Error' });
   }
 });
 
@@ -58,7 +59,7 @@ router.delete('/:id', authMiddleware(true), async (req, res) => {
     res.json({ message: 'Product removed' });
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).json({ message: 'Server Error' });
   }
 });
 

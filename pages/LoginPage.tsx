@@ -28,7 +28,15 @@ const LoginPage: React.FC<LoginProps> = ({ setToken, setUser, setView }) => {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await response.json();
+      let data;
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.indexOf("application/json") !== -1) {
+        data = await response.json();
+      } else {
+        // Fallback if response is not JSON (e.g. generic 500 text)
+        const text = await response.text();
+        throw new Error(text || response.statusText);
+      }
 
       if (!response.ok) {
         throw new Error(data.message || 'Failed to login');

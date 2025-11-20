@@ -12,38 +12,13 @@ const StatCard: React.FC<{ title: string; value: string | number; icon: React.Re
     <div>
       <p className="text-sm font-medium text-gray-500">{title}</p>
       <p className="text-3xl font-bold text-gray-800 mt-1">{value}</p>
-      {subtext && <p className="text-xs text-green-500 mt-1 flex items-center">▲ {subtext}</p>}
+      {subtext && <p className="text-xs text-green-500 mt-1 flex items-center">{subtext}</p>}
     </div>
     <div className="rounded-full p-3 shadow-sm" style={{ backgroundColor: `${color}20`, color: color }}>
       {icon}
     </div>
   </div>
 );
-
-// Mock Data for Charts
-const REVENUE_DATA = [
-  { name: 'Mon', revenue: 4000, orders: 24 },
-  { name: 'Tue', revenue: 3000, orders: 18 },
-  { name: 'Wed', revenue: 2000, orders: 12 },
-  { name: 'Thu', revenue: 2780, orders: 20 },
-  { name: 'Fri', revenue: 1890, orders: 15 },
-  { name: 'Sat', revenue: 2390, orders: 19 },
-  { name: 'Sun', revenue: 3490, orders: 28 },
-];
-
-const FUNNEL_DATA = [
-  { name: 'Page Views', value: 4000 },
-  { name: 'Add to Cart', value: 3000 },
-  { name: 'Checkout', value: 2000 },
-  { name: 'Purchase', value: 1200 },
-];
-
-const TRAFFIC_SOURCE = [
-  { name: 'Direct', value: 400 },
-  { name: 'Social', value: 300 },
-  { name: 'Organic', value: 300 },
-  { name: 'Referral', value: 200 },
-];
 
 const COLORS_PIE = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
@@ -73,11 +48,73 @@ const Dashboard: React.FC<{token: string | null}> = ({token}) => {
     };
     fetchData();
   }, [token]);
+
+  // --- Data Calculation Logic ---
   
+  // 1. Revenue Chart Data (Last 7 Days)
+  const getRevenueData = () => {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const today = new Date();
+    const data = [];
+    
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(today.getDate() - i);
+        const dayName = days[d.getDay()];
+        const dateStr = d.toDateString();
+        
+        const dailyOrders = orders.filter(o => new Date(o.date).toDateString() === dateStr);
+        const revenue = dailyOrders.reduce((sum, o) => sum + o.total, 0);
+        
+        data.push({
+            name: dayName,
+            revenue: revenue,
+            orders: dailyOrders.length
+        });
+    }
+    return data;
+  };
+  
+  // 2. Funnel Data (Approximated from Order Status)
+  const getFunnelData = () => {
+      const total = orders.length;
+      const pending = orders.filter(o => o.status === 'Pending').length;
+      const shipped = orders.filter(o => o.status === 'Shipped').length;
+      const delivered = orders.filter(o => o.status === 'Delivered').length;
+      
+      return [
+          { name: 'Total Orders', value: total },
+          { name: 'Pending', value: pending },
+          { name: 'Shipped', value: shipped },
+          { name: 'Delivered', value: delivered }
+      ];
+  };
+
+  // 3. Product Category Distribution (for Pie Chart instead of traffic source which we don't track)
+  const getCategoryData = () => {
+      const categoryCounts: {[key: string]: number} = {};
+      products.forEach(p => {
+          categoryCounts[p.category] = (categoryCounts[p.category] || 0) + 1;
+      });
+      return Object.keys(categoryCounts).map(key => ({
+          name: key,
+          value: categoryCounts[key]
+      }));
+  };
+
   if (loading) return <div className="flex h-full items-center justify-center">Loading Analytics...</div>;
 
-  const totalRevenue = orders.reduce((sum, order) => order.status === 'Delivered' ? sum + order.total : sum, 0);
+  const revenueData = getRevenueData();
+  const funnelData = getFunnelData();
+  const categoryData = getCategoryData();
+
+  const totalRevenue = orders.reduce((sum, order) => order.status !== 'Cancelled' ? sum + order.total : sum, 0);
   const pendingOrders = orders.filter(o => o.status === 'Pending').length;
+  const newCustomers = users.filter(u => {
+      const joinDate = new Date(u.joinDate);
+      const today = new Date();
+      return (today.getTime() - joinDate.getTime()) / (1000 * 3600 * 24) < 7;
+  }).length;
 
   return (
     <div className="space-y-6">
@@ -86,27 +123,25 @@ const Dashboard: React.FC<{token: string | null}> = ({token}) => {
         <div className="flex space-x-2">
             <select className="bg-white border border-gray-300 rounded-md text-sm px-3 py-1">
                 <option>Last 7 Days</option>
-                <option>Last 30 Days</option>
-                <option>Last Year</option>
             </select>
             <button className="bg-blue-600 text-white px-4 py-1 rounded-md text-sm">Export Report</button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Total Revenue" value={`$${totalRevenue.toLocaleString()}`} icon={Icons.orders} color={COLORS.accent} subtext="12% vs last week" />
-        <StatCard title="Pending Orders" value={pendingOrders} icon={Icons.orders} color="#3B82F6" subtext="Active now" />
+        <StatCard title="Total Revenue" value={`$${totalRevenue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`} icon={Icons.orders} color={COLORS.accent} />
+        <StatCard title="Pending Orders" value={pendingOrders} icon={Icons.orders} color="#3B82F6" subtext="Needs attention" />
         <StatCard title="Total Products" value={products.length} icon={Icons.products} color="#10B981" />
-        <StatCard title="Total Customers" value={users.length} icon={Icons.users} color="#8B5CF6" subtext="5 new today" />
+        <StatCard title="New Customers" value={newCustomers} icon={Icons.users} color="#8B5CF6" subtext="Last 7 days" />
       </div>
 
       {/* Main Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-            <h3 className="text-lg font-semibold mb-4 text-gray-800">Revenue & Orders Trend</h3>
+            <h3 className="text-lg font-semibold mb-4 text-gray-800">Revenue & Orders (Last 7 Days)</h3>
             <div className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={REVENUE_DATA} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                    <AreaChart data={revenueData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                         <defs>
                             <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="5%" stopColor="#F97316" stopOpacity={0.8}/>
@@ -131,15 +166,15 @@ const Dashboard: React.FC<{token: string | null}> = ({token}) => {
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-            <h3 className="text-lg font-semibold mb-4 text-gray-800">Conversion Funnel</h3>
+            <h3 className="text-lg font-semibold mb-4 text-gray-800">Order Status Funnel</h3>
              <div className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
-                    <BarChart layout="vertical" data={FUNNEL_DATA} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                    <BarChart layout="vertical" data={funnelData} margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
                         <XAxis type="number" hide />
                         <YAxis dataKey="name" type="category" width={100} />
                         <Tooltip cursor={{fill: 'transparent'}} />
                         <Bar dataKey="value" fill="#8884d8" barSize={20} radius={[0, 10, 10, 0]}>
-                            {FUNNEL_DATA.map((entry, index) => (
+                            {funnelData.map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={COLORS_PIE[index % COLORS_PIE.length]} />
                             ))}
                         </Bar>
@@ -151,12 +186,12 @@ const Dashboard: React.FC<{token: string | null}> = ({token}) => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-                <h3 className="text-lg font-semibold mb-4 text-gray-800">Traffic Sources</h3>
+                <h3 className="text-lg font-semibold mb-4 text-gray-800">Product Categories</h3>
                 <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
-                            <Pie data={TRAFFIC_SOURCE} cx="50%" cy="50%" innerRadius={60} outerRadius={80} fill="#8884d8" paddingAngle={5} dataKey="value">
-                                {TRAFFIC_SOURCE.map((entry, index) => (
+                            <Pie data={categoryData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} fill="#8884d8" paddingAngle={5} dataKey="value">
+                                {categoryData.map((entry, index) => (
                                     <Cell key={`cell-${index}`} fill={COLORS_PIE[index % COLORS_PIE.length]} />
                                 ))}
                             </Pie>
@@ -170,7 +205,6 @@ const Dashboard: React.FC<{token: string | null}> = ({token}) => {
              <div className="lg:col-span-2 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
                 <div className="flex justify-between items-center mb-4">
                     <h3 className="text-lg font-semibold text-gray-800">Recent Orders</h3>
-                    <button className="text-sm text-blue-600 hover:underline">View All</button>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">

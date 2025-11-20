@@ -1,11 +1,55 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import HeaderSettingsComponent from './HeaderSettings';
+import { SiteSettings } from '../types';
 
 type SettingsTab = 'header' | 'site' | 'tax' | 'shipping' | 'pixels';
 
 const Settings: React.FC<{token: string | null}> = ({token}) => {
     const [activeTab, setActiveTab] = useState<SettingsTab>('header');
+    const [siteSettings, setSiteSettings] = useState<SiteSettings | any>({});
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        const fetchSiteSettings = async () => {
+             if (activeTab === 'header') return;
+             setLoading(true);
+             try {
+                 const res = await fetch('/api/settings/site');
+                 const data = await res.json();
+                 setSiteSettings(data);
+             } catch (err) {
+                 console.error(err);
+             } finally {
+                 setLoading(false);
+             }
+        };
+        fetchSiteSettings();
+    }, [activeTab]);
+
+    const handleSave = async () => {
+        try {
+            const res = await fetch('/api/settings/site', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(siteSettings)
+            });
+            if (res.ok) alert('Settings saved!');
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value, type, checked } = e.target;
+        setSiteSettings((prev: any) => ({
+            ...prev,
+            [name]: type === 'checkbox' ? checked : value
+        }));
+    };
 
     const TabButton: React.FC<{ id: SettingsTab; label: string }> = ({ id, label }) => (
         <button
@@ -21,6 +65,8 @@ const Settings: React.FC<{token: string | null}> = ({token}) => {
     );
 
     const renderContent = () => {
+        if (loading) return <div>Loading...</div>;
+
         switch (activeTab) {
             case 'header':
                 return <HeaderSettingsComponent token={token} />;
@@ -32,17 +78,16 @@ const Settings: React.FC<{token: string | null}> = ({token}) => {
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Facebook Pixel ID</label>
                                 <div className="mt-1 flex rounded-md shadow-sm">
-                                    <input type="text" className="flex-1 min-w-0 block w-full px-3 py-2 rounded-md border border-gray-300 focus:ring-orange-500 focus:border-orange-500 sm:text-sm" placeholder="xxxxxxxxxxxxxxx" />
+                                    <input type="text" name="facebookPixelId" value={siteSettings.facebookPixelId || ''} onChange={handleChange} className="flex-1 min-w-0 block w-full px-3 py-2 rounded-md border border-gray-300" placeholder="xxxxxxxxxxxxxxx" />
                                 </div>
-                                <p className="mt-1 text-xs text-gray-500">We automatically inject the PageView and Purchase events.</p>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Google Analytics 4 Measurement ID</label>
                                 <div className="mt-1 flex rounded-md shadow-sm">
-                                    <input type="text" className="flex-1 min-w-0 block w-full px-3 py-2 rounded-md border border-gray-300 focus:ring-orange-500 focus:border-orange-500 sm:text-sm" placeholder="G-XXXXXXXXXX" />
+                                    <input type="text" name="googlePixelId" value={siteSettings.googlePixelId || ''} onChange={handleChange} className="flex-1 min-w-0 block w-full px-3 py-2 rounded-md border border-gray-300" placeholder="G-XXXXXXXXXX" />
                                 </div>
                             </div>
-                             <button className="px-4 py-2 text-sm font-medium text-white bg-gray-800 rounded-md">Save Pixel Settings</button>
+                             <button onClick={handleSave} className="px-4 py-2 text-sm font-medium text-white bg-gray-800 rounded-md">Save Pixel Settings</button>
                         </div>
                     </div>
                 );
@@ -52,14 +97,14 @@ const Settings: React.FC<{token: string | null}> = ({token}) => {
                         <h3 className="text-lg font-bold text-gray-800 mb-4">Tax & GST Configuration</h3>
                         <div className="space-y-4">
                             <div className="flex items-center">
-                                <input type="checkbox" className="h-4 w-4 text-orange-600 border-gray-300 rounded"/>
+                                <input type="checkbox" name="taxIncluded" checked={siteSettings.taxIncluded || false} onChange={handleChange} className="h-4 w-4 text-orange-600 border-gray-300 rounded"/>
                                 <label className="ml-2 block text-sm text-gray-900">All prices include tax</label>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Default Tax Rate (%)</label>
-                                <input type="number" className="mt-1 w-32 px-3 py-2 border border-gray-300 rounded-md"/>
+                                <input type="number" name="taxRate" value={siteSettings.taxRate || 0} onChange={handleChange} className="mt-1 w-32 px-3 py-2 border border-gray-300 rounded-md"/>
                             </div>
-                             <button className="px-4 py-2 text-sm font-medium text-white bg-gray-800 rounded-md">Save Tax Settings</button>
+                             <button onClick={handleSave} className="px-4 py-2 text-sm font-medium text-white bg-gray-800 rounded-md">Save Tax Settings</button>
                         </div>
                     </div>
                  );
@@ -67,20 +112,14 @@ const Settings: React.FC<{token: string | null}> = ({token}) => {
                  return (
                     <div className="bg-white p-6 rounded-lg shadow-md max-w-3xl">
                         <h3 className="text-lg font-bold text-gray-800 mb-4">Shipping Zones</h3>
+                        <p className="text-gray-500 mb-4">Configured in DB (UI implementation simplified)</p>
                         <div className="space-y-4">
+                             {/* Mock display of zones as the UI to add dynamic zones is complex for this snippet */}
                             <div className="border p-4 rounded-md flex justify-between items-center">
                                 <div>
-                                    <h4 className="font-medium">Domestic (Standard)</h4>
-                                    <p className="text-sm text-gray-500">5-7 Business Days</p>
+                                    <h4 className="font-medium">Standard Shipping</h4>
                                 </div>
                                 <span className="font-bold">$15.00</span>
-                            </div>
-                             <div className="border p-4 rounded-md flex justify-between items-center">
-                                <div>
-                                    <h4 className="font-medium">International (Express)</h4>
-                                    <p className="text-sm text-gray-500">2-4 Business Days</p>
-                                </div>
-                                <span className="font-bold">$45.00</span>
                             </div>
                             <button className="text-sm text-blue-600 font-medium">+ Add Shipping Zone</button>
                         </div>

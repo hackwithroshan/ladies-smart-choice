@@ -11,7 +11,7 @@ router.get('/', async (req, res) => {
     res.json(slides);
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).json({ message: 'Server Error' });
   }
 });
 
@@ -23,7 +23,7 @@ router.post('/', authMiddleware(true), async (req, res) => {
     res.json(slide);
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).json({ message: 'Server Error' });
   }
 });
 
@@ -35,7 +35,7 @@ router.put('/:id', authMiddleware(true), async (req, res) => {
     res.json(slide);
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).json({ message: 'Server Error' });
   }
 });
 
@@ -47,7 +47,7 @@ router.delete('/:id', authMiddleware(true), async (req, res) => {
     res.json({ message: 'Slide removed' });
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).json({ message: 'Server Error' });
   }
 });
 
