@@ -12,6 +12,7 @@ const settingsRoutes = require('./routes/settings');
 const slideRoutes = require('./routes/slides');
 const campaignRoutes = require('./routes/campaigns');
 const discountRoutes = require('./routes/discounts');
+const seedDatabase = require('./seed');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -56,12 +57,32 @@ async function connectDB() {
   return cached.conn;
 }
 
-// Connect to DB (this will reuse the connection in serverless environment)
-connectDB();
+// --- Vercel Middleware for DB Connection ---
+// Important: Await DB connection inside the request loop for serverless reliability
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    console.error("Database connection failed:", error);
+    res.status(500).json({ message: "Database connection failed", error: error.message });
+  }
+});
 
 // --- API Routes ---
 app.get('/api', (req, res) => {
   res.json({ message: 'Welcome to the AutoCosmic Backend API!' });
+});
+
+// Seeding Route (Run this once after deployment)
+app.get('/api/seed', async (req, res) => {
+  try {
+    // Ensure connection is established (handled by middleware, but safe to call again)
+    await seedDatabase();
+    res.json({ message: 'Database seeded successfully!' });
+  } catch (error) {
+    res.status(500).json({ message: 'Seeding failed', error: error.message });
+  }
 });
 
 app.use('/api/auth', authRoutes);

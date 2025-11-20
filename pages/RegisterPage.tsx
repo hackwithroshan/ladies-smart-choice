@@ -1,19 +1,20 @@
 
 import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { COLORS } from '../constants';
 
 interface RegisterProps {
   setToken: (token: string) => void;
   setUser: (user: any) => void;
-  setView: (view: 'home' | 'login') => void;
 }
 
-const RegisterPage: React.FC<RegisterProps> = ({ setToken, setUser, setView }) => {
+const RegisterPage: React.FC<RegisterProps> = ({ setToken, setUser }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +38,7 @@ const RegisterPage: React.FC<RegisterProps> = ({ setToken, setUser, setView }) =
       
       setToken(data.token);
       setUser(data.user);
-      setView('home');
+      navigate('/');
 
     } catch (err: any) {
        if (err.message === 'Failed to fetch') {
@@ -57,9 +58,9 @@ const RegisterPage: React.FC<RegisterProps> = ({ setToken, setUser, setView }) =
             <h1 className="text-3xl font-extrabold text-gray-900">Create your account</h1>
             <p className="mt-2 text-sm text-gray-600">
                 Or{' '}
-                <a href="#" onClick={() => setView('login')} className="font-medium" style={{color: COLORS.accent}}>
+                <Link to="/login" className="font-medium" style={{color: COLORS.accent}}>
                     sign in to your existing account
-                </a>
+                </Link>
             </p>
         </div>
         <form className="space-y-6" onSubmit={handleSubmit}>

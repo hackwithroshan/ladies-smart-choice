@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Category, Product } from '../types';
 
 interface MegaMenuProps {
@@ -55,7 +56,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ isOpen }) => {
               <ul className="mt-4 space-y-2">
                 {category.subcategories.map((sub) => (
                   <li key={sub.id}>
-                    <a href="#" className="text-base font-medium text-gray-900 hover:text-gray-700 transition duration-150 ease-in-out">{sub.name}</a>
+                    <Link to="/" className="text-base font-medium text-gray-900 hover:text-gray-700 transition duration-150 ease-in-out">{sub.name}</Link>
                   </li>
                 ))}
               </ul>
@@ -71,7 +72,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ isOpen }) => {
                       <p className="text-sm text-gray-600 mt-1 line-clamp-2">{featuredProduct.description}</p>
                   </div>
               </div>
-               <a href="#" className="mt-6 block w-full text-center px-4 py-2 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 shadow-sm">Shop Now</a>
+               <Link to={`/product/${featuredProduct.id}`} className="mt-6 block w-full text-center px-4 py-2 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 shadow-sm">Shop Now</Link>
             </div>
           ) : (
              <div className="lg:col-span-1 bg-gray-50 rounded-lg p-4 flex items-center justify-center">

@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -8,12 +9,12 @@ import { COLORS } from '../constants';
 interface CheckoutPageProps {
   user: any;
   logout: () => void;
-  setView: (view: any) => void;
 }
 
-const CheckoutPage: React.FC<CheckoutPageProps> = ({ user, logout, setView }) => {
+const CheckoutPage: React.FC<CheckoutPageProps> = ({ user, logout }) => {
   const { cart, cartTotal, clearCart } = useCart();
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     firstName: user?.name?.split(' ')[0] || '',
     lastName: user?.name?.split(' ')[1] || '',
@@ -55,9 +56,9 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ user, logout, setView }) =>
       clearCart();
       alert('Order placed successfully!');
       if (user) {
-          setView('user-dashboard');
+          navigate('/dashboard');
       } else {
-          setView('home');
+          navigate('/');
       }
     } catch (error) {
       console.error('Checkout error:', error);
@@ -70,11 +71,11 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ user, logout, setView }) =>
   if (cart.length === 0) {
       return (
           <div className="flex flex-col min-h-screen">
-              <Header user={user} logout={logout} setView={setView} />
+              <Header user={user} logout={logout} />
               <main className="flex-grow flex items-center justify-center">
                   <div className="text-center">
                       <h2 className="text-2xl font-bold text-gray-900">Your cart is empty</h2>
-                      <button onClick={() => setView('home')} className="mt-4 text-blue-600 hover:underline">Go shopping</button>
+                      <button onClick={() => navigate('/')} className="mt-4 text-blue-600 hover:underline">Go shopping</button>
                   </div>
               </main>
               <Footer />
@@ -84,7 +85,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ user, logout, setView }) =>
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      <Header user={user} logout={logout} setView={setView} />
+      <Header user={user} logout={logout} />
       <main className="flex-grow container mx-auto px-4 py-12">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">Checkout</h1>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">

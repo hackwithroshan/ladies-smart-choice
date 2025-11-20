@@ -1,14 +1,15 @@
 
 import React, { useState } from 'react';
-import AdminSidebar from '../admin/AdminSidebar';
-import Dashboard from '../admin/Dashboard';
-import ProductList from '../admin/ProductList';
-import OrderList from '../admin/OrderList';
-import Customers from '../admin/Customers';
-import Marketing from '../admin/Marketing';
-import Discounts from '../admin/Discounts';
-import Settings from '../admin/Settings';
-import SliderSettings from '../admin/SliderSettings';
+import { Link } from 'react-router-dom';
+import AdminSidebar from '../components/admin/AdminSidebar';
+import Dashboard from '../components/admin/Dashboard';
+import ProductList from '../components/admin/ProductList';
+import OrderList from '../components/admin/OrderList';
+import Customers from '../components/admin/Customers';
+import Marketing from '../components/admin/Marketing';
+import Discounts from '../components/admin/Discounts';
+import Settings from '../components/admin/Settings';
+import SliderSettings from '../components/admin/SliderSettings';
 import { COLORS } from '../constants';
 
 type AdminView = 'dashboard' | 'products' | 'orders' | 'customers' | 'marketing' | 'discounts' | 'settings' | 'slider';
@@ -16,10 +17,9 @@ type AdminView = 'dashboard' | 'products' | 'orders' | 'customers' | 'marketing'
 interface AdminDashboardPageProps {
   user: any;
   logout: () => void;
-  setView: (view: 'home') => void;
 }
 
-const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ user, logout, setView }) => {
+const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ user, logout }) => {
   const [currentView, setCurrentView] = useState<AdminView>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const token = localStorage.getItem('token');
@@ -70,13 +70,13 @@ const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ user, logout, s
                 <p className="font-semibold text-gray-700">{user.name}</p>
                 <p className="text-xs text-gray-500">{user.role || 'Admin'}</p>
              </div>
-             <button
-                onClick={() => setView('home')}
+             <Link
+                to="/"
                 className="px-4 py-2 text-sm font-semibold text-white rounded-md transition duration-150 ease-in-out hover:opacity-90"
                 style={{backgroundColor: COLORS.accent}}
             >
                 View Store
-            </button>
+            </Link>
           </div>
         </header>
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6 admin-scroll">

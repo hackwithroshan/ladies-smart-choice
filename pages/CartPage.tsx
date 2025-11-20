@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -8,28 +9,28 @@ import { COLORS } from '../constants';
 interface CartPageProps {
   user: any;
   logout: () => void;
-  setView: (view: any) => void;
 }
 
-const CartPage: React.FC<CartPageProps> = ({ user, logout, setView }) => {
+const CartPage: React.FC<CartPageProps> = ({ user, logout }) => {
   const { cart, removeFromCart, updateQuantity, cartTotal } = useCart();
+  const navigate = useNavigate();
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      <Header user={user} logout={logout} setView={setView} />
+      <Header user={user} logout={logout} />
       <main className="flex-grow container mx-auto px-4 py-12">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">Shopping Cart</h1>
 
         {cart.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-lg shadow">
                 <p className="text-xl text-gray-600">Your cart is empty.</p>
-                <button 
-                    onClick={() => setView('home')}
-                    className="mt-4 px-6 py-2 text-white rounded-md"
+                <Link 
+                    to="/"
+                    className="mt-4 inline-block px-6 py-2 text-white rounded-md"
                     style={{ backgroundColor: COLORS.accent }}
                 >
                     Continue Shopping
-                </button>
+                </Link>
             </div>
         ) : (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -87,14 +88,14 @@ const CartPage: React.FC<CartPageProps> = ({ user, logout, setView }) => {
                             <span className="text-xl font-bold text-gray-900">${cartTotal.toFixed(2)}</span>
                         </div>
                         <button 
-                            onClick={() => setView('checkout')}
+                            onClick={() => navigate('/checkout')}
                             className="w-full py-3 px-4 text-white font-medium rounded-md shadow hover:opacity-90 transition-opacity"
                             style={{ backgroundColor: COLORS.accent }}
                         >
                             Proceed to Checkout
                         </button>
                         <div className="mt-4 text-center">
-                             <button onClick={() => setView('home')} className="text-sm text-blue-600 hover:underline">or Continue Shopping</button>
+                             <Link to="/" className="text-sm text-blue-600 hover:underline">or Continue Shopping</Link>
                         </div>
                     </div>
                 </div>

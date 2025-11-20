@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import MegaMenu from './MegaMenu';
 import { TailGridsLogo, PhoneIcon, UserIcon, HeartIcon, CartIcon, SearchIcon, ChevronDownIcon, MenuIcon } from './Icons';
 import { HeaderSettings } from '../types';
@@ -8,7 +9,6 @@ import { useCart } from '../contexts/CartContext';
 interface HeaderProps {
   user: any;
   logout: () => void;
-  setView: (view: any) => void;
 }
 
 const initialSettings: HeaderSettings = {
@@ -18,12 +18,13 @@ const initialSettings: HeaderSettings = {
     mainNavLinks: [],
 };
 
-const Header: React.FC<HeaderProps> = ({ user, logout, setView }) => {
+const Header: React.FC<HeaderProps> = ({ user, logout }) => {
   const [isMegaMenuOpen, setIsMegaMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [settings, setSettings] = useState<HeaderSettings>(initialSettings);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const { cartCount } = useCart();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -34,8 +35,8 @@ const Header: React.FC<HeaderProps> = ({ user, logout, setView }) => {
               setSettings({ // Fallback settings
                  logoText: 'AutoCosmic',
                  phoneNumber: '+001 123 456 789',
-                 topBarLinks: [{text: 'Home', url: '#'}],
-                 mainNavLinks: [{text: 'Shop', url: '#'}]
+                 topBarLinks: [{text: 'Home', url: '/'}],
+                 mainNavLinks: [{text: 'Shop', url: '/'}]
               });
               return;
             }
@@ -86,10 +87,10 @@ const Header: React.FC<HeaderProps> = ({ user, logout, setView }) => {
       {/* Main Header */}
       <div className="border-b">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-24">
-          <a href="#" onClick={(e) => { e.preventDefault(); setView('home'); }} className="flex items-center space-x-2">
+          <Link to="/" className="flex items-center space-x-2">
             <TailGridsLogo />
             <span className="text-3xl font-bold text-gray-800">{settings.logoText}</span>
-          </a>
+          </Link>
 
           <div className="flex-1 max-w-xl mx-8">
             <div className="flex items-center border border-gray-200 rounded-md">
@@ -122,7 +123,7 @@ const Header: React.FC<HeaderProps> = ({ user, logout, setView }) => {
 
             <div className="flex items-center space-x-4">
                 <div className="relative" ref={profileMenuRef}>
-                    <button onClick={() => user ? setIsProfileMenuOpen(!isProfileMenuOpen) : setView('login')} className="p-2 rounded-full hover:bg-gray-100">
+                    <button onClick={() => user ? setIsProfileMenuOpen(!isProfileMenuOpen) : navigate('/login')} className="p-2 rounded-full hover:bg-gray-100">
                         <UserIcon />
                     </button>
                     {user && isProfileMenuOpen && (
@@ -132,11 +133,11 @@ const Header: React.FC<HeaderProps> = ({ user, logout, setView }) => {
                                 <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
                             </div>
                             {user.isAdmin ? (
-                                <a href="#" onClick={(e) => { e.preventDefault(); setView('admin'); setIsProfileMenuOpen(false); }} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Admin Dashboard</a>
+                                <Link to="/admin" onClick={() => setIsProfileMenuOpen(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Admin Dashboard</Link>
                             ) : (
-                               <a href="#" onClick={(e) => { e.preventDefault(); setView('user-dashboard'); setIsProfileMenuOpen(false); }} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">My Account</a>
+                               <Link to="/dashboard" onClick={() => setIsProfileMenuOpen(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">My Account</Link>
                             )}
-                            <a href="#" onClick={(e) => { e.preventDefault(); logout(); setIsProfileMenuOpen(false); }} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Logout</a>
+                            <button onClick={() => { logout(); setIsProfileMenuOpen(false); }} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Logout</button>
                         </div>
                     )}
                 </div>
@@ -145,10 +146,10 @@ const Header: React.FC<HeaderProps> = ({ user, logout, setView }) => {
                     <HeartIcon />
                     <span className="absolute top-0 right-0 flex items-center justify-center h-4 w-4 bg-blue-600 text-white text-xs rounded-full">3</span>
                 </button>
-                <button onClick={() => setView('cart')} className="relative p-2 rounded-full hover:bg-gray-100">
+                <Link to="/cart" className="relative p-2 rounded-full hover:bg-gray-100">
                     <CartIcon />
                     <span className="absolute top-0 right-0 flex items-center justify-center h-4 w-4 bg-blue-600 text-white text-xs rounded-full">{cartCount}</span>
-                </button>
+                </Link>
             </div>
           </div>
         </div>

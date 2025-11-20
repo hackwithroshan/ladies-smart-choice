@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -11,10 +12,9 @@ type UserDashboardView = 'profile' | 'orders';
 interface UserDashboardPageProps {
   user: User;
   logout: () => void;
-  setView: (view: 'home' | 'login' | 'register' | 'user-dashboard') => void;
 }
 
-const UserDashboardPage: React.FC<UserDashboardPageProps> = ({ user, logout, setView }) => {
+const UserDashboardPage: React.FC<UserDashboardPageProps> = ({ user, logout }) => {
   const [currentView, setCurrentView] = useState<UserDashboardView>('profile');
   const token = localStorage.getItem('token');
 
@@ -31,7 +31,7 @@ const UserDashboardPage: React.FC<UserDashboardPageProps> = ({ user, logout, set
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header user={user} logout={logout} setView={setView} />
+      <Header user={user} logout={logout} />
       <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="flex flex-col md:flex-row gap-8">
           <UserSidebar currentView={currentView} setCurrentView={setCurrentView} />

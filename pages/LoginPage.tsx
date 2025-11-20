@@ -1,18 +1,19 @@
 
 import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { COLORS } from '../constants';
 
 interface LoginProps {
   setToken: (token: string) => void;
   setUser: (user: any) => void;
-  setView: (view: 'home' | 'register' | 'admin' | 'user-dashboard') => void;
 }
 
-const LoginPage: React.FC<LoginProps> = ({ setToken, setUser, setView }) => {
+const LoginPage: React.FC<LoginProps> = ({ setToken, setUser }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,12 +31,12 @@ const LoginPage: React.FC<LoginProps> = ({ setToken, setUser, setView }) => {
 
       let data;
       const contentType = response.headers.get("content-type");
-      if (contentType && contentType.indexOf("application/json") !== -1) {
+      if (contentType && contentType.includes("application/json")) {
         data = await response.json();
       } else {
-        // Fallback if response is not JSON (e.g. generic 500 text)
+        // Fallback if server sends plain text error
         const text = await response.text();
-        throw new Error(text || response.statusText);
+        throw new Error(text || `Server error: ${response.status}`);
       }
 
       if (!response.ok) {
@@ -45,14 +46,14 @@ const LoginPage: React.FC<LoginProps> = ({ setToken, setUser, setView }) => {
       setToken(data.token);
       setUser(data.user);
 
-      // Role-based redirection
       if (data.user.isAdmin) {
-        setView('admin');
+        navigate('/admin');
       } else {
-        setView('user-dashboard');
+        navigate('/dashboard');
       }
 
     } catch (err: any) {
+      console.error("Login error:", err);
       if (err.message === 'Failed to fetch') {
         setError('Cannot connect to the server. Please try again later.');
       } else {
@@ -70,9 +71,9 @@ const LoginPage: React.FC<LoginProps> = ({ setToken, setUser, setView }) => {
             <h1 className="text-3xl font-extrabold text-gray-900">Sign in to your account</h1>
             <p className="mt-2 text-sm text-gray-600">
                 Or{' '}
-                <a href="#" onClick={() => setView('register')} className="font-medium" style={{color: COLORS.accent}}>
+                <Link to="/register" className="font-medium" style={{color: COLORS.accent}}>
                     create a new account
-                </a>
+                </Link>
             </p>
         </div>
         <form className="space-y-6" onSubmit={handleSubmit}>

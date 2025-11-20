@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import ProductCard from '../components/ProductCard';
@@ -10,16 +11,15 @@ import { ChevronLeftIcon, ChevronRightIcon } from '../components/Icons';
 interface HomePageProps {
   user: any;
   logout: () => void;
-  setView: (view: any) => void;
-  setSelectedProductId: (id: string) => void;
 }
 
-const HomePage: React.FC<HomePageProps> = ({ user, logout, setView, setSelectedProductId }) => {
+const HomePage: React.FC<HomePageProps> = ({ user, logout }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [slides, setSlides] = useState<Slide[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const navigate = useNavigate();
 
   const prevSlide = () => {
     if (slides.length === 0) return;
@@ -67,13 +67,12 @@ const HomePage: React.FC<HomePageProps> = ({ user, logout, setView, setSelectedP
   }, []);
 
   const handleProductClick = (id: string) => {
-    setSelectedProductId(id);
-    setView('product-details');
+    navigate(`/product/${id}`);
   };
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header user={user} logout={logout} setView={setView} />
+      <Header user={user} logout={logout} />
       <main className="flex-grow">
         {/* Hero Section Slider */}
         <div className="relative bg-gray-800 h-[600px] overflow-hidden">
@@ -93,9 +92,9 @@ const HomePage: React.FC<HomePageProps> = ({ user, logout, setView, setSelectedP
                         {slide.subtitle}
                     </p>
                     <div className="mt-10 max-w-sm mx-auto sm:max-w-none sm:flex sm:justify-center">
-                        <a href="#" className="px-8 py-3 border border-transparent text-base font-medium rounded-md text-white shadow-sm hover:opacity-90" style={{backgroundColor: COLORS.accent}}>
+                        <button className="px-8 py-3 border border-transparent text-base font-medium rounded-md text-white shadow-sm hover:opacity-90" style={{backgroundColor: COLORS.accent}}>
                             {slide.buttonText}
-                        </a>
+                        </button>
                     </div>
                 </div>
               </div>

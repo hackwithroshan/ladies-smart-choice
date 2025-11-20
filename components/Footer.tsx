@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { COLORS } from '../constants';
 
 const Footer: React.FC = () => {
@@ -20,17 +21,17 @@ const Footer: React.FC = () => {
               <div>
                 <h3 className="text-sm font-semibold text-gray-200 tracking-wider uppercase">Shop</h3>
                 <ul className="mt-4 space-y-4">
-                  <li><a href="#" className="text-base text-gray-400 hover:text-white">Performance</a></li>
-                  <li><a href="#" className="text-base text-gray-400 hover:text-white">Exterior</a></li>
-                  <li><a href="#" className="text-base text-gray-400 hover:text-white">Interior</a></li>
+                  <li><Link to="/" className="text-base text-gray-400 hover:text-white">Performance</Link></li>
+                  <li><Link to="/" className="text-base text-gray-400 hover:text-white">Exterior</Link></li>
+                  <li><Link to="/" className="text-base text-gray-400 hover:text-white">Interior</Link></li>
                 </ul>
               </div>
               <div className="mt-12 md:mt-0">
                 <h3 className="text-sm font-semibold text-gray-200 tracking-wider uppercase">Support</h3>
                 <ul className="mt-4 space-y-4">
-                  <li><a href="#" className="text-base text-gray-400 hover:text-white">Contact</a></li>
-                  <li><a href="#" className="text-base text-gray-400 hover:text-white">FAQ</a></li>
-                  <li><a href="#" className="text-base text-gray-400 hover:text-white">Shipping</a></li>
+                  <li><Link to="/" className="text-base text-gray-400 hover:text-white">Contact</Link></li>
+                  <li><Link to="/" className="text-base text-gray-400 hover:text-white">FAQ</Link></li>
+                  <li><Link to="/" className="text-base text-gray-400 hover:text-white">Shipping</Link></li>
                 </ul>
               </div>
             </div>
@@ -38,8 +39,8 @@ const Footer: React.FC = () => {
               <div>
                 <h3 className="text-sm font-semibold text-gray-200 tracking-wider uppercase">Company</h3>
                 <ul className="mt-4 space-y-4">
-                  <li><a href="#" className="text-base text-gray-400 hover:text-white">About Us</a></li>
-                  <li><a href="#" className="text-base text-gray-400 hover:text-white">Careers</a></li>
+                  <li><Link to="/" className="text-base text-gray-400 hover:text-white">About Us</Link></li>
+                  <li><Link to="/" className="text-base text-gray-400 hover:text-white">Careers</Link></li>
                 </ul>
               </div>
             </div>
