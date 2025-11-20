@@ -21,7 +21,6 @@ app.use(cors());
 app.use(express.json());
 
 // --- MongoDB Connection (Serverless Optimized) ---
-// Use env variable for connection string
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/autocosmic';
 
 let cached = global.mongoose;
@@ -56,8 +55,17 @@ async function connectDB() {
   return cached.conn;
 }
 
-// Connect to DB (this will reuse the connection in serverless environment)
-connectDB();
+// Middleware to ensure DB is connected before handling requests
+app.use(async (req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    try {
+      await connectDB();
+    } catch (error) {
+      console.error("Database connection failed:", error);
+    }
+  }
+  next();
+});
 
 // --- API Routes ---
 app.get('/api', (req, res) => {
@@ -73,17 +81,18 @@ app.use('/api/slides', slideRoutes);
 app.use('/api/campaigns', campaignRoutes);
 app.use('/api/discounts', discountRoutes);
 
-// Error handling middleware for JSON errors
+// Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  // Ensure we always return JSON, preventing "Unexpected token S" on frontend
   res.status(500).json({ message: 'Something went wrong!', error: err.message });
 });
 
 // --- Start Server (Only if running directly) ---
 if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+  connectDB().then(() => {
+    app.listen(PORT, () => {
+      console.log(`Server is running on http://localhost:${PORT}`);
+    });
   });
 }
 
