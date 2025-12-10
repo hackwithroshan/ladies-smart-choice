@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  PieChart, Pie, Cell, Funnel, FunnelChart, LabelList
+  PieChart, Pie, Cell
 } from 'recharts';
 
 // --- TYPE DEFINITIONS ---
@@ -40,7 +41,7 @@ interface CustomTooltipProps {
 }
 
 // --- HELPER FUNCTIONS & CONSTANTS ---
-const PIE_COLORS = {
+const PIE_COLORS: { [key: string]: string } = {
     meta: '#4267B2', google: '#4285F4', organic: '#34A853',
     direct: '#EA4335', ads: '#FBBC05', referral: '#7e22ce', unknown: '#9ca3af'
 };
@@ -90,8 +91,7 @@ const SkeletonLoader: React.FC<{className?: string}> = ({ className }) => (
     </div>
 );
 
-
-// --- NEW: Full Calendar Date Range Picker Component ---
+// --- UPDATED: Date Range Picker Component matching user-provided image ---
 interface DateRangePickerProps {
     currentRange: DateRange;
     onApply: (range: { startDate: Date; endDate: Date }) => void;
@@ -118,11 +118,23 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ currentRange, onApply
     const handlePresetClick = (label: string) => {
         const end = new Date();
         const start = new Date();
+        end.setHours(23, 59, 59, 999);
+        start.setHours(0, 0, 0, 0);
+
         switch(label) {
-            case 'Today': start.setHours(0,0,0,0); break;
+            case 'Today': break;
+            case 'Yesterday': 
+                start.setDate(end.getDate() - 1);
+                end.setDate(end.getDate() - 1);
+                break;
             case 'Last 7 Days': start.setDate(end.getDate() - 6); break;
             case 'Last 30 Days': start.setDate(end.getDate() - 29); break;
             case 'This Month': start.setDate(1); break;
+            case 'Last Month':
+                start.setMonth(start.getMonth() - 1);
+                start.setDate(1);
+                end.setDate(0); // Sets to the last day of the previous month
+                break;
         }
         setStartDate(start);
         setEndDate(end);
@@ -138,31 +150,39 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ currentRange, onApply
         const allDays = [...padding, ...days];
 
         return (
-            <div>
-                <h4 className="font-bold text-center mb-2">{date.toLocaleString('default', { month: 'long', year: 'numeric' })}</h4>
-                <div className="grid grid-cols-7 gap-1 text-xs text-center text-gray-500 mb-2">
-                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => <div key={d}>{d}</div>)}
+            <div className="w-full sm:w-72 p-1">
+                <div className="flex justify-between items-center mb-3 px-2">
+                    <button type="button" onClick={() => setViewDate(new Date(date.getFullYear(), date.getMonth() - 1, 1))} className="p-1 rounded-full text-gray-400 hover:bg-gray-100">&lt;</button>
+                    <h4 className="font-bold text-gray-800">{date.toLocaleString('default', { month: 'long', year: 'numeric' })}</h4>
+                    <button type="button" onClick={() => setViewDate(new Date(date.getFullYear(), date.getMonth() + 1, 1))} className="p-1 rounded-full text-gray-400 hover:bg-gray-100">&gt;</button>
                 </div>
-                <div className="grid grid-cols-7 gap-1">
+                <div className="grid grid-cols-7 gap-y-1 text-xs text-center text-gray-500 mb-2">
+                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => <div key={d} className="w-9 h-9 flex items-center justify-center font-medium">{d}</div>)}
+                </div>
+                <div className="grid grid-cols-7 gap-y-1">
                     {allDays.map((day, i) => {
-                        if (!day) return <div key={i}></div>;
+                        if (!day) return <div key={`pad-${i}`}></div>;
                         
                         const isStart = startDate && isSameDay(day, startDate);
                         const isEnd = endDate && isSameDay(day, endDate);
                         const inRange = startDate && endDate && day > startDate && day < endDate;
                         const inHoverRange = startDate && !endDate && hoverDate && day > startDate && day <= hoverDate;
 
-                        let classes = "w-8 h-8 flex items-center justify-center rounded-full transition-colors cursor-pointer";
-                        if (isStart || isEnd) classes += " bg-rose-600 text-white font-bold";
-                        else if (inRange || inHoverRange) classes += " bg-rose-100 text-rose-800";
-                        else classes += " hover:bg-gray-100";
-                        if (isStart && endDate) classes += " rounded-r-none";
-                        if (isEnd) classes += " rounded-l-none";
+                        let classes = "w-9 h-9 flex items-center justify-center rounded-full transition-colors cursor-pointer text-sm";
+                        if (isStart || isEnd) classes += " bg-indigo-600 text-white font-bold";
+                        else if (inRange || inHoverRange) classes += " bg-indigo-100 text-indigo-800 rounded-none";
+                        else classes += " hover:bg-gray-100 text-gray-700";
+                        
+                        const isToday = isSameDay(day, new Date());
+                        if(isToday && !isStart && !isEnd && !inRange) classes += " text-indigo-600 font-bold";
+
 
                         return (
-                            <button key={i} onClick={() => handleDateClick(day)} onMouseEnter={() => setHoverDate(day)} onMouseLeave={() => setHoverDate(null)} className={classes}>
-                                {day.getDate()}
-                            </button>
+                            <div key={day.toISOString()} className={`flex items-center justify-center ${(inRange || inHoverRange) ? 'bg-indigo-100' : ''} ${isStart || (inRange && day.getDay() === 0) ? 'rounded-l-full' : ''} ${isEnd || (inRange && day.getDay() === 6) ? 'rounded-r-full' : ''}`}>
+                                <button type="button" onClick={() => handleDateClick(day)} onMouseEnter={() => setHoverDate(day)} onMouseLeave={() => setHoverDate(null)} className={classes}>
+                                    {day.getDate()}
+                                </button>
+                            </div>
                         );
                     })}
                 </div>
@@ -170,31 +190,82 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ currentRange, onApply
         );
     };
     
-    const prevMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1);
-    const nextMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1);
+    const prevMonthDate = new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1);
 
     return (
-        <div className="absolute right-0 mt-2 bg-white rounded-lg shadow-2xl border z-20 animate-fade-in-up flex p-4">
-            <div className="w-40 border-r pr-4">
-                <h4 className="text-xs font-bold text-gray-400 uppercase mb-2">Presets</h4>
-                {['Today', 'Last 7 Days', 'Last 30 Days', 'This Month'].map(label => (
-                    <button key={label} onClick={() => handlePresetClick(label)} className="block w-full text-left text-sm p-2 rounded hover:bg-gray-100">{label}</button>
-                ))}
+        <div className="absolute top-full right-4 left-4 md:left-auto md:right-0 mt-2 bg-white rounded-lg shadow-2xl border z-20 animate-fade-in-up flex flex-col md:flex-row w-[calc(100vw-2rem)] max-w-sm md:w-auto md:max-w-none">
+             {/* Left Column: Presets */}
+            <div className="w-full md:w-44 border-b md:border-b-0 md:border-r border-gray-200 p-4">
+                <div className="space-y-1">
+                    {['Today', 'Yesterday', 'Last 7 Days', 'Last 30 Days', 'This Month', 'Last Month'].map(label => (
+                        <button key={label} onClick={() => handlePresetClick(label)} className="block w-full text-left text-sm font-medium p-2 rounded hover:bg-gray-100 text-gray-600 hover:text-indigo-600">{label}</button>
+                    ))}
+                </div>
             </div>
-            <div className="pl-4">
-                <div className="flex justify-between items-center mb-4">
-                    <button onClick={() => setViewDate(prevMonth)} className="p-2 rounded-full hover:bg-gray-100">&lt;</button>
-                    <div className="flex gap-8">
-                        {renderCalendar(prevMonth)}
+
+            {/* Right Column: Calendars & Actions */}
+            <div className="flex flex-col p-4">
+                {/* Calendars */}
+                <div className="flex flex-col md:flex-row justify-center gap-x-8">
+                     <div className="hidden md:block">
+                        {renderCalendar(prevMonthDate)}
+                    </div>
+                    <div>
                         {renderCalendar(viewDate)}
                     </div>
-                    <button onClick={() => setViewDate(nextMonth)} className="p-2 rounded-full hover:bg-gray-100">&gt;</button>
                 </div>
-                <div className="flex justify-end gap-2 border-t pt-4">
-                    <button onClick={onClose} className="px-4 py-2 text-sm bg-white border rounded-md">Cancel</button>
-                    <button onClick={() => startDate && endDate && onApply({ startDate, endDate })} disabled={!startDate || !endDate} className="px-4 py-2 text-sm bg-rose-600 text-white rounded-md disabled:opacity-50">Apply</button>
+
+                {/* Footer Actions */}
+                <div className="flex flex-col sm:flex-row justify-between items-center border-t border-gray-200 pt-4 mt-4 gap-4">
+                    <div className="text-sm">
+                        <span className="font-bold text-gray-800">{startDate ? formatDate(startDate) : '...'}</span>
+                        <span className="text-gray-500 mx-2">~</span>
+                        <span className="font-bold text-gray-800">{endDate ? formatDate(endDate) : '...'}</span>
+                    </div>
+                    <div className="flex justify-end gap-2 w-full sm:w-auto">
+                        <button onClick={onClose} className="flex-1 sm:flex-none px-4 py-2 text-sm font-bold bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50">Cancel</button>
+                        <button onClick={() => startDate && endDate && onApply({ startDate, endDate })} disabled={!startDate || !endDate} className="flex-1 sm:flex-none px-4 py-2 text-sm font-bold bg-indigo-600 text-white rounded-md disabled:opacity-50 hover:bg-indigo-700">Apply</button>
+                    </div>
                 </div>
             </div>
+        </div>
+    );
+};
+
+
+// --- UPDATED: Conversion Funnel Step Component ---
+const FunnelStep: React.FC<{ title: string; value: number; initialValue: number; previousValue?: number; color: string; isLast?: boolean }> = ({ title, value, initialValue, previousValue, color, isLast }) => {
+    const conversionFromPrev = previousValue && previousValue > 0 ? (value / previousValue) * 100 : 100;
+    const conversionFromStart = initialValue > 0 ? (value / initialValue) * 100 : 100;
+    const dropOff = previousValue ? 100 - conversionFromPrev : 0;
+
+    return (
+        <div className="relative">
+            <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-gray-600">{title}</span>
+                    <span className="text-xl font-bold text-gray-900">{value.toLocaleString()}</span>
+                </div>
+                <div className="mt-3 h-2 w-full bg-gray-200 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full" style={{ width: `${conversionFromPrev}%`, backgroundColor: color }}></div>
+                </div>
+                 {initialValue !== value && (
+                    <div className="text-xs text-gray-500 mt-2 text-right">
+                        Overall Conversion: <span className="font-bold text-gray-700">{conversionFromStart.toFixed(1)}%</span>
+                    </div>
+                 )}
+            </div>
+            {!isLast && (
+                <div className="absolute left-1/2 -translate-x-1/2 top-full mt-3 flex items-center flex-col text-xs text-gray-500">
+                    <div className="h-6 w-px bg-gray-300"></div>
+                    <div className="mt-1 flex items-center gap-1.5 p-1 bg-white rounded-full border shadow-sm">
+                         <svg className="w-3 h-3 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17l-5-5 5-5m-5 5h12" /></svg>
+                        <span className="font-bold text-red-600" title="Drop-off from previous step">{dropOff.toFixed(1)}%</span>
+                        <span className="font-medium text-green-600" title="Conversion from previous step">{conversionFromPrev.toFixed(1)}%</span>
+                        <svg className="w-3 h-3 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5-5 5M6 12h12" /></svg>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -269,16 +340,11 @@ const Analytics: React.FC<{ token: string | null }> = ({ token }) => {
     
     // --- Data Transformation for Charts ---
     const funnelChartData = data ? [
-        { name: 'Visitors', value: data.funnel.visitors },
-        { name: 'Added to Cart', value: data.funnel.addToCart },
-        { name: 'Reached Checkout', value: data.funnel.checkout },
-        { name: 'Purchased', value: data.funnel.purchased },
+        { name: 'Visitors', value: data.funnel.visitors, color: '#3b82f6' },
+        { name: 'Added to Cart', value: data.funnel.addToCart, color: '#8b5cf6' },
+        { name: 'Reached Checkout', value: data.funnel.checkout, color: '#f97316' },
+        { name: 'Purchased', value: data.funnel.purchased, color: '#10b981' },
     ] : [];
-
-    const getFunnelStepPercentage = (current: number, previous: number) => {
-        if (previous === 0) return '0%';
-        return `${((current / previous) * 100).toFixed(1)}%`;
-    };
     
     // Date Range Selection Logic
     const handleApplyDateRange = (newRange: { startDate: Date, endDate: Date }) => {
@@ -295,38 +361,20 @@ const Analytics: React.FC<{ token: string | null }> = ({ token }) => {
 
     const kpis = data?.kpis;
     const recentEvents = liveData.recentEvents;
-
-    // FIX: The `formatter` prop on LabelList does not receive the `index` property needed for this calculation.
-    // Switched to the `content` prop which provides a custom render function with more properties, including `index`.
-    const renderCustomFunnelLabel = (props: any) => {
-        const { x, y, width, height, value, index } = props;
-        const cx = x + width / 2;
-        const cy = y + height / 2;
-    
-        let labelText: string;
-        if (index === 0) {
-            labelText = value.toLocaleString();
-        } else {
-            const prevValue = funnelChartData[index - 1].value;
-            labelText = getFunnelStepPercentage(value, prevValue);
-        }
-    
-        return (
-            <text x={cx} y={cy} fill="#fff" textAnchor="middle" dominantBaseline="middle" fontSize={14} fontWeight="bold">
-                {labelText}
-            </text>
-        );
-    };
+    const totalRevenueFromSource = data?.revenueBySource.reduce((sum, item) => sum + item.value, 0) || 0;
+    const totalFunnelConversion = (data?.funnel.visitors && data.funnel.visitors > 0) ? (data.funnel.purchased / data.funnel.visitors) * 100 : 0;
 
     return (
         <div className="space-y-8">
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <h2 className="text-2xl font-bold text-gray-800">Marketing Analytics</h2>
-                <div className="relative" ref={datePickerRef}>
-                    <button onClick={() => setIsDateSelectorOpen(!isDateSelectorOpen)} className="flex items-center gap-2 bg-white border border-gray-300 rounded-md px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                        <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                        <span>{dateRange.label}</span>
+                <div className="relative w-full md:w-auto" ref={datePickerRef}>
+                    <button onClick={() => setIsDateSelectorOpen(!isDateSelectorOpen)} className="flex items-center justify-between md:justify-start gap-2 bg-white border border-gray-300 rounded-md px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 w-full">
+                        <div className="flex items-center gap-2">
+                            <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                            <span>{dateRange.label}</span>
+                        </div>
                         <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                     </button>
                     {isDateSelectorOpen && (
@@ -395,26 +443,37 @@ const Analytics: React.FC<{ token: string | null }> = ({ token }) => {
                         </div>
 
                         {/* Revenue by Source */}
-                        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 flex flex-col">
                             <h3 className="font-bold text-gray-800 mb-4">Sales by Traffic Source</h3>
-                            <div className="h-72">
-                                <ResponsiveContainer width="100%" height="100%">
+                            <div className="relative h-48">
+                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
-                                        <Pie data={data.revenueBySource} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={5} labelLine={false}
-                                             label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
-                                                const radius = innerRadius + (outerRadius - innerRadius) * 1.3;
-                                                const x  = cx + radius * Math.cos(-midAngle * Math.PI / 180);
-                                                const y = cy  + radius * Math.sin(-midAngle * Math.PI / 180);
-                                                return <text x={x} y={y} fill="#6b7280" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize={12}>{`${(percent * 100).toFixed(0)}%`}</text>;
-                                             }}>
-                                            {data.revenueBySource.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={PIE_COLORS[entry.name as keyof typeof PIE_COLORS] || PIE_COLORS.unknown} />
+                                        <Pie data={data.revenueBySource} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={2} stroke="none">
+                                            {data.revenueBySource.map((entry) => (
+                                                <Cell key={`cell-${entry.name}`} fill={PIE_COLORS[entry.name] || PIE_COLORS.unknown} />
                                             ))}
                                         </Pie>
                                         <Tooltip formatter={(value: number) => `₹${value.toLocaleString()}`} />
-                                        <Legend iconType="circle" />
                                     </PieChart>
                                 </ResponsiveContainer>
+                                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                    <p className="text-xs text-gray-500">Total Sales</p>
+                                    <p className="text-2xl font-bold text-gray-800">₹{Math.round(totalRevenueFromSource).toLocaleString()}</p>
+                                </div>
+                            </div>
+                            <div className="flex-1 space-y-2 mt-4 overflow-y-auto">
+                                {data.revenueBySource.sort((a,b) => b.value - a.value).map(entry => (
+                                    <div key={entry.name} className="flex justify-between items-center text-sm">
+                                        <div className="flex items-center gap-2">
+                                            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: PIE_COLORS[entry.name] || PIE_COLORS.unknown }}></span>
+                                            <span className="capitalize font-medium text-gray-600">{entry.name}</span>
+                                        </div>
+                                        <div className="font-bold text-gray-800">
+                                            <span>{((entry.value / totalRevenueFromSource) * 100).toFixed(1)}%</span>
+                                            <span className="text-xs text-gray-400 font-normal ml-2">₹{entry.value.toLocaleString()}</span>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     </>
@@ -425,20 +484,26 @@ const Analytics: React.FC<{ token: string | null }> = ({ token }) => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                  {loading ? <SkeletonLoader /> : data && (
                     <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                        <h3 className="font-bold text-gray-800 mb-4">Conversion Funnel</h3>
-                        <div className="h-72">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <FunnelChart>
-                                    <Tooltip />
-                                    <Funnel dataKey="value" data={funnelChartData} isAnimationActive>
-                                        <LabelList position="right" fill="#000" stroke="none" dataKey="name" />
-                                        <LabelList
-                                            position="center"
-                                            content={renderCustomFunnelLabel}
-                                        />
-                                    </Funnel>
-                                </FunnelChart>
-                            </ResponsiveContainer>
+                        <h3 className="font-bold text-gray-800 mb-6">Conversion Funnel</h3>
+                        <div className="space-y-12">
+                            {funnelChartData.map((step, index) => (
+                                <FunnelStep 
+                                    key={step.name}
+                                    title={step.name}
+                                    value={step.value}
+                                    initialValue={funnelChartData[0].value}
+                                    previousValue={index > 0 ? funnelChartData[index-1].value : undefined}
+                                    color={step.color}
+                                    isLast={index === funnelChartData.length - 1}
+                                />
+                            ))}
+                        </div>
+                         <div className="mt-12 text-center border-t border-gray-200 pt-6">
+                            <p className="text-sm font-bold text-gray-500 uppercase tracking-wider">Total Funnel Conversion</p>
+                            <p className="text-4xl font-extrabold text-green-600 mt-2">
+                                {totalFunnelConversion.toFixed(2)}%
+                            </p>
+                            <p className="text-xs text-gray-400 mt-1">(Visitors to Purchasers)</p>
                         </div>
                     </div>
                 )}
@@ -454,7 +519,7 @@ const Analytics: React.FC<{ token: string | null }> = ({ token }) => {
                                         <span className="font-bold text-gray-800">{page.views.toLocaleString()}</span>
                                     </div>
                                     <div className="w-full bg-gray-200 rounded-full h-1.5">
-                                        <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${(page.views / data.topPages[0].views) * 100}%` }}></div>
+                                        <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${(page.views / (data.topPages[0]?.views || page.views)) * 100}%` }}></div>
                                     </div>
                                 </div>
                             ))}

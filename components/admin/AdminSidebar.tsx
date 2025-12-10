@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Icons, COLORS } from '../../constants';
 import { User } from '../../types';
 
-type AdminView = 'dashboard' | 'analytics' | 'products' | 'inventory' | 'categories' | 'orders' | 'customers' | 'marketing' | 'discounts' | 'settings' | 'cms' | 'shop-videos' | 'slider' | 'media' | 'blogs' | 'pages';
+type AdminView = 'dashboard' | 'analytics' | 'products' | 'inventory' | 'categories' | 'orders' | 'customers' | 'marketing' | 'discounts' | 'settings' | 'cms' | 'shop-videos' | 'slider' | 'media' | 'blogs' | 'pages' | 'contact-messages' | 'admin-profile';
 
 interface AdminSidebarProps {
   user: User;
@@ -39,16 +39,6 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ user, currentView, setCurre
       }
     }
   };
-  
-  const getInitials = (name: string) => {
-      if (!name) return 'A';
-      const parts = name.split(' ').filter(Boolean);
-      if (parts.length > 1) {
-          return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-      }
-      return name.substring(0, 2).toUpperCase();
-  };
-
 
   // --- Hierarchical Menu Structure ---
   const menuStructure: MenuItem[] = [
@@ -83,6 +73,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ user, currentView, setCurre
         { id: 'orders-list', label: 'All Orders', view: 'orders' },
         { id: 'customers', label: 'Customers', view: 'customers' },
         { id: 'discounts', label: 'Coupons & Discounts', view: 'discounts' },
+        { id: 'contact-messages', label: 'Contact Messages', view: 'contact-messages' },
       ]
     },
     {
@@ -223,22 +214,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ user, currentView, setCurre
           })}
         </nav>
 
-        {/* User Footer */}
-        <div className="p-4 border-t border-gray-800 bg-[#0f172a]">
-            <div className="flex items-center gap-3 px-2">
-                {user.avatarUrl ? (
-                    <img src={user.avatarUrl} alt={user.name} className="w-9 h-9 rounded-full object-cover shadow-md" />
-                ) : (
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-rose-500 to-orange-600 flex items-center justify-center text-xs font-bold text-white shadow-md">
-                        {getInitials(user.name)}
-                    </div>
-                )}
-                <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{user.name}</p>
-                    <p className="text-xs text-gray-500 truncate">{user.role}</p>
-                </div>
-            </div>
-        </div>
+        {/* User Footer is now removed and handled by AdminHeader */}
       </div>
     </>
   );

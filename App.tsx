@@ -1,8 +1,12 @@
 
 
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, Suspense, lazy, useRef } from 'react';
 import * as ReactRouterDom from 'react-router-dom';
-const { BrowserRouter: Router, Routes, Route, Navigate, useLocation, useNavigate } = ReactRouterDom;
+// FIX: Property 'as' does not exist on type 'typeof import(...)'. This indicates an issue with aliasing during destructuring from a namespace import.
+// This also caused a downstream error where `Router` was incorrectly typed, expecting props like `location` and `navigator`.
+// We will separate the alias assignment to ensure `Router` correctly points to `BrowserRouter`.
+const { Routes, Route, Navigate, useLocation, useNavigate } = ReactRouterDom;
+const Router = ReactRouterDom.BrowserRouter;
 import { HelmetProvider } from 'react-helmet-async';
 import { CartProvider } from './contexts/CartContext';
 import { SiteDataProvider, useSiteData } from './contexts/SiteDataContext';
@@ -22,6 +26,7 @@ const CartPage = lazy(() => import('./pages/CartPage'));
 const CheckoutPage = lazy(() => import('./pages/CheckoutPage'));
 const DynamicPage = lazy(() => import('./pages/DynamicPage'));
 const CollectionPage = lazy(() => import('./pages/CollectionPage'));
+const ContactPage = lazy(() => import('./pages/ContactPage'));
 
 // --- Loading Spinner for Suspense Fallback ---
 const LoadingSpinner: React.FC = () => (
@@ -33,38 +38,34 @@ const LoadingSpinner: React.FC = () => (
 // --- Master Tracking Component for Meta Pixel & CAPI ---
 const MasterTracker: React.FC = () => {
     const location = useLocation();
-    const initialLoad = React.useRef(true);
     const { siteSettings, loading: siteDataLoading } = useSiteData();
+    const warningLogged = useRef(false);
 
-    // 1. Initialize Pixel exactly once when siteSettings are loaded from the context
     useEffect(() => {
-        // Prevent initialization if it's already done, or if the main site data is still loading
-        if ((window as any)._pixelInitialized || siteDataLoading) {
+        // Don't do anything until site settings (with Pixel ID) are loaded.
+        if (siteDataLoading) {
             return;
         }
 
-        if (siteSettings && siteSettings.metaPixelId) {
-            (window as any)._pixelInitialized = true;
-            initFacebookPixel(siteSettings.metaPixelId);
-        } else {
-            // This is now the single source of truth for the pixel ID warning.
-            console.warn("M-Tracker: Meta Pixel ID not found in site settings from the database. Pixel not initialized.");
+        // 1. Initialize Pixel if it hasn't been initialized and we have a valid ID.
+        if (!(window as any)._pixelInitialized) {
+            if (siteSettings?.metaPixelId) {
+                initFacebookPixel(siteSettings.metaPixelId);
+                (window as any)._pixelInitialized = true; // Mark as initialized
+            } else if (!warningLogged.current) {
+                // Log the warning only once to avoid console spam on every navigation.
+                console.warn("M-Tracker: Meta Pixel ID not found in site settings. Pixel not initialized.");
+                warningLogged.current = true;
+            }
         }
-    }, [siteSettings, siteDataLoading]); // Depend on settings and loading state from the main context
-
-    // 2. Track subsequent PageView events on route changes
-    useEffect(() => {
-        // On initial load, the initFacebookPixel function handles the first PageView.
-        // This effect only tracks navigation changes after the initial load.
-        if (initialLoad.current) {
-            initialLoad.current = false;
-            return;
+        
+        // 2. If the pixel is ready, track the PageView for the current location.
+        // This will fire for the initial load and all subsequent route changes.
+        if ((window as any)._pixelInitialized) {
+            masterTracker('PageView');
         }
 
-        // Use the master tracker for all subsequent page views
-        masterTracker('PageView');
-
-    }, [location]);
+    }, [location, siteSettings, siteDataLoading]); // Re-run on location change or when settings finish loading.
 
     return null;
 };
@@ -139,6 +140,8 @@ const AppContent: React.FC = () => {
               path="/checkout" 
               element={<CheckoutPage user={user} logout={handleLogout} />} 
             />
+            {/* FIX: Corrected a typo where `logout` was used instead of `handleLogout` for the `logout` prop. */}
+            <Route path="/contact" element={<ContactPage user={user} logout={handleLogout} />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>

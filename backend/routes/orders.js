@@ -5,10 +5,14 @@ const Order = require('../models/Order');
 const User = require('../models/User');
 const Product = require('../models/Product');
 const AnalyticsEvent = require('../models/AnalyticsEvent');
+const StoreDetails = require('../models/StoreDetails');
 const { protect, admin } = require('../middleware/authMiddleware');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
 const { sendCapiEvent } = require('../utils/facebookCapiService');
+const { createNotification } = require('../utils/createNotification');
+const { generateInvoice } = require('../utils/generateInvoice');
+const { sendOrderConfirmationEmail } = require('../utils/emailService');
 
 // --- Admin: Get all orders ---
 router.get('/', protect, admin, async (req, res) => {
@@ -182,6 +186,26 @@ router.post('/', async (req, res) => {
             }
         });
 
+        // 7. Create a notification for admins
+        await createNotification({
+            type: 'NEW_ORDER',
+            message: `New order #${savedOrder._id.toString().substring(0, 6)} for ₹${savedOrder.total.toFixed(2)} placed by ${savedOrder.customerName}.`,
+            link: `/admin?view=orders&id=${savedOrder._id.toString()}` // A deep link for the future
+        });
+
+        // 8. Generate Invoice and send Order Confirmation Email (Fire and forget)
+        try {
+            const [fullOrder, storeDetails] = await Promise.all([
+                Order.findById(savedOrder._id).populate('items.productId'),
+                StoreDetails.findOne()
+            ]);
+            const invoicePdf = await generateInvoice(fullOrder, storeDetails);
+            await sendOrderConfirmationEmail(fullOrder, invoicePdf);
+        } catch (emailError) {
+            console.error(`Failed to send order confirmation email for order ${savedOrder._id}:`, emailError);
+        }
+
+
         res.status(201).json({ order: savedOrder, accountCreated });
     } catch (error) {
         console.error('Order creation failed:', error);
@@ -189,11 +213,27 @@ router.post('/', async (req, res) => {
     }
 });
 
-// Resend order confirmation email (simplified for brevity)
+// Resend order confirmation email
 router.post('/:id/resend-email', protect, admin, async (req, res) => {
-    // Placeholder for email sending logic (e.g., using nodemailer)
-    console.log(`Email for order ${req.params.id} would be resent here.`);
-    res.json({ message: `Confirmation email for order #${req.params.id.substring(0,8)} has been sent.` });
+    try {
+        const [order, storeDetails] = await Promise.all([
+            Order.findById(req.params.id).populate('items.productId'),
+            StoreDetails.findOne()
+        ]);
+
+        if (!order) {
+            return res.status(404).json({ message: 'Order not found.' });
+        }
+        
+        const invoicePdf = await generateInvoice(order, storeDetails);
+        await sendOrderConfirmationEmail(order, invoicePdf);
+        
+        res.json({ message: `Confirmation email for order #${order.id.substring(0,8)} has been resent to ${order.customerEmail}.` });
+
+    } catch (error) {
+        console.error(`Failed to resend email for order ${req.params.id}:`, error);
+        res.status(500).json({ message: "Error resending email. Check server logs." });
+    }
 });
 
 

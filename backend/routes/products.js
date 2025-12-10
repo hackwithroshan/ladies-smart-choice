@@ -35,18 +35,18 @@ router.get('/search', async (req, res) => {
     }
 });
 
-// NEW: Get a single featured (random) product
+// GET multiple featured (random) products
 router.get('/featured', async (req, res) => {
     try {
-        // Use aggregation pipeline to efficiently get one random document
+        // Use aggregation pipeline to efficiently get multiple random documents
         const products = await Product.aggregate([
             { $match: { status: 'Active' } },
-            { $sample: { size: 1 } }
+            { $sample: { size: 4 } }
         ]);
         if (!products.length) {
             return res.status(404).json({ message: 'No active products found to feature' });
         }
-        res.json(products[0]);
+        res.json(products);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
@@ -151,23 +151,36 @@ router.delete('/categories/:id', protect, admin, async (req, res) => {
 });
 
 // POST a review
-router.post('/:id/reviews', async (req, res) => {
-    const { rating, comment, name } = req.body;
+router.post('/:id/reviews', protect, async (req, res) => {
+    const { rating, comment, imageUrl } = req.body;
     const product = await Product.findById(req.params.id);
 
     if (product) {
+        // Check if user already reviewed
+        const alreadyReviewed = product.reviews.find(
+            r => r.userId && r.userId.toString() === req.user._id.toString()
+        );
+
+        if (alreadyReviewed) {
+            return res.status(400).json({ message: 'You have already reviewed this product.' });
+        }
+
         const review = {
-            name,
+            name: req.user.name,
             rating: Number(rating),
             comment,
+            userId: req.user._id,
+            imageUrl,
             date: new Date()
         };
-        product.reviews.push(review);
+        product.reviews.unshift(review); // Add to the beginning of the array
         await product.save();
-        res.status(201).json(review);
+        // Return the newly created review with its generated ID
+        res.status(201).json(product.reviews[0]);
     } else {
         res.status(404).json({ message: 'Product not found' });
     }
 });
+
 
 module.exports = router;

@@ -47,7 +47,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClick }) =>
 
   return (
     <div 
-      className="group relative bg-white border border-gray-100 rounded-lg shadow-sm overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer flex flex-col h-full"
+      className="group relative bg-white border border-gray-100 rounded-lg shadow-sm overflow-hidden transition-all duration-300 hover:shadow-xl lg:hover:-translate-y-1 cursor-pointer flex flex-col h-full"
       onClick={() => onProductClick && product.slug && onProductClick(product.slug)}
     >
       <div className="aspect-[3/4] w-full overflow-hidden relative">
@@ -86,7 +86,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClick }) =>
             
             <button 
               onClick={handleAddToCart}
-              className="w-full text-center px-4 py-2.5 text-xs font-bold text-white rounded-md shadow-sm transition-all duration-300 opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-rose-500" 
+              className="w-full text-center px-4 py-2.5 text-xs font-bold text-white rounded-md shadow-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-rose-500 lg:opacity-0 lg:group-hover:opacity-100 lg:transform lg:translate-y-2 lg:group-hover:translate-y-0" 
               style={{ backgroundColor: COLORS.accent }}
              >
               Add to Cart

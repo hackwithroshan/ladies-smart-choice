@@ -1,3 +1,5 @@
+// FIX: Switched to a namespace import for React to resolve a type error where `this.props` was not being recognized on the class component.
+// This is a more robust pattern for this project's TypeScript configuration.
 import * as React from 'react';
 
 interface ErrorBoundaryProps {
@@ -9,8 +11,6 @@ interface State {
   error?: Error;
 }
 
-// FIX: Switched to a namespace import for React to resolve property access errors on 'this.props',
-// which can occur in environments where named exports are not resolved correctly.
 class ErrorBoundary extends React.Component<ErrorBoundaryProps, State> {
   public state: State = {
     hasError: false,

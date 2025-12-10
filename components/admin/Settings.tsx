@@ -1,9 +1,11 @@
 
-
 import React, { useState, useEffect } from 'react';
 import HeaderSettingsComponent from './HeaderSettings';
 import FooterSettingsComponent from './FooterSettings';
 import HomePageSEOSettings from './HomePageSEOSettings';
+import GeneralSettings from './GeneralSettings';
+import TaxSettings from './TaxSettings';
+import ShippingSettings from './ShippingSettings';
 import { SiteSettings, SyncLog } from '../../types';
 import { getApiUrl } from '../../utils/apiHelper';
 
@@ -23,33 +25,45 @@ function timeAgo(dateString: string): string {
     return date.toLocaleDateString();
 }
 
-const EventStatusIndicator: React.FC<{ eventName: string; description: string }> = ({ eventName, description }) => (
+const EventToggleSwitch: React.FC<{
+    eventName: string;
+    description: string;
+    isEnabled: boolean;
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    name: string;
+}> = ({ eventName, description, isEnabled, onChange, name }) => (
     <div className="flex items-start justify-between py-3 border-b border-gray-100 last:border-0">
-        <div className="flex items-center">
-            <div className="w-5 h-5 bg-green-100 text-green-600 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"></path></svg>
-            </div>
-            <div>
-                <p className="font-medium text-sm text-gray-800">{eventName}</p>
-                <p className="text-xs text-gray-500">{description}</p>
-            </div>
+        <div>
+            <p className="font-medium text-sm text-gray-800">{eventName}</p>
+            <p className="text-xs text-gray-500">{description}</p>
         </div>
-        <span className="text-xs font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded-full whitespace-nowrap">ACTIVE</span>
+        <div className="flex items-center gap-3">
+            <span className={`text-xs font-bold ${isEnabled ? 'text-green-700' : 'text-gray-500'}`}>
+                {isEnabled ? 'ENABLED' : 'DISABLED'}
+            </span>
+            <button
+                type="button"
+                role="switch"
+                aria-checked={isEnabled}
+                onClick={() => onChange({ target: { name, type: 'checkbox', checked: !isEnabled } } as any)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-rose-500 ${isEnabled ? 'bg-rose-600' : 'bg-gray-200'}`}
+            >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
+        </div>
     </div>
 );
 
 
 const Settings: React.FC<{token: string | null}> = ({token}) => {
-    const [activeTab, setActiveTab] = useState<SettingsTab>('pixels');
+    const [activeTab, setActiveTab] = useState<SettingsTab>('site');
+    
+    // State for Pixels tab
     const [siteSettings, setSiteSettings] = useState<SiteSettings | any>({});
     const [loading, setLoading] = useState(false);
-    
-    // Feeds
     const [feedUrls, setFeedUrls] = useState({ csv: '', xml: '' });
     const [generatingFeed, setGeneratingFeed] = useState(false);
     const [feedFeedback, setFeedFeedback] = useState('');
-
-    // Meta Sync & Test
     const [syncing, setSyncing] = useState(false);
     const [syncLogs, setSyncLogs] = useState<SyncLog[]>([]);
     const [syncFeedback, setSyncFeedback] = useState('');
@@ -58,12 +72,11 @@ const Settings: React.FC<{token: string | null}> = ({token}) => {
     const [testEventLoading, setTestEventLoading] = useState(false);
     const [testEventFeedback, setTestEventFeedback] = useState('');
 
-    const fetchAllData = async () => {
+    const fetchPixelTabData = async () => {
          setLoading(true);
          try {
              const [siteRes, syncRes, eventsRes] = await Promise.all([
                  fetch(getApiUrl('/api/settings/site')),
-                 // FIX: Fetch from the new /api/catalog endpoint
                  fetch(getApiUrl('/api/catalog/sync-logs'), { headers: { 'Authorization': `Bearer ${token}` } }),
                  fetch(getApiUrl('/api/analytics/recent-events'), { headers: { 'Authorization': `Bearer ${token}` } })
              ]);
@@ -78,13 +91,14 @@ const Settings: React.FC<{token: string | null}> = ({token}) => {
     };
 
     useEffect(() => {
-        // FIX: Use window.location.origin for a robust URL that works in both dev (with proxy) and prod.
         const baseUrl = window.location.origin;
         setFeedUrls({
             csv: `${baseUrl}/feeds/facebook/products.csv`,
             xml: `${baseUrl}/feeds/facebook/products.xml`
         });
-        fetchAllData();
+        if (activeTab === 'pixels') {
+            fetchPixelTabData();
+        }
     }, [activeTab, token]);
 
     const handleSave = async () => {
@@ -102,7 +116,6 @@ const Settings: React.FC<{token: string | null}> = ({token}) => {
         setGeneratingFeed(true);
         setFeedFeedback('Generating...');
         try {
-            // FIX: Call the new /api/catalog/generate-feeds endpoint
             const res = await fetch(getApiUrl('/api/catalog/generate-feeds'), {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -110,7 +123,7 @@ const Settings: React.FC<{token: string | null}> = ({token}) => {
             const data = await res.json();
             if (!res.ok) throw new Error(data.message);
             setFeedFeedback(data.message);
-            fetchAllData(); // Refresh logs
+            fetchPixelTabData();
         } catch (err: any) {
             setFeedFeedback(`Error: ${err.message}`);
         } finally {
@@ -122,7 +135,6 @@ const Settings: React.FC<{token: string | null}> = ({token}) => {
         setSyncing(true);
         setSyncFeedback('Starting sync...');
         try {
-            // FIX: Call the new /api/catalog/sync endpoint
             const res = await fetch(getApiUrl('/api/catalog/sync'), {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -130,7 +142,7 @@ const Settings: React.FC<{token: string | null}> = ({token}) => {
             const data = await res.json();
             if (!res.ok) throw new Error(data.message || 'Sync failed.');
             setSyncFeedback(`Sync complete! ${data.status?.processedCount || 0} products processed.`);
-            fetchAllData();
+            fetchPixelTabData();
         } catch (err: any) {
             setSyncFeedback(`Error: ${err.message}`);
         } finally {
@@ -170,8 +182,6 @@ const Settings: React.FC<{token: string | null}> = ({token}) => {
     );
 
     const renderContent = () => {
-        if (loading) return <div>Loading...</div>;
-        
         const isCapiActive = siteSettings.metaAccessToken && siteSettings.metaPixelId;
         const lastFeedGen = syncLogs.find(log => log.service === 'feed-generation');
         const lastMetaSync = syncLogs.find(log => log.service === 'meta-catalog');
@@ -180,7 +190,12 @@ const Settings: React.FC<{token: string | null}> = ({token}) => {
             case 'header': return <HeaderSettingsComponent token={token} />;
             case 'footer': return <FooterSettingsComponent token={token} />;
             case 'homepage-seo': return <HomePageSEOSettings token={token} />;
-            case 'pixels': return (
+            case 'site': return <GeneralSettings token={token} />;
+            case 'tax': return <TaxSettings token={token} />;
+            case 'shipping': return <ShippingSettings token={token} />;
+            case 'pixels': 
+                if (loading) return <div>Loading Tracking & Catalogs settings...</div>;
+                return (
                 <div className="space-y-8">
                     {/* Credentials & Feeds */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -233,13 +248,46 @@ const Settings: React.FC<{token: string | null}> = ({token}) => {
                     {/* Event Status */}
                     <div className="bg-white p-6 rounded-xl shadow-md border">
                         <h4 className="font-bold text-gray-800">Event Tracking Status</h4>
-                        <p className="text-xs text-gray-500 mb-4">Core e-commerce events are tracked automatically across the customer journey.</p>
+                        <p className="text-xs text-gray-500 mb-4">Enable or disable core e-commerce events sent to Meta Pixel and your analytics.</p>
                         <div className="divide-y divide-gray-100">
-                            <EventStatusIndicator eventName="PageView" description="Fires on every page load across the site." />
-                            <EventStatusIndicator eventName="ViewContent" description="Fires when a user views a product details page." />
-                            <EventStatusIndicator eventName="AddToCart" description="Fires when a product is added to the cart." />
-                            <EventStatusIndicator eventName="InitiateCheckout" description="Fires when a user starts the checkout process." />
-                            <EventStatusIndicator eventName="Purchase" description="Fires after a successful payment is verified." />
+                             <EventToggleSwitch 
+                                eventName="PageView" 
+                                description="Fires on every page load across the site."
+                                isEnabled={siteSettings.trackPageView !== false}
+                                onChange={handleChange}
+                                name="trackPageView"
+                            />
+                            <EventToggleSwitch 
+                                eventName="ViewContent" 
+                                description="Fires when a user views a product details page."
+                                isEnabled={siteSettings.trackViewContent !== false}
+                                onChange={handleChange}
+                                name="trackViewContent"
+                            />
+                            <EventToggleSwitch 
+                                eventName="AddToCart" 
+                                description="Fires when a product is added to the cart."
+                                isEnabled={siteSettings.trackAddToCart !== false}
+                                onChange={handleChange}
+                                name="trackAddToCart"
+                            />
+                            <EventToggleSwitch 
+                                eventName="InitiateCheckout" 
+                                description="Fires when a user starts the checkout process."
+                                isEnabled={siteSettings.trackInitiateCheckout !== false}
+                                onChange={handleChange}
+                                name="trackInitiateCheckout"
+                            />
+                            <EventToggleSwitch 
+                                eventName="Purchase" 
+                                description="Fires after a successful payment is verified."
+                                isEnabled={siteSettings.trackPurchase !== false}
+                                onChange={handleChange}
+                                name="trackPurchase"
+                            />
+                        </div>
+                        <div className="text-right mt-4">
+                            <button onClick={handleSave} className="text-sm text-white bg-gray-800 px-4 py-2 rounded-md hover:bg-black">Save Tracking Settings</button>
                         </div>
                     </div>
                     
@@ -260,7 +308,7 @@ const Settings: React.FC<{token: string | null}> = ({token}) => {
                              <div className="lg:pl-8">
                                 <div className="flex justify-between items-center mb-4">
                                     <h4 className="font-bold text-gray-800">Live Server Event Feed</h4>
-                                    <button onClick={fetchAllData} className="p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100" title="Refresh Feed">
+                                    <button onClick={fetchPixelTabData} className="p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100" title="Refresh Feed">
                                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h5M20 20v-5h-5M20 4h-5v5M4 20h5v-5"/></svg>
                                     </button>
                                 </div>
@@ -302,9 +350,8 @@ const Settings: React.FC<{token: string | null}> = ({token}) => {
                     </div>
                 </div>
             );
-            case 'tax': return <div>Tax Settings</div>;
-            case 'shipping': return <div>Shipping Settings</div>;
-            case 'site': return <div>Site Settings</div>;
+            default:
+                return null;
         }
     };
 
@@ -312,13 +359,13 @@ const Settings: React.FC<{token: string | null}> = ({token}) => {
         <div className="space-y-6">
              <h2 className="text-2xl font-bold text-gray-800">Store Settings</h2>
              <div className="flex space-x-2 bg-gray-100 p-1 rounded-lg w-fit overflow-x-auto">
+                <TabButton id="site" label="General & Media" />
+                <TabButton id="tax" label="Taxes" />
+                <TabButton id="shipping" label="Shipping" />
                 <TabButton id="pixels" label="Tracking & Catalogs" />
                 <TabButton id="header" label="Header & Menu" />
                 <TabButton id="footer" label="Footer" />
                 <TabButton id="homepage-seo" label="Home Page SEO" />
-                <TabButton id="site" label="General & Media" />
-                <TabButton id="tax" label="Taxes" />
-                <TabButton id="shipping" label="Shipping" />
              </div>
              <div>
                  {renderContent()}

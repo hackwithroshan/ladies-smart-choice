@@ -159,9 +159,11 @@ const HomePage: React.FC<HomePageProps> = ({ user, logout }) => {
                           {slide.subtitle}
                       </p>
                       <div className="mt-8 sm:mt-10 max-w-sm mx-auto sm:max-w-none sm:flex sm:justify-center">
-                          <button className="px-8 py-3.5 border border-transparent text-base font-semibold rounded-full text-white shadow-lg hover:opacity-90 transition-transform transform hover:scale-105" style={{backgroundColor: COLORS.accent}}>
-                              {slide.buttonText}
-                          </button>
+                          {slide.buttonText && (
+                              <button className="px-8 py-3.5 border border-transparent text-base font-semibold rounded-full text-white shadow-lg hover:opacity-90 transition-transform transform hover:scale-105" style={{backgroundColor: COLORS.accent}}>
+                                  {slide.buttonText}
+                              </button>
+                          )}
                       </div>
                   </div>
                 </div>

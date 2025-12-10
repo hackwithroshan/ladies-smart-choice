@@ -4,9 +4,16 @@ import { User } from '../../types';
 import { COLORS } from '../../constants';
 import { getApiUrl } from '../../utils/apiHelper';
 
-// Extend User type locally to include backend-calculated stats
+// Extend User type locally to include backend-calculated stats and contact info
 interface AdminUser extends User {
     totalSpent?: number;
+    phone?: string;
+    shippingAddress?: {
+        address: string;
+        city: string;
+        postalCode: string;
+        country: string;
+    };
 }
 
 const Customers: React.FC<{token: string | null}> = ({token}) => {
@@ -245,35 +252,37 @@ const Customers: React.FC<{token: string | null}> = ({token}) => {
 
         {/* --- User Details Modal --- */}
         {isModalOpen && selectedUser && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm p-4">
-                <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-fade-in-up">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm p-4 animate-fade-in">
+                <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden">
                     
                     {/* Modal Header */}
-                    <div className="bg-gradient-to-r from-gray-900 to-gray-800 px-6 py-6 text-white flex justify-between items-start">
-                        <div className="flex items-center gap-4">
-                            {selectedUser.avatarUrl ? (
-                                <img className="h-16 w-16 rounded-full border-4 border-white shadow-md object-cover" src={selectedUser.avatarUrl} alt={selectedUser.name} />
-                            ) : (
-                                <div className="h-16 w-16 rounded-full border-4 border-white shadow-md bg-gradient-to-br from-rose-500 to-orange-600 flex items-center justify-center text-xl font-bold text-white">
-                                    {getInitials(selectedUser.name)}
-                                </div>
-                            )}
-                            <div>
-                                <h3 className="text-xl font-bold">{selectedUser.name}</h3>
-                                <p className="text-sm text-gray-300">{selectedUser.email}</p>
-                                <div className="flex gap-2 mt-2">
-                                    <span className="bg-white/20 text-white text-xs px-2 py-0.5 rounded">{selectedUser.role}</span>
-                                    <span className="bg-orange-500 text-white text-xs px-2 py-0.5 rounded">{selectedUser.segment}</span>
+                    <div className="bg-gray-50 px-6 py-6 border-b border-gray-200">
+                        <div className="flex justify-between items-start">
+                             <div className="flex items-center gap-4">
+                                {selectedUser.avatarUrl ? (
+                                    <img className="h-16 w-16 rounded-full border-4 border-white shadow-md object-cover" src={selectedUser.avatarUrl} alt={selectedUser.name} />
+                                ) : (
+                                    <div className="h-16 w-16 rounded-full border-4 border-white shadow-md bg-gradient-to-br from-rose-500 to-orange-600 flex items-center justify-center text-xl font-bold text-white">
+                                        {getInitials(selectedUser.name)}
+                                    </div>
+                                )}
+                                <div>
+                                    <h3 className="text-xl font-bold text-gray-900">{selectedUser.name}</h3>
+                                    <p className="text-sm text-gray-500">{selectedUser.email}</p>
+                                    <div className="flex gap-2 mt-2">
+                                        <span className="bg-purple-100 text-purple-800 text-xs font-semibold px-2 py-0.5 rounded-full">{selectedUser.role}</span>
+                                        <span className="bg-orange-100 text-orange-800 text-xs font-semibold px-2 py-0.5 rounded-full">{selectedUser.segment}</span>
+                                    </div>
                                 </div>
                             </div>
+                            <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full hover:bg-gray-100">
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
                         </div>
-                        <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-white transition-colors">
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                        </button>
                     </div>
 
                     {/* Modal Body */}
-                    <div className="p-6 space-y-6">
+                    <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto">
                         
                         {/* Stats Grid */}
                         <div className="grid grid-cols-2 gap-4">
@@ -286,6 +295,30 @@ const Customers: React.FC<{token: string | null}> = ({token}) => {
                                 <p className="text-xl font-bold text-blue-600 mt-1">{selectedUser.totalOrders}</p>
                             </div>
                         </div>
+
+                        {/* Contact & Address */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <h4 className="text-xs font-bold uppercase text-gray-500 mb-2">Contact Information</h4>
+                                <div className="space-y-2 text-sm">
+                                    <p><strong className="font-medium text-gray-600 w-20 inline-block">Email:</strong> {selectedUser.email}</p>
+                                    <p><strong className="font-medium text-gray-600 w-20 inline-block">Phone:</strong> {selectedUser.phone || 'N/A'}</p>
+                                    <p><strong className="font-medium text-gray-600 w-20 inline-block">Joined:</strong> {new Date(selectedUser.joinDate).toLocaleDateString()}</p>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 className="text-xs font-bold uppercase text-gray-500 mb-2">Last Known Address</h4>
+                                {selectedUser.shippingAddress ? (
+                                    <div className="text-sm text-gray-800 leading-relaxed">
+                                        <p>{selectedUser.shippingAddress.address}</p>
+                                        <p>{selectedUser.shippingAddress.city}, {selectedUser.shippingAddress.postalCode}</p>
+                                        <p>{selectedUser.shippingAddress.country}</p>
+                                    </div>
+                                ) : <p className="text-sm text-gray-400 italic">No address on file.</p>}
+                                <p className="text-xs text-gray-400 mt-1">(From most recent order)</p>
+                            </div>
+                        </div>
+
 
                         {/* Management Section */}
                         <div className="border-t border-gray-200 pt-6">
@@ -316,15 +349,15 @@ const Customers: React.FC<{token: string | null}> = ({token}) => {
                                     </div>
                                 </div>
 
-                                <div className="pt-4 flex justify-between items-center border-t border-gray-100 mt-4">
+                                <div className="pt-4 flex justify-between items-center border-t border-gray-100 mt-4 bg-red-50 p-3 rounded-lg border border-red-200">
                                     <div>
-                                        <p className="text-sm font-medium text-red-600">Danger Zone</p>
-                                        <p className="text-xs text-gray-500">Delete this user and all data.</p>
+                                        <p className="text-sm font-medium text-red-700">Danger Zone</p>
+                                        <p className="text-xs text-red-600">This action cannot be undone.</p>
                                     </div>
                                     <button 
                                         onClick={handleDeleteUser}
                                         disabled={actionLoading}
-                                        className="bg-white border border-red-300 text-red-600 hover:bg-red-50 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                                        className="bg-white border border-red-300 text-red-600 hover:bg-red-100 px-4 py-2 rounded-md text-sm font-medium transition-colors"
                                     >
                                         Delete User
                                     </button>

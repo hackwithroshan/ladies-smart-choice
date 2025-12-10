@@ -16,6 +16,7 @@ import { handleApiError, getFriendlyErrorMessage } from '../utils/errorHandler';
 import ErrorMessage from '../components/ErrorMessage';
 import { getApiUrl } from '../utils/apiHelper';
 import ErrorBoundary from '../components/ErrorBoundary';
+import MediaPicker from '../components/admin/MediaPicker';
 
 interface ShopVideo {
     _id: string;
@@ -30,6 +31,7 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const token = localStorage.getItem('token');
 
   // --- Data State ---
   const [product, setProduct] = useState<Product | null>(null);
@@ -45,7 +47,7 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
   const [selectedVideo, setSelectedVideo] = useState<ShopVideo | null>(null);
   
   // --- Reviews State ---
-  const [newReview, setNewReview] = useState({ rating: 5, comment: '', name: '' });
+  const [newReview, setNewReview] = useState({ rating: 5, comment: '', imageUrl: '' });
   const [submittingReview, setSubmittingReview] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
   
@@ -127,11 +129,12 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
-        // If the main CTA block is NOT visible on the screen, show the sticky bar.
-        setIsStickyBarVisible(!entry.isIntersecting && window.scrollY > 300);
+        // When the main "Add to Cart" button is NOT visible in the viewport, show the sticky bar.
+        // This is more reliable than checking scroll position.
+        setIsStickyBarVisible(!entry.isIntersecting);
       },
       { 
-        rootMargin: "-100px 0px 0px 0px", // A margin from the top of the viewport
+        // Trigger when the element is fully out of view.
         threshold: 0 
       }
     );
@@ -186,19 +189,26 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
 
   const submitReview = async (e: React.FormEvent) => {
       e.preventDefault();
-      if (!product) return;
+      if (!product || !token) return;
       setSubmittingReview(true);
       setReviewError(null);
       try {
           const res = await fetch(getApiUrl(`/api/products/${product.id}/reviews`), {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(newReview)
+              headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}` 
+              },
+              body: JSON.stringify({
+                  rating: newReview.rating,
+                  comment: newReview.comment,
+                  imageUrl: newReview.imageUrl
+              })
           });
           if (res.ok) {
               const saved = await res.json();
               setProduct(prev => prev ? ({ ...prev, reviews: [saved, ...(prev.reviews || [])] }) : null);
-              setNewReview({ rating: 5, comment: '', name: '' });
+              setNewReview({ rating: 5, comment: '', imageUrl: '' });
           } else {
               throw res;
           }
@@ -226,16 +236,25 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
 
   const images = [product.imageUrl, ...(product.galleryImages || [])];
   const discount = product.mrp ? Math.round(((product.mrp - product.price) / product.mrp) * 100) : 0;
+  
+  // --- UPDATED: More accurate review calculation ---
   const reviews = product.reviews || [];
-  const avgRating = reviews.length ? (reviews.reduce((a, b) => a + b.rating, 0) / reviews.length).toFixed(1) : '5.0';
-  const reviewCount = reviews.length || 1; 
+  const reviewCount = reviews.length;
+  const avgRating = reviewCount > 0 ? (reviews.reduce((a, b) => a + b.rating, 0) / reviewCount).toFixed(1) : null;
 
-  const productSchema = {
+  // --- ADDED: Helper for cleaning HTML and generating JSON-LD Schema ---
+  const stripHtml = (html: string) => {
+    if (typeof DOMParser === 'undefined') return html.replace(/<[^>]*>?/gm, '');
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    return doc.body.textContent || "";
+  };
+  
+  const productSchema: any = {
     "@context": "https://schema.org/",
     "@type": "Product",
     "name": product.name,
     "image": product.imageUrl,
-    "description": product.seoDescription || product.shortDescription || product.description,
+    "description": product.seoDescription || product.shortDescription || stripHtml(product.description),
     "sku": product.sku || product.id,
     "brand": {
       "@type": "Brand",
@@ -248,19 +267,22 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
       "price": product.price,
       "availability": product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
       "priceValidUntil": new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString()
-    },
-    "aggregateRating": {
+    }
+  };
+
+  if (reviewCount > 0 && avgRating) {
+    productSchema.aggregateRating = {
       "@type": "AggregateRating",
       "ratingValue": avgRating,
       "reviewCount": reviewCount
-    }
-  };
+    };
+  }
 
   return (
     <div className="bg-white min-h-screen font-sans text-[#333]">
       <Helmet>
         <title>{product.seoTitle || product.name} | Ladies Smart Choice</title>
-        <meta name="description" content={product.seoDescription || product.shortDescription || product.description.substring(0, 160)} />
+        <meta name="description" content={product.seoDescription || product.shortDescription || stripHtml(product.description).substring(0, 160)} />
         <meta property="og:title" content={product.seoTitle || product.name} />
         <meta property="og:description" content={product.seoDescription || product.shortDescription} />
         <meta property="og:image" content={product.imageUrl} />
@@ -323,9 +345,15 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
                                   )}
                               </div>
                               <div className="flex items-center gap-1 text-sm">
-                                  <StarIcon className="w-4 h-4 text-yellow-500" fill="currentColor"/>
-                                  <span className="font-bold">{avgRating}</span>
-                                  <span className="text-gray-400 underline cursor-pointer hover:text-gray-600">({reviewCount} reviews)</span>
+                                  {reviewCount > 0 && avgRating ? (
+                                      <>
+                                          <StarIcon className="w-4 h-4 text-yellow-500" fill="currentColor"/>
+                                          <span className="font-bold">{avgRating}</span>
+                                          <a href="#reviews" className="text-gray-400 underline cursor-pointer hover:text-gray-600">({reviewCount} reviews)</a>
+                                      </>
+                                  ) : (
+                                      <span className="text-gray-400">No reviews yet</span>
+                                  )}
                               </div>
                           </div>
                       </div>
@@ -436,60 +464,47 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
               </div>
           )}
 
-          <div className="mt-24 border-t border-gray-100 pt-16 pb-16">
+          <div id="reviews" className="mt-24 border-t border-gray-100 pt-16 pb-16">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
                   <div className="lg:col-span-4">
-                      <div className="bg-gray-50 p-8 rounded-xl">
-                          <h3 className="text-xl font-serif font-bold text-gray-900 mb-4">Write a Review</h3>
-                          <p className="text-sm text-gray-500 mb-6">Share your thoughts with other customers.</p>
-                          <form onSubmit={submitReview} className="space-y-4">
-                              <ErrorMessage message={reviewError} onClose={() => setReviewError(null)} />
-                              <div>
-                                  <label className="block text-xs font-bold uppercase text-gray-500 mb-2">Rating</label>
-                                  <div className="flex gap-1">
-                                      {[1, 2, 3, 4, 5].map(star => (
-                                          <button 
-                                              key={star} 
-                                              type="button" 
-                                              onClick={() => setNewReview({...newReview, rating: star})}
-                                              className="focus:outline-none transition-transform hover:scale-110"
-                                          >
-                                              <StarIcon className={`w-6 h-6 ${star <= newReview.rating ? 'text-yellow-500' : 'text-gray-300'}`} fill="currentColor" />
-                                          </button>
-                                      ))}
+                      {user ? (
+                          <div className="bg-gray-50 p-8 rounded-xl">
+                              <h3 className="text-xl font-serif font-bold text-gray-900 mb-4">Write a Review</h3>
+                              <p className="text-sm text-gray-500 mb-6">Share your thoughts as <span className="font-bold">{user.name}</span>.</p>
+                              <form onSubmit={submitReview} className="space-y-4">
+                                  <ErrorMessage message={reviewError} onClose={() => setReviewError(null)} />
+                                  <div>
+                                      <label className="block text-xs font-bold uppercase text-gray-500 mb-2">Rating</label>
+                                      <div className="flex gap-1">
+                                          {[1, 2, 3, 4, 5].map(star => (
+                                              <button key={star} type="button" onClick={() => setNewReview({ ...newReview, rating: star })} className="focus:outline-none transition-transform hover:scale-110">
+                                                  <StarIcon className={`w-6 h-6 ${star <= newReview.rating ? 'text-yellow-500' : 'text-gray-300'}`} fill="currentColor" />
+                                              </button>
+                                          ))}
+                                      </div>
                                   </div>
-                              </div>
-                              <div>
-                                  <label className="block text-xs font-bold uppercase text-gray-500 mb-1">Name</label>
-                                  <input 
-                                      type="text" 
-                                      required 
-                                      value={newReview.name}
-                                      onChange={e => setNewReview({...newReview, name: e.target.value})}
-                                      className="w-full border border-gray-300 rounded-md p-3 text-sm focus:ring-black focus:border-black"
-                                      placeholder="Your Name"
-                                  />
-                              </div>
-                              <div>
-                                  <label className="block text-xs font-bold uppercase text-gray-500 mb-1">Review</label>
-                                  <textarea 
-                                      required 
-                                      rows={4}
-                                      value={newReview.comment}
-                                      onChange={e => setNewReview({...newReview, comment: e.target.value})}
-                                      className="w-full border border-gray-300 rounded-md p-3 text-sm focus:ring-black focus:border-black"
-                                      placeholder="How was the fit? Material quality?"
-                                  />
-                              </div>
-                              <button 
-                                  type="submit" 
-                                  disabled={submittingReview}
-                                  className="w-full bg-black text-white font-bold py-3 rounded-md uppercase text-xs tracking-widest hover:bg-gray-900 disabled:opacity-50 transition-colors"
-                              >
-                                  {submittingReview ? 'Submitting...' : 'Submit Review'}
-                              </button>
-                          </form>
-                      </div>
+                                  <div>
+                                      <label className="block text-xs font-bold uppercase text-gray-500 mb-1">Review</label>
+                                      <textarea required rows={4} value={newReview.comment} onChange={e => setNewReview({ ...newReview, comment: e.target.value })} className="w-full border border-gray-300 rounded-md p-3 text-sm focus:ring-black focus:border-black" placeholder="How was the fit? Material quality?" />
+                                  </div>
+                                  <div>
+                                      <label className="block text-xs font-bold uppercase text-gray-500 mb-1">Add a Photo (Optional)</label>
+                                      <MediaPicker value={newReview.imageUrl} onChange={url => setNewReview({ ...newReview, imageUrl: url })} type="image" />
+                                  </div>
+                                  <button type="submit" disabled={submittingReview} className="w-full bg-black text-white font-bold py-3 rounded-md uppercase text-xs tracking-widest hover:bg-gray-900 disabled:opacity-50 transition-colors">
+                                      {submittingReview ? 'Submitting...' : 'Submit Review'}
+                                  </button>
+                              </form>
+                          </div>
+                      ) : (
+                          <div className="bg-gray-50 p-8 rounded-xl text-center">
+                              <h3 className="text-xl font-serif font-bold text-gray-900 mb-4">Want to share your thoughts?</h3>
+                              <p className="text-sm text-gray-600 mb-6">Please log in to write a review and share your feedback with other customers.</p>
+                              <Link to="/login" className="px-6 py-3 bg-rose-600 text-white font-semibold rounded-md hover:bg-rose-700 transition-colors">
+                                  Login to Review
+                              </Link>
+                          </div>
+                      )}
                   </div>
 
                   <div className="lg:col-span-8">
@@ -518,6 +533,9 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
                                               </div>
                                           </div>
                                           <p className="text-sm text-gray-600 leading-relaxed">{review.comment}</p>
+                                          {review.imageUrl && (
+                                            <img src={review.imageUrl} alt={`Review by ${review.name}`} className="mt-4 rounded-lg w-32 h-32 object-cover border"/>
+                                          )}
                                           <p className="text-xs text-gray-400 mt-3">{new Date(review.date).toLocaleDateString()}</p>
                                       </div>
                                   </div>

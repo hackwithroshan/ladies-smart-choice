@@ -1,9 +1,9 @@
 
-import React, { useState } from 'react';
-// FIX: The `react-router-dom` module is not resolving named exports correctly in this environment.
-// Switching to a namespace import (`import * as ...`) and then destructuring is a more robust way to access the exports.
+import React, { useState, useEffect } from 'react';
 import * as ReactRouterDom from 'react-router-dom';
 import AdminSidebar from '../components/admin/AdminSidebar';
+import AdminHeader from '../components/admin/AdminHeader';
+import GlobalSearch from '../components/admin/GlobalSearch';
 import Dashboard from '../components/admin/Dashboard';
 import Analytics from '../components/admin/Analytics';
 import ProductList from '../components/admin/ProductList';
@@ -14,23 +14,68 @@ import Discounts from '../components/admin/Discounts';
 import Settings from '../components/admin/Settings';
 import CMSManagement from '../components/admin/CMSManagement';
 import MediaLibrary from '../components/admin/MediaLibrary';
+import ContactSubmissions from '../components/admin/ContactSubmissions';
+import AdminProfile from '../components/admin/AdminProfile';
 import { COLORS } from '../constants';
 import ErrorBoundary from '../components/ErrorBoundary';
-import { User } from '../types';
+import { User, Product, Order } from '../types';
+import { getApiUrl } from '../utils/apiHelper';
 
-// Expanded view types to match Sidebar IDs
-type AdminView = 'dashboard' | 'analytics' | 'products' | 'inventory' | 'categories' | 'orders' | 'customers' | 'marketing' | 'discounts' | 'settings' | 'cms' | 'shop-videos' | 'slider' | 'media' | 'blogs' | 'pages';
+type AdminView = 'dashboard' | 'analytics' | 'products' | 'inventory' | 'categories' | 'orders' | 'customers' | 'marketing' | 'discounts' | 'settings' | 'cms' | 'shop-videos' | 'slider' | 'media' | 'blogs' | 'pages' | 'contact-messages' | 'admin-profile';
 
 interface AdminDashboardPageProps {
   user: User;
   logout: () => void;
 }
 
-const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ user, logout }) => {
+const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ user: initialUser, logout }) => {
   const [currentView, setCurrentView] = useState<AdminView>('dashboard');
-  // Initialize sidebar closed on mobile, open on desktop
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 1024);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const token = localStorage.getItem('token');
+  const [user, setUser] = useState(initialUser);
+
+  // Data for Global Search
+  const [products, setProducts] = useState<Product[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [customers, setCustomers] = useState<User[]>([]);
+
+  // Fetch data for global search on component mount
+  useEffect(() => {
+    const fetchSearchData = async () => {
+        try {
+            const [productsRes, ordersRes, customersRes] = await Promise.all([
+                fetch(getApiUrl('/api/products/all'), { headers: { 'Authorization': `Bearer ${token}` } }),
+                fetch(getApiUrl('/api/orders'), { headers: { 'Authorization': `Bearer ${token}` } }),
+                fetch(getApiUrl('/api/users'), { headers: { 'Authorization': `Bearer ${token}` } })
+            ]);
+            if (productsRes.ok) setProducts(await productsRes.json());
+            if (ordersRes.ok) setOrders(await ordersRes.json());
+            if (customersRes.ok) setCustomers(await customersRes.json());
+        } catch (error) {
+            console.error("Failed to fetch data for global search:", error);
+        }
+    };
+    fetchSearchData();
+  }, [token]);
+
+  // Keyboard shortcut for search
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+        if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
+            event.preventDefault();
+            setIsSearchOpen(true);
+        }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const handleUpdateUser = (updatedUser: User) => {
+      setUser(updatedUser);
+      // Also update localStorage so it persists on refresh
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+  };
 
   const renderView = () => {
     switch (currentView) {
@@ -39,7 +84,7 @@ const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ user, logout })
       case 'analytics':
         return <Analytics token={token} />;
       case 'products':
-      case 'inventory': // Reusing ProductList for now, can handle inventory specific logic inside if needed
+      case 'inventory':
         return <ProductList token={token} />;
       case 'orders':
         return <OrderList token={token} />;
@@ -53,8 +98,12 @@ const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ user, logout })
         return <Settings token={token} />;
       case 'media':
         return <MediaLibrary token={token} />;
+      case 'contact-messages':
+        return <ContactSubmissions token={token} />;
+      case 'admin-profile':
+        return <AdminProfile user={user} token={token} onUpdateUser={handleUpdateUser} />;
       
-      // Deep links into CMS Management
+      // CMS deep links
       case 'categories': 
         return <CMSManagement token={token} initialTab="collections" />;
       case 'shop-videos': 
@@ -73,28 +122,6 @@ const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ user, logout })
     }
   };
 
-  const getTitle = () => {
-      const titles: Record<string, string> = {
-          'dashboard': 'Dashboard Overview',
-          'analytics': 'Marketing Analytics',
-          'products': 'Product Management',
-          'inventory': 'Inventory Control',
-          'categories': 'Category & Collections',
-          'shop-videos': 'Shoppable Videos',
-          'orders': 'Order Management',
-          'customers': 'Customer Overview',
-          'marketing': 'Marketing Campaigns',
-          'discounts': 'Coupons & Discounts',
-          'settings': 'Store Settings',
-          'cms': 'Content Management',
-          'media': 'Media Library',
-          'blogs': 'Blog Posts',
-          'pages': 'Static Pages',
-          'slider': 'Homepage Sliders'
-      };
-      return titles[currentView] || currentView.replace('-', ' ');
-  };
-
   return (
     <div className="flex h-screen bg-gray-100 font-sans overflow-hidden">
       <AdminSidebar 
@@ -105,29 +132,29 @@ const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ user, logout })
         setIsOpen={setIsSidebarOpen} 
       />
       <div className="flex-1 flex flex-col h-full relative overflow-hidden">
-        {/* Main Content Header */}
-        <header className="bg-white shadow-sm p-4 flex justify-between items-center z-10 border-b flex-shrink-0">
-            <div className="flex items-center">
-                <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="lg:hidden text-gray-500 mr-4">
-                     <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
-                </button>
-                <h1 className="text-xl font-bold text-gray-800 capitalize">{getTitle()}</h1>
-            </div>
-            <div className="flex items-center space-x-4">
-                <a href="/" target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 font-medium hover:underline flex items-center gap-1">
-                    View Store
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                </a>
-            </div>
-        </header>
+        <AdminHeader 
+            user={user}
+            logout={logout}
+            toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+            openGlobalSearch={() => setIsSearchOpen(true)}
+            setCurrentView={setCurrentView}
+        />
         
-        {/* Main Content Area */}
         <main className="flex-1 overflow-y-auto p-6 md:p-8 admin-scroll">
             <ErrorBoundary>
               {renderView()}
             </ErrorBoundary>
         </main>
       </div>
+
+      <GlobalSearch 
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+        products={products}
+        orders={orders}
+        customers={customers}
+        setCurrentView={setCurrentView}
+      />
     </div>
   );
 };

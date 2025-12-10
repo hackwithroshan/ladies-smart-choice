@@ -4,6 +4,7 @@ const router = express.Router();
 const User = require('../models/User');
 const Order = require('../models/Order');
 const { protect, admin } = require('../middleware/authMiddleware');
+const bcrypt = require('bcryptjs');
 
 // @desc    Get all users
 // @route   GET /api/users
@@ -25,6 +26,9 @@ router.get('/', protect, admin, async (req, res) => {
             else if (totalSpent > 5000) segment = 'High-Value';
             else if (totalOrders > 1) segment = 'Returning';
 
+            // Get contact info from the most recent order
+            const recentOrder = userOrders.sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+
             return {
                 id: user._id,
                 name: user.name,
@@ -34,7 +38,9 @@ router.get('/', protect, admin, async (req, res) => {
                 avatarUrl: user.avatarUrl,
                 totalOrders,
                 totalSpent,
-                segment
+                segment,
+                phone: recentOrder ? recentOrder.customerPhone : undefined,
+                shippingAddress: recentOrder ? recentOrder.shippingAddress : undefined,
             };
         });
 
@@ -45,7 +51,71 @@ router.get('/', protect, admin, async (req, res) => {
     }
 });
 
-// @desc    Update user role
+
+// @desc    Get current user's profile
+// @route   GET /api/users/profile
+// @access  Private
+router.get('/profile', protect, async (req, res) => {
+    // req.user is populated by the 'protect' middleware
+    const user = await User.findById(req.user.id).select('-password');
+    if (user) {
+        res.json(user);
+    } else {
+        res.status(404).json({ message: 'User not found' });
+    }
+});
+
+
+// @desc    Update current user's profile
+// @route   PUT /api/users/profile
+// @access  Private
+router.put('/profile', protect, async (req, res) => {
+    const user = await User.findById(req.user.id);
+
+    if (user) {
+        user.name = req.body.name || user.name;
+        user.email = req.body.email || user.email;
+        user.avatarUrl = req.body.avatarUrl; // Allow clearing the avatar
+
+        const updatedUser = await user.save();
+
+        res.json({
+            id: updatedUser._id,
+            name: updatedUser.name,
+            email: updatedUser.email,
+            isAdmin: updatedUser.isAdmin,
+            role: updatedUser.role,
+            avatarUrl: updatedUser.avatarUrl,
+            joinDate: updatedUser.joinDate,
+        });
+    } else {
+        res.status(404).json({ message: 'User not found' });
+    }
+});
+
+// @desc    Change current user's password
+// @route   PUT /api/users/change-password
+// @access  Private
+router.put('/change-password', protect, async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
+    
+    if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: 'Please provide both current and new passwords.' });
+    }
+
+    const user = await User.findById(req.user.id);
+
+    if (user && (await user.matchPassword(currentPassword))) {
+        user.password = newPassword; // The pre-save hook will hash it
+        await user.save();
+        res.json({ message: 'Password updated successfully.' });
+    } else {
+        res.status(401).json({ message: 'Invalid current password.' });
+    }
+});
+
+
+// @desc    Update user role by ID
 // @route   PUT /api/users/:id
 // @access  Private/Admin
 router.put('/:id', protect, admin, async (req, res) => {

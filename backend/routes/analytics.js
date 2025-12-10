@@ -2,17 +2,36 @@
 const express = require('express');
 const router = express.Router();
 const AnalyticsEvent = require('../models/AnalyticsEvent');
+const SiteSettings = require('../models/SiteSettings');
 const { protect, admin } = require('../middleware/authMiddleware');
 const { sendCapiEvent } = require('../utils/facebookCapiService');
 
 // Endpoint to track events from the frontend
 router.post('/track', async (req, res) => {
     try {
+        const { eventType, eventId, data, path } = req.body;
+
+        // --- Check if tracking is enabled for this event ---
+        const settings = await SiteSettings.findOne();
+        const eventMap = {
+            PageView: 'trackPageView',
+            ViewContent: 'trackViewContent',
+            AddToCart: 'trackAddToCart',
+            InitiateCheckout: 'trackInitiateCheckout',
+            Purchase: 'trackPurchase',
+        };
+        const settingKey = eventMap[eventType];
+        
+        // If settings exist and the specific tracking toggle is explicitly set to false, skip tracking.
+        if (settings && settingKey && settings[settingKey] === false) {
+            console.log(`Tracking SKIPPED for event '${eventType}' as it is disabled in settings.`);
+            return res.status(200).json({ message: `Tracking disabled for ${eventType}.` });
+        }
+        
         const event = new AnalyticsEvent(req.body);
         await event.save();
         
         // --- Trigger Meta CAPI Event ---
-        const { eventType, eventId, data, path } = req.body;
         if (eventType && eventId) { // Required for CAPI
              await sendCapiEvent({
                 eventName: eventType,

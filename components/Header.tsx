@@ -17,93 +17,124 @@ interface HeaderProps {
   logout: () => void;
 }
 
+// --- Skeleton Loader Components for Search ---
+const SearchResultSkeleton: React.FC = () => (
+    <li className="flex items-center p-3">
+        <div className="w-12 h-12 rounded-md bg-gray-200 mr-4"></div>
+        <div className="flex-1 min-w-0 space-y-2">
+            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+        </div>
+    </li>
+);
+
+const FeaturedProductSkeleton: React.FC = () => (
+    <div className="flex items-center gap-3 p-2">
+        <div className="w-12 h-12 rounded bg-gray-200"></div>
+        <div className="space-y-1.5 flex-1">
+            <div className="h-3 bg-gray-200 rounded w-full"></div>
+            <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+            <div className="h-3 bg-gray-200 rounded w-1/3"></div>
+        </div>
+    </div>
+);
+
+
 const Header: React.FC<HeaderProps> = ({ user, logout }) => {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [openMobileCategory, setOpenMobileCategory] = useState<string | null>(null);
   
   // --- Centralized Data from Context ---
   const { headerSettings, categories, loading: siteDataLoading } = useSiteData();
 
-  // Search State
+  // --- Enhanced Search State ---
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
   const [searchResults, setSearchResults] = useState<Product[]>([]);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isSearchPanelOpen, setIsSearchPanelOpen] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(false);
+  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   
   const profileMenuRef = useRef<HTMLDivElement>(null);
-  const searchRef = useRef<HTMLDivElement>(null); // Ref for the entire search container
+  const searchRef = useRef<HTMLDivElement>(null);
   const { cartCount } = useCart();
   const navigate = useNavigate();
 
-  // Debounced search effect for API call
+  // --- Click outside handler for search panel & profile menu ---
   useEffect(() => {
-    if (searchTerm.length < 2) {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setIsSearchPanelOpen(false);
+      }
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setIsProfileMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+  
+  // --- Fetch initial featured products OR search results ---
+  useEffect(() => {
+    if (!isSearchPanelOpen) {
       setSearchResults([]);
-      setIsSearchOpen(false);
+      return;
+    }
+    
+    // Show featured products on focus with empty input
+    if (searchTerm.length < 2) {
+      setSearchResults([]); 
+      if (featuredProducts.length === 0) {
+        const fetchFeatured = async () => {
+          setIsInitialLoading(true);
+          try {
+            const response = await fetch(getApiUrl(`/products/featured`));
+            if (response.ok) setFeaturedProducts(await response.json());
+          } catch (error) { console.error('Featured products fetch failed:', error); } 
+          finally { setIsInitialLoading(false); }
+        };
+        fetchFeatured();
+      }
       return;
     }
 
+    // Debounce and search when user types
     const handler = setTimeout(async () => {
       setSearchLoading(true);
       try {
         const query = new URLSearchParams({ q: searchTerm });
-        if (selectedCategory) {
-          query.set('category', selectedCategory);
-        }
-        
-        const response = await fetch(getApiUrl(`/api/products/search?${query.toString()}`));
-        if (response.ok) {
-          const data = await response.json();
-          setSearchResults(data);
-          setIsSearchOpen(true);
-        } else {
-          setSearchResults([]);
-        }
+        const response = await fetch(getApiUrl(`/products/search?${query.toString()}`));
+        if (response.ok) setSearchResults(await response.json());
+        else setSearchResults([]);
       } catch (error) {
         console.error('Search failed:', error);
         setSearchResults([]);
       } finally {
         setSearchLoading(false);
       }
-    }, 300); // 300ms debounce
+    }, 300);
 
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [searchTerm, selectedCategory]);
+    return () => clearTimeout(handler);
+  }, [isSearchPanelOpen, searchTerm, featuredProducts.length]);
 
-  // Click outside handlers
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
-        setIsProfileMenuOpen(false);
-      }
-      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
-        setIsSearchOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const handleSearch = () => {
-    setIsSearchOpen(false);
+  const handleSearchNavigate = () => {
     if (searchTerm.trim()) {
-        const query = new URLSearchParams();
-        query.set('search', searchTerm);
-        if (selectedCategory) query.set('category', selectedCategory);
-        navigate(`/?${query.toString()}`);
+      setIsSearchPanelOpen(false);
+      // This is a placeholder for a future search results page.
+      // For now, it will just close the panel.
+      console.log(`Navigating to search page for: "${searchTerm.trim()}"`);
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
       if (e.key === 'Enter') {
-          handleSearch();
+          handleSearchNavigate();
       }
   };
 
   const brandColor = headerSettings.brandColor || COLORS.primary;
+  const trendingSearches = ['Summer Dress', 'Handbag', 'Red Heels', 'Necklace'];
 
   return (
     <header className="bg-white text-sm text-gray-600 relative z-50">
@@ -159,77 +190,93 @@ const Header: React.FC<HeaderProps> = ({ user, logout }) => {
               </div>
           </div>
 
-          {/* Search Bar - Full width on mobile */}
+          {/* Search Bar */}
           <div className="flex-1 w-full lg:max-w-xl lg:mx-8 relative" ref={searchRef}>
-            <div className="flex items-center border border-gray-200 rounded-md w-full relative">
-              <div className="relative hidden sm:block h-full">
-                 <select 
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="pl-4 pr-8 py-2.5 text-sm text-gray-600 bg-gray-50 rounded-l-md border-r border-gray-200 appearance-none focus:outline-none cursor-pointer hover:bg-gray-100 transition-colors h-full max-w-[150px] truncate"
-                 >
-                    <option value="">All Categories</option>
-                    {categories.map(cat => (
-                        <option key={cat.id} value={cat.name}>{cat.name}</option>
-                    ))}
-                 </select>
-                 <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
-                    <ChevronDownIcon className="h-4 w-4" />
-                </div>
-              </div>
+            <div className="flex items-center border-2 border-gray-200 rounded-lg w-full relative transition-colors focus-within:border-rose-500">
               <input 
                 type="text" 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                onFocus={() => setIsSearchPanelOpen(true)}
                 onKeyDown={handleKeyDown}
-                placeholder="Search for products..." 
-                className="w-full px-4 py-2.5 text-sm focus:outline-none rounded-l-md sm:rounded-l-none" 
+                placeholder="Search for dresses, handbags..." 
+                className="w-full pl-4 pr-12 py-3 text-base focus:outline-none rounded-lg" 
               />
               <button 
-                onClick={handleSearch}
-                className="text-white px-6 py-2.5 rounded-r-md transition-colors hover:opacity-90 flex items-center justify-center" 
+                onClick={handleSearchNavigate}
+                className="absolute right-0 text-white h-full px-5 rounded-r-md transition-colors hover:opacity-90 flex items-center justify-center" 
                 style={{backgroundColor: COLORS.accent}}
+                aria-label="Search"
               >
                 <SearchIcon />
               </button>
             </div>
 
-            {/* --- Search Recommendations Dropdown --- */}
-            {isSearchOpen && (
-                <div className="absolute top-full mt-2 w-full bg-white rounded-lg shadow-lg border border-gray-100 z-10 overflow-hidden animate-fade-in-up">
+            {/* --- Enhanced Search Panel --- */}
+            {isSearchPanelOpen && (
+                <div className="absolute top-full mt-2 w-full lg:w-[600px] lg:-translate-x-12 bg-white rounded-xl shadow-2xl border border-gray-200 z-10 overflow-hidden animate-fade-in-up">
                     {searchLoading ? (
-                        <div className="p-4 text-center text-sm text-gray-500">Searching...</div>
-                    ) : searchResults.length > 0 ? (
-                        <ul>
-                            {searchResults.map(product => (
-                                <li key={product.id}>
-                                    <Link 
-                                        to={`/product/${product.slug}`}
-                                        onClick={() => {
-                                            setIsSearchOpen(false);
-                                            setSearchTerm(''); // Clear search on click
-                                        }}
-                                        className="flex items-center p-3 hover:bg-gray-50 transition-colors"
-                                    >
-                                        <img src={product.imageUrl} alt={product.name} className="w-10 h-10 object-cover rounded-md mr-4"/>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium text-gray-800 truncate">{product.name}</p>
-                                            <p className="text-sm font-bold text-rose-600">₹{product.price.toLocaleString('en-IN')}</p>
-                                        </div>
-                                    </Link>
-                                </li>
-                            ))}
-                            <li className="border-t">
-                                <button 
-                                    onClick={handleSearch}
-                                    className="w-full text-center p-3 text-sm font-medium text-blue-600 hover:bg-gray-50"
-                                >
-                                    View all results for "{searchTerm}"
-                                </button>
-                            </li>
+                        <ul className="animate-pulse">
+                            <SearchResultSkeleton />
+                            <SearchResultSkeleton />
+                            <SearchResultSkeleton />
                         </ul>
+                    ) : searchTerm.length < 2 ? (
+                        // --- Initial Recommendations View ---
+                        <div className="flex flex-col md:flex-row">
+                            <div className="w-full md:w-1/3 p-4 border-b md:border-b-0 md:border-r">
+                                <h3 className="text-xs font-bold uppercase text-gray-400 mb-3">Trending</h3>
+                                <div className="space-y-2">
+                                    {trendingSearches.map(term => (
+                                        <button key={term} onClick={() => setSearchTerm(term)} className="block text-sm text-gray-700 hover:text-rose-600">{term}</button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="flex-1 p-4">
+                                <h3 className="text-xs font-bold uppercase text-gray-400 mb-3">Featured Products</h3>
+                                {isInitialLoading ? (
+                                    <div className="grid grid-cols-2 gap-4 animate-pulse">
+                                        <FeaturedProductSkeleton />
+                                        <FeaturedProductSkeleton />
+                                        <FeaturedProductSkeleton />
+                                        <FeaturedProductSkeleton />
+                                    </div>
+                                ) : featuredProducts.length > 0 ? (
+                                    <div className="grid grid-cols-2 gap-4">
+                                        {featuredProducts.map(product => (
+                                            <Link key={product.id} to={`/product/${product.slug}`} onClick={() => setIsSearchPanelOpen(false)} className="flex items-center gap-3 hover:bg-gray-50 p-2 rounded-md">
+                                                <img src={product.imageUrl} alt={product.name} className="w-12 h-12 object-cover rounded"/>
+                                                <div>
+                                                    <p className="text-xs font-semibold text-gray-800 line-clamp-2">{product.name}</p>
+                                                    <p className="text-xs font-bold text-rose-600">₹{product.price.toLocaleString()}</p>
+                                                </div>
+                                            </Link>
+                                        ))}
+                                    </div>
+                                ) : <p className="text-xs text-gray-400">No featured products.</p>}
+                            </div>
+                        </div>
                     ) : (
-                        <div className="p-4 text-center text-sm text-gray-500">No products found for "{searchTerm}".</div>
+                        // --- Active Search Results View ---
+                        <div>
+                            {searchResults.length > 0 ? (
+                                <ul>
+                                    {searchResults.map(product => (
+                                        <li key={product.id}>
+                                            <Link to={`/product/${product.slug}`} onClick={() => setIsSearchPanelOpen(false)} className="flex items-center p-3 hover:bg-gray-50 transition-colors border-b last:border-0">
+                                                <img src={product.imageUrl} alt={product.name} className="w-12 h-12 object-cover rounded-md mr-4"/>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-medium text-gray-800 truncate">{product.name}</p>
+                                                    <p className="text-sm font-bold text-rose-600">₹{product.price.toLocaleString()}</p>
+                                                </div>
+                                            </Link>
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <div className="p-8 text-center text-sm text-gray-500">No products found for "{searchTerm}".</div>
+                            )}
+                        </div>
                     )}
                 </div>
             )}
@@ -289,29 +336,60 @@ const Header: React.FC<HeaderProps> = ({ user, logout }) => {
             ))}
           </nav>
         </div>
-        <a href="#" className="font-semibold text-gray-800 hover:text-pink-600 transition-colors">Contact Us</a>
+        <Link to="/contact" className="font-semibold text-gray-800 hover:text-pink-600 transition-colors">Contact Us</Link>
       </div>
 
-      {/* Mobile Navigation Menu (Slide/Dropdown) */}
+      {/* --- Full-Screen Mobile Navigation Menu --- */}
       {isMobileMenuOpen && (
-          <div className="lg:hidden bg-white border-t border-gray-200 px-4 py-2 shadow-lg absolute w-full">
-              <nav className="flex flex-col space-y-3 py-2">
-                  {headerSettings.mainNavLinks.map(link => (
-                      <a key={link._id || link.text} href={link.url} className="block text-gray-800 font-medium hover:text-pink-600 py-2 border-b border-gray-100">{link.text}</a>
-                  ))}
-                  <div className="pt-2 border-t border-gray-200">
-                      <p className="text-xs text-gray-500 mb-2">My Account</p>
+          <div className="lg:hidden fixed inset-0 z-50 flex">
+              <div className="fixed inset-0 bg-black/60 animate-fade-in" onClick={() => setIsMobileMenuOpen(false)}></div>
+              <div className="relative w-4/5 max-w-sm bg-white h-full flex flex-col animate-slide-in-left">
+                  <div className="p-4 border-b flex justify-between items-center">
+                      <span className="font-bold text-lg">Menu</span>
+                      <button onClick={() => setIsMobileMenuOpen(false)} className="p-2">
+                          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                      </button>
+                  </div>
+                  <nav className="flex-1 overflow-y-auto p-4 space-y-4">
+                      <div>
+                          <p className="text-xs font-bold uppercase text-gray-400 px-2 mb-2">Shop by Category</p>
+                          <div className="space-y-1">
+                              {categories.map(category => (
+                                  <div key={category.id}>
+                                      <button onClick={() => setOpenMobileCategory(openMobileCategory === category.id ? null : category.id)} className="w-full flex justify-between items-center p-2 rounded-md hover:bg-gray-100 font-medium">
+                                          <span>{category.name}</span>
+                                          <ChevronDownIcon className={`transition-transform ${openMobileCategory === category.id ? 'rotate-180' : ''}`} />
+                                      </button>
+                                      {openMobileCategory === category.id && (
+                                          <div className="pl-4 mt-1 space-y-1 border-l-2 ml-2">
+                                              {category.subcategories.map(sub => (
+                                                  <Link key={sub.id} to="/" className="block p-2 text-gray-600 hover:text-black rounded-md text-sm">{sub.name}</Link>
+                                              ))}
+                                          </div>
+                                      )}
+                                  </div>
+                              ))}
+                          </div>
+                      </div>
+                      <div className="border-t pt-4">
+                           <p className="text-xs font-bold uppercase text-gray-400 px-2 mb-2">More</p>
+                           {headerSettings.mainNavLinks.map(link => (
+                               <a key={link._id || link.text} href={link.url} className="block font-medium p-2 rounded-md hover:bg-gray-100">{link.text}</a>
+                           ))}
+                      </div>
+                  </nav>
+                  <div className="p-4 border-t">
                       {user ? (
-                          <>
-                            <p className="font-medium text-gray-800 mb-2">{user.name}</p>
-                            <Link to={user.isAdmin ? "/admin" : "/dashboard"} className="block text-pink-600 py-1">Dashboard</Link>
-                            <button onClick={logout} className="block text-red-600 py-1">Logout</button>
-                          </>
+                          <div className="space-y-2">
+                            <p className="text-sm">Signed in as <span className="font-bold">{user.name}</span></p>
+                            <Link to={user.isAdmin ? "/admin" : "/dashboard"} className="block text-center w-full py-2 bg-gray-800 text-white font-medium rounded-md">Dashboard</Link>
+                            <button onClick={logout} className="block text-center w-full py-2 text-red-600 font-medium rounded-md hover:bg-red-50">Logout</button>
+                          </div>
                       ) : (
-                          <Link to="/login" className="block text-pink-600 font-bold py-2">Login / Register</Link>
+                          <Link to="/login" className="block text-center w-full py-3 bg-rose-600 text-white font-bold rounded-md shadow-sm">Login / Register</Link>
                       )}
                   </div>
-              </nav>
+              </div>
           </div>
       )}
     </header>

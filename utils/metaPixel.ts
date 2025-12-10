@@ -33,11 +33,8 @@ export const initFacebookPixel = (pixelId: string) => {
 
   window.fbq('init', pixelId);
   
-  // --- Track the initial PageView with a unique event ID for deduplication ---
-  // The masterTracker is not used here to avoid circular dependencies and because this is a one-time setup event.
-  const eventId = `pageview_${Date.now()}`;
-  window.fbq('track', 'PageView', {}, { event_id: eventId });
-  trackUserEvent('PageView', { eventId });
+  // The initial PageView event is now handled by the MasterTracker component to ensure
+  // it fires consistently on initial load and all subsequent route changes.
   
   console.log(`✅ Meta Pixel Initialized with ID: ${pixelId}`);
 };

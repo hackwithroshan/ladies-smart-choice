@@ -74,7 +74,7 @@ router.post('/sync', protect, admin, async (req, res) => {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    requests: JSON.stringify(requests),
+                    requests: requests, // FIX: Removed the incorrect inner JSON.stringify()
                     item_type: 'PRODUCT_ITEM'
                 })
             });

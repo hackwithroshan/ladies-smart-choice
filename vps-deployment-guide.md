@@ -11,7 +11,7 @@ Follow these steps exactly to ensure a successful deployment.
 
 Before you begin, make sure you have:
 1.  **A VPS Server:** Running Ubuntu 20.04 or 22.04 with root access.
-2.  **A Domain Name:** Pointing to your VPS server's IP address. (e.g., `your_domain.com`).
+2.  **A Domain Name:** `ladiessmartchoice.com`, pointing to your VPS server's IP address.
 3.  **A GitHub Repository:** Your entire project code pushed to a private GitHub repository.
 
 ---
@@ -70,14 +70,13 @@ Press `y` and `Enter` when prompted to proceed.
 Clone your project repository into the `/var/www/` directory, which is the standard for web projects.
 
 1.  **Create project directory and navigate into it:**
-    Replace `your_project_name` with a name you prefer (e.g., `ladies-smart-choice`).
     ```bash
-    sudo mkdir -p /var/www/your_project_name
-    cd /var/www/your_project_name
+    sudo mkdir -p /var/www/ladies-smart-choice
+    cd /var/www/ladies-smart-choice
     ```
 
 2.  **Clone your repository:**
-    Replace `YOUR_GITHUB_REPO_URL` with your repository's URL.
+    Replace `YOUR_GITHUB_REPO_URL` with your repository's URL (e.g., `https://github.com/your_username/ladies-smart-choice.git`).
     ```bash
     sudo git clone YOUR_GITHUB_REPO_URL .
     ```
@@ -97,14 +96,14 @@ Clone your project repository into the `/var/www/` directory, which is the stand
     ```bash
     sudo nano .env
     ```
-    Copy the entire block below, **replace all placeholder values with your real production data**, and paste it into the `nano` editor.
+    Copy the entire block below, **replace placeholder values with your real production data**, and paste it into the `nano` editor.
 
     ```ini
     NODE_ENV=production
     PORT=5000
     MONGO_URI=your_production_mongodb_uri_here
     JWT_SECRET=generate_a_very_long_random_secret_string_for_production
-    FRONTEND_URL=https://your_domain.com
+    FRONTEND_URL=https://ladiessmartchoice.com
 
     # Production Razorpay Keys (Live Mode)
     RAZORPAY_KEY_ID=your_live_key_id
@@ -115,6 +114,7 @@ Clone your project repository into the `/var/www/` directory, which is the stand
     EMAIL_PORT=your_smtp_port
     EMAIL_USER=your_smtp_user
     EMAIL_PASS=your_smtp_password
+    ADMIN_EMAIL=your_admin_notification_email
     ```
     To save and exit, press `Ctrl+X`, then `Y`, then `Enter`.
 
@@ -132,7 +132,7 @@ The frontend needs to be built into static HTML, CSS, and JS files.
 
 1.  **Navigate to the project root:**
     ```bash
-    cd /var/www/your_project_name
+    cd /var/www/ladies-smart-choice
     ```
 2.  **Install all dependencies** (Vite is a dev dependency needed for the build):
     ```bash
@@ -150,7 +150,7 @@ The frontend needs to be built into static HTML, CSS, and JS files.
 
 1.  **Navigate to the project root directory:**
     ```bash
-    cd /var/www/your_project_name
+    cd /var/www/ladies-smart-choice
     ```
 
 2.  **Start your server using PM2:**
@@ -178,25 +178,28 @@ The frontend needs to be built into static HTML, CSS, and JS files.
 Nginx will act as the public-facing web server. It will serve the React frontend and forward API requests to your backend (running on port 5000).
 
 1.  **Create an Nginx Configuration File:**
-    **IMPORTANT:** Replace `your_domain.com` with your actual domain name in this command.
     ```bash
-    sudo nano /etc/nginx/sites-available/your_domain.com
+    sudo nano /etc/nginx/sites-available/ladiessmartchoice.com
     ```
 
 2.  **Paste the following configuration.** This is the most important step.
-    *   Replace `your_domain.com www.your_domain.com` with your actual domain.
-    *   Replace `/var/www/your_project_name` with the actual path to your project.
 
     ```nginx
     server {
+        # Listen on both IPv4 and IPv6 for modern compatibility
         listen 80;
-        server_name your_domain.com www.your_domain.com;
+        listen [::]:80;
+        
+        server_name ladiessmartchoice.com www.ladiessmartchoice.com;
 
         # Main route serves the frontend build files
-        root /var/www/your_project_name/dist;
+        root /var/www/ladies-smart-choice/dist;
         index index.html;
 
-        # Handle API requests by forwarding them to your backend on port 5000
+        # IMPORTANT CLARIFICATION:
+        # The line below tells Nginx to forward API requests internally to your Node.js app,
+        # which is running on the SAME server at port 5000. 
+        # "localhost" is correct here and should NOT be changed to your domain name.
         location /api {
             proxy_pass http://localhost:5000;
             proxy_http_version 1.1;
@@ -226,23 +229,22 @@ Nginx will act as the public-facing web server. It will serve the React frontend
     Save and exit (`Ctrl+X`, `Y`, `Enter`).
 
 3.  **Enable the new configuration by creating a symbolic link:**
-    **IMPORTANT:** Replace `your_domain.com` with the *exact same filename* you used above.
     ```bash
-    sudo ln -s /etc/nginx/sites-available/your_domain.com /etc/nginx/sites-enabled/
+    sudo ln -s /etc/nginx/sites-available/ladiessmartchoice.com /etc/nginx/sites-enabled/
     ```
 
 4.  **Test and Restart Nginx:**
     ```bash
     sudo nginx -t
     ```
-    If you see `syntax is ok` and `test is successful`, you are good to go! If not, double-check your domain and paths in the config file.
+    If you see `syntax is ok` and `test is successful`, you are good to go! If not, double-check the config file for typos.
 
     Once the test is successful, restart Nginx to apply the changes:
     ```bash
     sudo systemctl restart nginx
     ```
 
-At this point, you should be able to visit `http://your_domain.com` and see your website!
+At this point, you should be able to visit `http://ladiessmartchoice.com` and see your website!
 
 ---
 
@@ -253,10 +255,9 @@ At this point, you should be able to visit `http://your_domain.com` and see your
     sudo apt-get install certbot python3-certbot-nginx -y
     ```
 2.  **Run Certbot:** It will automatically detect your domain from Nginx, get a certificate, and configure Nginx for you.
-    **IMPORTANT:** Replace `your_domain.com` and `www.your_domain.com` with your actual domain names.
     
     ```bash
-    sudo certbot --nginx -d your_domain.com -d www.your_domain.com
+    sudo certbot --nginx -d ladiessmartchoice.com -d www.ladiessmartchoice.com
     ```
     Follow the on-screen prompts. When asked about redirecting traffic, choose the option to **redirect all HTTP traffic to HTTPS**.
 
@@ -264,20 +265,20 @@ At this point, you should be able to visit `http://your_domain.com` and see your
 
 ### **Deployment Complete!**
 
-Your site is now live, secure, and running robustly at `https://your_domain.com`.
+Your site is now live, secure, and running robustly at `https://ladiessmartchoice.com`.
 
 -   To check your backend logs, run: `pm2 logs ladies-smart-choice-app`
--   To restart your backend after an update, run: `pm2 restart ladies-smart-choice-app`
+-   To restart your backend after an update, run: `pm2 restart ladies-smart-choice-app --update-env`
 
 ### **How to Update Your Live Application**
 
 1.  **SSH into your server:** `ssh root@YOUR_SERVER_IP`
-2.  **Navigate to your project directory:** `cd /var/www/your_project_name`
+2.  **Navigate to your project directory:** `cd /var/www/ladies-smart-choice`
 3.  **Pull the latest code from GitHub:** `sudo git pull`
 4.  **Install any new dependencies:**
     -   For backend: `cd backend && sudo npm run install-prod && cd ..`
     -   For frontend: `sudo npm install`
 5.  **Rebuild the frontend:** `sudo npm run build`
-6.  **Restart the backend application:** `pm2 restart ladies-smart-choice-app`
+6.  **Restart the backend application with new environment variables:** `pm2 restart ladies-smart-choice-app --update-env`
 
 Your changes will now be live.

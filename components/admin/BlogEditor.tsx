@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { BlogPost } from '../../types';
 import { COLORS } from '../../constants';
 import { getApiUrl } from '../../utils/apiHelper';
+import MediaPicker from './MediaPicker';
+import RichTextEditor from './RichTextEditor';
 
 const BlogEditor: React.FC<{ token: string | null }> = ({ token }) => {
     const [blogs, setBlogs] = useState<BlogPost[]>([]);
@@ -141,21 +143,28 @@ const BlogEditor: React.FC<{ token: string | null }> = ({ token }) => {
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Featured Image URL</label>
-                                <input type="text" value={editingBlog.imageUrl || ''} onChange={e => setEditingBlog({...editingBlog, imageUrl: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"/>
+                                <label className="block text-sm font-medium text-gray-700">Featured Image</label>
+                                <MediaPicker 
+                                    value={editingBlog.imageUrl || ''} 
+                                    onChange={url => setEditingBlog(prev => ({ ...prev, imageUrl: url }))} 
+                                    type="image" 
+                                />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Excerpt (Short Summary)</label>
                                 <textarea rows={3} value={editingBlog.excerpt || ''} onChange={e => setEditingBlog({...editingBlog, excerpt: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"/>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Content (HTML Supported)</label>
-                                <textarea required rows={15} value={editingBlog.content || ''} onChange={e => setEditingBlog({...editingBlog, content: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 font-mono text-sm"/>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Content</label>
+                                <RichTextEditor
+                                    value={editingBlog.content || ''}
+                                    onChange={(val) => setEditingBlog(prev => ({...prev, content: val}))}
+                                />
                             </div>
                         </form>
                         <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
-                            <button onClick={() => setIsEditorOpen(false)} className="px-4 py-2 bg-white border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100">Cancel</button>
-                            <button onClick={handleSave} className="px-4 py-2 text-white rounded-md hover:opacity-90" style={{ backgroundColor: COLORS.accent }}>Save Post</button>
+                            <button type="button" onClick={() => setIsEditorOpen(false)} className="px-4 py-2 bg-white border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100">Cancel</button>
+                            <button type="button" onClick={handleSave} className="px-4 py-2 text-white rounded-md hover:opacity-90" style={{ backgroundColor: COLORS.accent }}>Save Post</button>
                         </div>
                     </div>
                 </div>

@@ -4,7 +4,7 @@ const router = express.Router();
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const { sendPasswordResetOTP } = require('../utils/emailService');
+const { sendPasswordResetOTP, sendWelcomeEmail } = require('../utils/emailService');
 
 const generateToken = (id) => {
     return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
@@ -22,6 +22,14 @@ router.post('/register', async (req, res) => {
         }
         const user = await User.create({ name, email, password });
         if (user) {
+            // --- SEND WELCOME EMAIL (Fire and forget) ---
+            try {
+                await sendWelcomeEmail(user.email, user.name);
+            } catch (emailError) {
+                console.error(`Failed to send welcome email to ${user.email}:`, emailError);
+            }
+            // --- END ---
+
             res.status(201).json({
                 token: generateToken(user._id),
                 user: {

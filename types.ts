@@ -11,6 +11,8 @@ export interface Review {
   rating: number;
   comment: string;
   date: string;
+  imageUrl?: string;
+  userId?: string;
 }
 
 export interface Product {

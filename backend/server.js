@@ -41,12 +41,18 @@ app.use('/api/media', require('./routes/media'));
 app.use('/api/campaigns', require('./routes/campaigns'));
 app.use('/api/discounts', require('./routes/discounts'));
 app.use('/api/analytics', require('./routes/analytics'));
+app.use('/api/contact', require('./routes/contact'));
+app.use('/api/notifications', require('./routes/notifications'));
 // Refactored: All feed/catalog routes are now under /api/catalog
 app.use('/api/catalog', require('./routes/feed')); 
 app.use('/api/integrations', require('./routes/integrations'));
 
 // Efficient App Data route
 app.use('/api/app-data', require('./routes/appData'));
+
+// Models (for registration with Mongoose)
+require('./models/ContactSubmission');
+require('./models/StoreDetails');
 
 
 // --- Serve Frontend in Production ---

@@ -19,10 +19,10 @@ const MegaMenu: React.FC = () => {
     if (isOpen && !featuredProductFetched.current) {
       const fetchFeatured = async () => {
         try {
-          const res = await fetch(getApiUrl('/api/products/featured'));
+          const res = await fetch(getApiUrl('/products/featured'));
           if (res.ok) {
             const data = await res.json();
-            setFeaturedProduct(data);
+            setFeaturedProduct(data[0] || null); // API now returns an array, take the first item
             featuredProductFetched.current = true; // Mark as fetched
           }
         } catch (error) {

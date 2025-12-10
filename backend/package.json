@@ -20,6 +20,7 @@
     "node-cron": "^3.0.3",
     "node-fetch": "^2.6.9",
     "nodemailer": "^6.9.13",
+    "pdfkit": "^0.15.0",
     "razorpay": "^2.8.6",
     "xmlbuilder2": "^3.1.1"
   },

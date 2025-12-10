@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Slide } from '../../types';
 import { COLORS } from '../../constants';
 import { getApiUrl } from '../../utils/apiHelper';
+import MediaPicker from './MediaPicker';
 
 const emptySlide: Omit<Slide, '_id'> = {
     imageUrl: '',
@@ -52,6 +53,11 @@ const SliderSettings: React.FC<{ token: string | null }> = ({ token }) => {
     };
 
     const handleSaveSlide = async () => {
+        if (!editingSlide.imageUrl) {
+            alert('An image is required to save the slide.');
+            return;
+        }
+
         const isEditing = '_id' in editingSlide;
         const url = isEditing ? getApiUrl(`/api/slides/${editingSlide._id}`) : getApiUrl('/api/slides');
         const method = isEditing ? 'PUT' : 'POST';
@@ -114,8 +120,8 @@ const SliderSettings: React.FC<{ token: string | null }> = ({ token }) => {
                         <div key={slide._id} className="border rounded-lg overflow-hidden shadow">
                             <img src={slide.imageUrl} alt={slide.title} className="h-40 w-full object-cover" />
                             <div className="p-4">
-                                <h3 className="font-bold text-lg truncate">{slide.title}</h3>
-                                <p className="text-sm text-gray-600 truncate">{slide.subtitle}</p>
+                                <h3 className="font-bold text-lg truncate">{slide.title || 'Untitled Slide'}</h3>
+                                <p className="text-sm text-gray-600 truncate">{slide.subtitle || 'No subtitle'}</p>
                                 <div className="mt-4 flex justify-end space-x-2">
                                     <button onClick={() => handleOpenModal(slide)} className="text-sm text-blue-600 hover:text-blue-800 font-medium">Edit</button>
                                     <button onClick={() => handleDeleteSlide(slide._id!)} className="text-sm text-red-600 hover:text-red-800 font-medium">Delete</button>
@@ -127,25 +133,30 @@ const SliderSettings: React.FC<{ token: string | null }> = ({ token }) => {
             </div>
 
             {isModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 z-40 flex justify-center items-center">
-                    <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg z-50">
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-40 flex justify-center items-center p-4 animate-fade-in">
+                    <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl z-50">
                         <h3 className="text-xl font-bold mb-4">{'_id' in editingSlide ? 'Edit Slide' : 'Add New Slide'}</h3>
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Image URL</label>
-                                <input type="text" name="imageUrl" value={editingSlide.imageUrl} onChange={handleInputChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-orange-500 focus:border-orange-500"/>
+                                <label className="block text-sm font-medium text-gray-700">Slide Image <span className="text-red-500">*</span></label>
+                                <MediaPicker 
+                                    value={editingSlide.imageUrl || ''} 
+                                    onChange={url => setEditingSlide(prev => ({ ...prev, imageUrl: url }))} 
+                                    type="image" 
+                                />
+                                <p className="mt-2 text-xs text-gray-500">Recommended size: 1905x600 pixels for best desktop appearance.</p>
                             </div>
                              <div>
-                                <label className="block text-sm font-medium text-gray-700">Title</label>
-                                <input type="text" name="title" value={editingSlide.title} onChange={handleInputChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-orange-500 focus:border-orange-500"/>
+                                <label className="block text-sm font-medium text-gray-700">Title <span className="text-gray-400 font-normal">(Optional)</span></label>
+                                <input type="text" name="title" value={editingSlide.title || ''} onChange={handleInputChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-orange-500 focus:border-orange-500"/>
                             </div>
                              <div>
-                                <label className="block text-sm font-medium text-gray-700">Subtitle</label>
-                                <input type="text" name="subtitle" value={editingSlide.subtitle} onChange={handleInputChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-orange-500 focus:border-orange-500"/>
+                                <label className="block text-sm font-medium text-gray-700">Subtitle <span className="text-gray-400 font-normal">(Optional)</span></label>
+                                <input type="text" name="subtitle" value={editingSlide.subtitle || ''} onChange={handleInputChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-orange-500 focus:border-orange-500"/>
                             </div>
                              <div>
-                                <label className="block text-sm font-medium text-gray-700">Button Text</label>
-                                <input type="text" name="buttonText" value={editingSlide.buttonText} onChange={handleInputChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-orange-500 focus:border-orange-500"/>
+                                <label className="block text-sm font-medium text-gray-700">Button Text <span className="text-gray-400 font-normal">(Optional)</span></label>
+                                <input type="text" name="buttonText" value={editingSlide.buttonText || ''} onChange={handleInputChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-orange-500 focus:border-orange-500"/>
                             </div>
                         </div>
                         <div className="mt-6 flex justify-end space-x-3">

@@ -86,7 +86,7 @@ const importData = async () => {
     await HeaderSetting.create({
       logoText: 'Ladies Smart Choice',
       phoneNumber: '+91 987 654 3210',
-      topBarLinks: [{ text: 'About Us', url: '/pages/about' }, { text: 'Order Tracking', url: '#' }, { text: 'Contact Us', url: '/pages/contact' }, { text: 'Blog', url: '/blogs' }],
+      topBarLinks: [{ text: 'About Us', url: '/pages/about' }, { text: 'Order Tracking', url: '#' }, { text: 'Contact Us', url: '/contact' }, { text: 'Blog', url: '/blogs' }],
       mainNavLinks: [{ text: 'New Arrivals', url: '#' }, { text: 'Clothing', url: '#' }, { text: 'Sale', url: '#' }]
     });
 
@@ -96,7 +96,7 @@ const importData = async () => {
       socialLinks: [{ platform: 'Facebook', url: '#' }, { platform: 'Instagram', url: '#' }, { platform: 'Twitter', url: '#' }],
       columns: [
           { title: 'Shop', links: [{ text: 'Clothing', url: '#' }, { text: 'Footwear', url: '#' }, { text: 'Accessories', url: '#' }] },
-          { title: 'Support', links: [{ text: 'Contact Us', url: '/pages/contact' }, { text: 'FAQs', url: '/pages/faq' }] },
+          { title: 'Support', links: [{ text: 'Contact Us', url: '/contact' }, { text: 'FAQs', url: '/pages/faq' }] },
           { title: 'Company', links: [{ text: 'About Us', url: '/pages/about' }, { text: 'Privacy Policy', url: '/pages/privacy-policy' }] }
       ]
     });

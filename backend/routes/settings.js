@@ -7,6 +7,7 @@ const HeaderSetting = require('../models/HeaderSetting');
 const FooterSetting = require('../models/FooterSetting');
 const SiteSettings = require('../models/SiteSettings');
 const HomePageSetting = require('../models/HomePageSetting');
+const StoreDetails = require('../models/StoreDetails');
 
 // --- Header Settings ---
 router.get('/header', async (req, res) => {
@@ -50,6 +51,17 @@ router.get('/homepage', async (req, res) => {
 router.put('/homepage', protect, admin, async (req, res) => {
     const settings = await HomePageSetting.findOneAndUpdate({}, req.body, { new: true, upsert: true });
     res.json(settings);
+});
+
+// --- NEW: Store Business Details ---
+router.get('/store-details', async (req, res) => {
+    const details = await StoreDetails.findOne();
+    res.json(details || {});
+});
+
+router.put('/store-details', protect, admin, async (req, res) => {
+    const details = await StoreDetails.findOneAndUpdate({}, req.body, { new: true, upsert: true });
+    res.json(details);
 });
 
 module.exports = router;
