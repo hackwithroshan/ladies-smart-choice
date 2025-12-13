@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { ContentPage } from '../../types';
 import { COLORS } from '../../constants';
 import { getApiUrl } from '../../utils/apiHelper';
+import RichTextEditor from './RichTextEditor';
 
 const PageEditor: React.FC<{ token: string | null }> = ({ token }) => {
     const [pages, setPages] = useState<ContentPage[]>([]);
@@ -116,32 +117,42 @@ const PageEditor: React.FC<{ token: string | null }> = ({ token }) => {
             {/* Editor Overlay */}
             {isEditorOpen && (
                 <div className="fixed inset-0 z-50 flex justify-end bg-black bg-opacity-50 backdrop-blur-sm">
-                    <div className="w-full max-w-2xl bg-white h-full shadow-2xl flex flex-col animate-fade-in-right">
+                    <div className="w-full max-w-4xl bg-white h-full shadow-2xl flex flex-col animate-fade-in-right">
                         <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
                             <h2 className="text-lg font-bold text-gray-800">{editingPage.id ? 'Edit Page' : 'New Page'}</h2>
                             <button onClick={() => setIsEditorOpen(false)} className="text-gray-500 hover:text-gray-700">Close</button>
                         </div>
                         <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-6 space-y-6">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Page Title</label>
-                                <input type="text" required value={editingPage.title || ''} onChange={e => handleTitleChange(e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"/>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-2 gap-6">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Page Title</label>
+                                    <input type="text" required value={editingPage.title || ''} onChange={e => handleTitleChange(e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"/>
+                                </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">Slug</label>
                                     <input type="text" required value={editingPage.slug || ''} onChange={e => setEditingPage({...editingPage, slug: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-gray-50"/>
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Visibility</label>
-                                    <select value={editingPage.status} onChange={e => setEditingPage({...editingPage, status: e.target.value as any})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
-                                        <option value="Hidden">Hidden</option>
-                                        <option value="Published">Published</option>
-                                    </select>
-                                </div>
                             </div>
+                            
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Page Content (HTML)</label>
-                                <textarea required rows={20} value={editingPage.content || ''} onChange={e => setEditingPage({...editingPage, content: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 font-mono text-sm"/>
+                                <label className="block text-sm font-medium text-gray-700">Visibility</label>
+                                <select value={editingPage.status} onChange={e => setEditingPage({...editingPage, status: e.target.value as any})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                                    <option value="Hidden">Hidden</option>
+                                    <option value="Published">Published</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Page Content</label>
+                                <div className="border rounded-md shadow-sm">
+                                    <RichTextEditor
+                                        value={editingPage.content || ''}
+                                        onChange={(val) => setEditingPage(prev => ({...prev, content: val}))}
+                                    />
+                                </div>
+                                <p className="text-xs text-gray-500 mt-2">
+                                    You can copy-paste formatted text, images, and HTML/CSS here.
+                                </p>
                             </div>
                         </form>
                         <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">

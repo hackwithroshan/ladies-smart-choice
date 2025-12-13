@@ -1,6 +1,17 @@
 
 const nodemailer = require('nodemailer');
 
+// **IMPROVEMENT**: Add a clear startup check for essential email variables.
+// This helps diagnose .env configuration issues immediately when the server starts.
+if (!process.env.EMAIL_HOST || !process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    console.error("---------------------------------------------------------------------------");
+    console.error("FATAL EMAIL CONFIG ERROR: Email service is not configured correctly.");
+    console.error("Please ensure EMAIL_HOST, EMAIL_USER, and EMAIL_PASS are set in your .env file.");
+    console.error("This can be caused by a typo, missing variable, or syntax error in the .env file.");
+    console.error("---------------------------------------------------------------------------");
+}
+
+
 // Create a reusable transporter object using the default SMTP transport
 const transporter = nodemailer.createTransport({
     host: process.env.EMAIL_HOST,

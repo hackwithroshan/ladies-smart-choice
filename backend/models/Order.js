@@ -9,6 +9,13 @@ const OrderItemSchema = new mongoose.Schema({
     imageUrl: { type: String }
 });
 
+const TrackingEventSchema = new mongoose.Schema({
+    date: { type: Date, default: Date.now },
+    status: String, // e.g., "In Transit", "Out for Delivery"
+    location: String,
+    message: String
+});
+
 const OrderSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     customerName: { type: String, required: true },
@@ -23,7 +30,10 @@ const OrderSchema = new mongoose.Schema({
     trackingInfo: {
         carrier: String,
         trackingNumber: String,
+        shippingLabelUrl: String, // URL to download label
+        estimatedDelivery: Date
     },
+    trackingHistory: [TrackingEventSchema], // Detailed timeline
     date: { type: Date, default: Date.now },
     total: { type: Number, required: true },
     status: { 
@@ -36,7 +46,8 @@ const OrderSchema = new mongoose.Schema({
         razorpay_payment_id: String,
         razorpay_order_id: String,
         razorpay_signature: String,
-    }
+    },
+    lastTrackingSync: Date
 });
 
 OrderSchema.set('toJSON', { virtuals: true });

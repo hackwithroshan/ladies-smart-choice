@@ -1,6 +1,7 @@
 
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose'); // Required for ObjectId validation
 const Order = require('../models/Order');
 const User = require('../models/User');
 const Product = require('../models/Product');
@@ -13,6 +14,7 @@ const { sendCapiEvent } = require('../utils/facebookCapiService');
 const { createNotification } = require('../utils/createNotification');
 const { generateInvoice } = require('../utils/generateInvoice');
 const { sendOrderConfirmationEmail } = require('../utils/emailService');
+const { createShipment, syncOrderStatus } = require('../services/shippingService');
 
 // --- Admin: Get all orders ---
 router.get('/', protect, admin, async (req, res) => {
@@ -21,6 +23,91 @@ router.get('/', protect, admin, async (req, res) => {
         res.json(orders);
     } catch (error) {
         res.status(500).json({ message: 'Server Error' });
+    }
+});
+
+// --- Admin: Create Manual Order (Shopify Style) ---
+router.post('/manual', protect, admin, async (req, res) => {
+    try {
+        const { 
+            customerInfo, 
+            items, 
+            financials, 
+            notes, 
+            paymentStatus 
+        } = req.body;
+
+        // 1. Resolve User
+        let userId = null;
+        if (customerInfo.id) {
+            userId = customerInfo.id;
+        } else {
+            // Check if email exists, otherwise create or treat as guest
+            const existingUser = await User.findOne({ email: customerInfo.email });
+            if (existingUser) {
+                userId = existingUser._id;
+            }
+            // Optional: Create new user logic here if needed
+        }
+
+        // 2. Map Items (ensure they have all required fields)
+        const orderItems = items.map(item => ({
+            productId: item.id,
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price,
+            imageUrl: item.imageUrl
+        }));
+
+        // 3. Create Order Object
+        const newOrder = new Order({
+            userId: userId,
+            customerName: customerInfo.name,
+            customerEmail: customerInfo.email,
+            customerPhone: customerInfo.phone,
+            shippingAddress: {
+                address: customerInfo.address,
+                city: customerInfo.city,
+                postalCode: customerInfo.postalCode,
+                country: customerInfo.country || 'India'
+            },
+            items: orderItems,
+            total: financials.total,
+            status: paymentStatus === 'Paid' ? 'Processing' : 'Pending',
+            date: new Date(),
+            paymentInfo: {
+                razorpay_payment_id: paymentStatus === 'Paid' ? 'MANUAL_ENTRY' : 'PENDING',
+                razorpay_order_id: `MANUAL_${Date.now()}`,
+                razorpay_signature: 'ADMIN_CREATED'
+            },
+            // Store discounts/notes if you extend the schema, 
+            // for now we just handle the total.
+        });
+
+        const savedOrder = await newOrder.save();
+
+        // 4. Update Inventory
+        for (const item of orderItems) {
+            await Product.findByIdAndUpdate(item.productId, { $inc: { stock: -item.quantity } });
+        }
+
+        // 5. Send Email (Optional - usually manual orders might not want auto-email immediately)
+        if (req.body.sendEmail) {
+            try {
+                const storeDetails = await StoreDetails.findOne();
+                const fullOrder = await Order.findById(savedOrder._id).populate('items.productId');
+                const invoicePdf = await generateInvoice(fullOrder, storeDetails);
+                await sendOrderConfirmationEmail(fullOrder, invoicePdf);
+            } catch (err) {
+                console.error("Manual order email failed", err);
+            }
+        }
+
+        res.status(201).json(savedOrder);
+
+    } catch (error) {
+        console.error("Manual Create Error:", error);
+        res.status(500).json({ message: error.message });
     }
 });
 
@@ -34,13 +121,109 @@ router.get('/my-orders', protect, async (req, res) => {
     }
 });
 
-// --- Admin: Update order status/details ---
-router.put('/:id', protect, admin, async (req, res) => {
+// --- PUBLIC: Track Order (Fixed Logic) ---
+router.post('/track', async (req, res) => {
+    let { orderId, email } = req.body;
+
+    if (!orderId || !email) {
+        return res.status(400).json({ message: 'Please provide Order ID and Email.' });
+    }
+
+    // 1. Clean Inputs
+    orderId = orderId.trim();
+    email = email.trim().toLowerCase();
+
     try {
-        const order = await Order.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        if (!order) return res.status(404).json({ message: 'Order not found' });
+        let order;
+        
+        // 2. Determine Search Method
+        // Check if it looks like a valid MongoDB ObjectId (24 hex characters)
+        const isObjectId = mongoose.Types.ObjectId.isValid(orderId);
+
+        if (isObjectId) {
+             // Try finding by internal Order ID
+             order = await Order.findById(orderId).populate('items.productId', 'name imageUrl');
+        }
+
+        // If not found by ID (or invalid format), try finding by Tracking Number
+        if (!order) {
+             order = await Order.findOne({ 'trackingInfo.trackingNumber': orderId }).populate('items.productId', 'name imageUrl');
+        }
+
+        if (!order) {
+            return res.status(404).json({ message: 'Order not found. Check your Order ID or Tracking Number.' });
+        }
+
+        // 3. Verify Email ownership
+        if (order.customerEmail.toLowerCase() !== email) {
+            return res.status(401).json({ message: 'Email address does not match this order.' });
+        }
+
+        // --- REAL-TIME SYNC ---
+        // If 15 mins passed since last sync, try to fetch fresh data from courier
+        const diff = Date.now() - new Date(order.lastTrackingSync || 0).getTime();
+        if (order.status === 'Shipped' && diff > 15 * 60 * 1000) {
+             const syncResult = await syncOrderStatus(order);
+             if (syncResult) {
+                 if (syncResult.status) order.status = syncResult.status;
+                 if (syncResult.history) order.trackingHistory = syncResult.history;
+                 order.lastTrackingSync = new Date();
+                 await order.save();
+             }
+        }
+
         res.json(order);
     } catch (error) {
+        console.error("Tracking error:", error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
+// --- Admin: Update order status/details (Auto-Ship Logic) ---
+router.put('/:id', protect, admin, async (req, res) => {
+    try {
+        // 1. Get the existing order first
+        const existingOrder = await Order.findById(req.params.id);
+        if (!existingOrder) return res.status(404).json({ message: 'Order not found' });
+
+        const newStatus = req.body.status;
+        
+        // 2. Logic: If changing to 'Shipped' and no tracking info, generate it automatically
+        if (newStatus === 'Shipped' && existingOrder.status !== 'Shipped' && (!existingOrder.trackingInfo || !existingOrder.trackingInfo.trackingNumber)) {
+            console.log(`Auto-generating shipment for Order ${existingOrder._id}...`);
+            const shipmentData = await createShipment(existingOrder);
+            
+            if (shipmentData.success) {
+                req.body.trackingInfo = {
+                    carrier: shipmentData.carrier,
+                    trackingNumber: shipmentData.trackingNumber,
+                    shippingLabelUrl: shipmentData.shippingLabelUrl,
+                    estimatedDelivery: shipmentData.estimatedDelivery
+                };
+                
+                // Add initial history event
+                req.body.trackingHistory = [
+                    ...(existingOrder.trackingHistory || []),
+                    {
+                        status: 'Shipped',
+                        location: 'Warehouse',
+                        message: `Shipment created with ${shipmentData.carrier}. Tracking ID: ${shipmentData.trackingNumber}`,
+                        date: new Date()
+                    }
+                ];
+            } else {
+                console.error("Auto-ship failed:", shipmentData.error);
+                // We typically proceed with saving the status change anyway, but alert backend logs
+            }
+        }
+
+        const order = await Order.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        
+        // TODO: Trigger email notification based on status change here
+        
+        res.json(order);
+    } catch (error) {
+        console.error(error);
         res.status(500).json({ message: 'Server Error' });
     }
 });
@@ -48,8 +231,6 @@ router.put('/:id', protect, admin, async (req, res) => {
 
 // --- Create Razorpay Order ID ---
 router.post('/razorpay-order', async (req, res) => {
-    // **FIX:** Initialize Razorpay inside the handler and check for keys.
-    // This prevents the entire application from crashing if keys are missing.
     if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
         console.error("Razorpay keys are not configured in the .env file.");
         return res.status(500).json({ message: 'Payment gateway is not configured. Please contact support.' });
@@ -62,7 +243,7 @@ router.post('/razorpay-order', async (req, res) => {
 
     const { amount, currency } = req.body;
     const options = {
-        amount: Math.round(amount * 100), // amount in the smallest currency unit, ensure it's an integer
+        amount: Math.round(amount * 100),
         currency,
         receipt: `receipt_order_${new Date().getTime()}`
     };
@@ -85,7 +266,6 @@ router.post('/razorpay-order', async (req, res) => {
 router.post('/', async (req, res) => {
     const { paymentInfo, items, eventId, ...orderData } = req.body;
 
-    // 1. Verify Razorpay Signature
     const shasum = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET);
     shasum.update(`${paymentInfo.razorpay_order_id}|${paymentInfo.razorpay_payment_id}`);
     const digest = shasum.digest('hex');
@@ -95,7 +275,6 @@ router.post('/', async (req, res) => {
     }
 
     try {
-        // 2. Check if user exists, if not, create one
         let user;
         let accountCreated = false;
         const existingUser = await User.findOne({ email: orderData.customerEmail });
@@ -106,14 +285,13 @@ router.post('/', async (req, res) => {
             user = new User({
                 name: orderData.customerName,
                 email: orderData.customerEmail,
-                password: orderData.customerPhone, // Use phone as temporary password
+                password: orderData.customerPhone,
                 role: 'User'
             });
             await user.save();
             accountCreated = true;
         }
         
-        // 3. Create the order
         const newOrder = new Order({
             ...orderData,
             userId: user._id,
@@ -126,21 +304,26 @@ router.post('/', async (req, res) => {
             })),
             paymentInfo: paymentInfo,
             status: 'Processing',
+            // Initialize Tracking History
+            trackingHistory: [{
+                status: 'Ordered',
+                location: 'Online',
+                message: 'Order placed successfully.',
+                date: new Date()
+            }]
         });
         
         const savedOrder = await newOrder.save();
 
-        // 4. Update product stock
         for (const item of items) {
             await Product.findByIdAndUpdate(item.id, { $inc: { stock: -item.quantity } });
         }
         
-        // 5. Save internal analytics event for Purchase
         try {
             const analyticsEvent = new AnalyticsEvent({
                 eventType: 'Purchase',
                 path: '/checkout',
-                source: orderData.source || 'direct', // Default source if not provided
+                source: orderData.source || 'direct',
                 data: {
                     eventId: eventId,
                     value: savedOrder.total,
@@ -155,15 +338,13 @@ router.post('/', async (req, res) => {
             });
             await analyticsEvent.save();
         } catch (analyticsError) {
-            // Do not fail the order if analytics saving fails. Just log it.
             console.error("Failed to save internal Purchase analytics event:", analyticsError);
         }
 
-        // 6. Send order confirmation via Meta CAPI (Server-Side)
         sendCapiEvent({
             eventName: 'Purchase',
             eventUrl: `${process.env.FRONTEND_URL}/checkout`,
-            eventId: eventId, // Use event_id from client for deduplication
+            eventId: eventId,
             userData: {
                 ip: req.ip,
                 userAgent: req.headers['user-agent'],
@@ -186,14 +367,12 @@ router.post('/', async (req, res) => {
             }
         });
 
-        // 7. Create a notification for admins
         await createNotification({
             type: 'NEW_ORDER',
             message: `New order #${savedOrder._id.toString().substring(0, 6)} for ₹${savedOrder.total.toFixed(2)} placed by ${savedOrder.customerName}.`,
-            link: `/admin?view=orders&id=${savedOrder._id.toString()}` // A deep link for the future
+            link: `/admin?view=orders&id=${savedOrder._id.toString()}`
         });
 
-        // 8. Generate Invoice and send Order Confirmation Email (Fire and forget)
         try {
             const [fullOrder, storeDetails] = await Promise.all([
                 Order.findById(savedOrder._id).populate('items.productId'),
@@ -205,7 +384,6 @@ router.post('/', async (req, res) => {
             console.error(`Failed to send order confirmation email for order ${savedOrder._id}:`, emailError);
         }
 
-
         res.status(201).json({ order: savedOrder, accountCreated });
     } catch (error) {
         console.error('Order creation failed:', error);
@@ -213,7 +391,6 @@ router.post('/', async (req, res) => {
     }
 });
 
-// Resend order confirmation email
 router.post('/:id/resend-email', protect, admin, async (req, res) => {
     try {
         const [order, storeDetails] = await Promise.all([
@@ -235,6 +412,5 @@ router.post('/:id/resend-email', protect, admin, async (req, res) => {
         res.status(500).json({ message: "Error resending email. Check server logs." });
     }
 });
-
 
 module.exports = router;

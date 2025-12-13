@@ -1,9 +1,8 @@
-// FIX: Switched to a namespace import for React to resolve a type error where `this.props` was not being recognized on the class component.
-// This is a more robust pattern for this project's TypeScript configuration.
-import * as React from 'react';
+
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 
 interface ErrorBoundaryProps {
-    children?: React.ReactNode;
+    children?: ReactNode;
 }
 
 interface State {
@@ -11,16 +10,24 @@ interface State {
   error?: Error;
 }
 
-class ErrorBoundary extends React.Component<ErrorBoundaryProps, State> {
-  public state: State = {
-    hasError: false,
-  };
+class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
+  // Explicitly declare props to satisfy strict TypeScript environments
+  public props: Readonly<ErrorBoundaryProps>;
+  public state: State;
+
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.props = props;
+    this.state = {
+      hasError: false,
+    };
+  }
 
   public static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
   }
 
-  public componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
     // You could also log the error to an external service here
   }

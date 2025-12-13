@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, Suspense, lazy, useRef } from 'react';
 import * as ReactRouterDom from 'react-router-dom';
 // FIX: Property 'as' does not exist on type 'typeof import(...)'. This indicates an issue with aliasing during destructuring from a namespace import.
@@ -27,6 +26,7 @@ const CheckoutPage = lazy(() => import('./pages/CheckoutPage'));
 const DynamicPage = lazy(() => import('./pages/DynamicPage'));
 const CollectionPage = lazy(() => import('./pages/CollectionPage'));
 const ContactPage = lazy(() => import('./pages/ContactPage'));
+const OrderTrackingPage = lazy(() => import('./pages/OrderTrackingPage'));
 
 // --- Loading Spinner for Suspense Fallback ---
 const LoadingSpinner: React.FC = () => (
@@ -140,8 +140,9 @@ const AppContent: React.FC = () => {
               path="/checkout" 
               element={<CheckoutPage user={user} logout={handleLogout} />} 
             />
-            {/* FIX: Corrected a typo where `logout` was used instead of `handleLogout` for the `logout` prop. */}
             <Route path="/contact" element={<ContactPage user={user} logout={handleLogout} />} />
+            {/* New Tracking Route */}
+            <Route path="/track-order" element={<OrderTrackingPage user={user} logout={handleLogout} />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>

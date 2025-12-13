@@ -87,6 +87,9 @@ export interface CartItem extends Product {
 export interface OrderItem {
     productId: string | Product; // Can be ID or populated object
     quantity: number;
+    name: string;
+    price: number;
+    imageUrl?: string;
 }
 
 export interface Order {
@@ -104,11 +107,25 @@ export interface Order {
   trackingInfo?: {
       carrier: string;
       trackingNumber: string;
+      shippingLabelUrl?: string;
+      estimatedDelivery?: string;
   };
+  trackingHistory?: {
+      date: string;
+      status: string;
+      location?: string;
+      message: string;
+  }[];
   date: string;
   total: number;
   status: 'Pending' | 'Processing' | 'Packed' | 'Shipped' | 'Delivered' | 'Returned' | 'Cancelled';
   items: OrderItem[];
+  paymentInfo?: {
+      razorpay_payment_id?: string;
+      razorpay_order_id?: string;
+      razorpay_signature?: string;
+  };
+  lastTrackingSync?: string;
 }
 
 export type UserRole = 'Super Admin' | 'Manager' | 'Editor' | 'Staff' | 'User';
@@ -224,11 +241,19 @@ export interface SiteSettings {
   metaPixelId?: string;
   metaAccessToken?: string;
   metaCatalogId?: string;
+  
+  // Event Tracking Toggles
+  trackPageView?: boolean;
+  trackViewContent?: boolean;
+  trackAddToCart?: boolean;
+  trackInitiateCheckout?: boolean;
+  trackPurchase?: boolean;
 }
 
 export interface HomePageSettings {
     seoTitle: string;
     seoDescription: string;
+    seoKeywords?: string[];
 }
 
 export interface MediaItem {
@@ -272,4 +297,25 @@ export interface Testimonial {
     comment: string;
     rating: number;
     imageUrl?: string;
+}
+
+export interface ShippingProvider {
+    _id?: string;
+    slug: string;
+    name: string;
+    logoUrl?: string;
+    isEnabled: boolean;
+    isTestMode: boolean;
+    credentials: {
+        apiKey?: string;
+        apiSecret?: string;
+        token?: string;
+        merchantId?: string;
+        username?: string;
+        password?: string;
+    };
+    settings?: {
+        autoShip?: boolean;
+        defaultPickupLocation?: string;
+    };
 }

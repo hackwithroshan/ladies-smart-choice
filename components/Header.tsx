@@ -61,6 +61,9 @@ const Header: React.FC<HeaderProps> = ({ user, logout }) => {
   const { cartCount } = useCart();
   const navigate = useNavigate();
 
+  // Mock Wishlist Count (To be replaced with real context/state later)
+  const wishlistCount = 0;
+
   // --- Click outside handler for search panel & profile menu ---
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -142,6 +145,11 @@ const Header: React.FC<HeaderProps> = ({ user, logout }) => {
       <div className="border-b hidden md:block">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-10">
           <div className="flex items-center space-x-6">
+            <Link to="/track-order" className="hover:text-pink-600 transition-colors flex items-center gap-1">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                Track Order
+            </Link>
+            <div className="w-px h-3 bg-gray-300"></div>
             {headerSettings.topBarLinks.map(link => (
                 <a key={link._id || link.text} href={link.url} className="hover:text-pink-600 transition-colors">{link.text}</a>
             ))}
@@ -179,8 +187,12 @@ const Header: React.FC<HeaderProps> = ({ user, logout }) => {
               </Link>
 
               {/* Mobile Action Icons */}
-              <div className="flex items-center space-x-4 lg:hidden">
-                  <Link to="/cart" className="relative p-2">
+              <div className="flex items-center space-x-3 lg:hidden">
+                  <button className="relative p-2 text-gray-600">
+                    <HeartIcon />
+                    {wishlistCount > 0 && <span className="absolute top-0 right-0 flex items-center justify-center h-4 w-4 text-white text-[10px] rounded-full" style={{backgroundColor: COLORS.accent}}>{wishlistCount}</span>}
+                  </button>
+                  <Link to="/cart" className="relative p-2 text-gray-600">
                     <CartIcon />
                     {cartCount > 0 && <span className="absolute top-0 right-0 flex items-center justify-center h-4 w-4 text-white text-[10px] rounded-full" style={{backgroundColor: COLORS.accent}}>{cartCount}</span>}
                   </Link>
@@ -308,6 +320,7 @@ const Header: React.FC<HeaderProps> = ({ user, logout }) => {
                             ) : (
                                <Link to="/dashboard" onClick={() => setIsProfileMenuOpen(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">My Account</Link>
                             )}
+                            <Link to="/track-order" onClick={() => setIsProfileMenuOpen(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Track Order</Link>
                             <button onClick={() => { logout(); setIsProfileMenuOpen(false); }} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Logout</button>
                         </div>
                     )}
@@ -315,7 +328,7 @@ const Header: React.FC<HeaderProps> = ({ user, logout }) => {
 
                 <button className="relative p-2 rounded-full hover:bg-gray-100 transition-colors">
                     <HeartIcon />
-                    <span className="absolute top-0 right-0 flex items-center justify-center h-4 w-4 text-white text-xs rounded-full" style={{backgroundColor: COLORS.accent}}>0</span>
+                    {wishlistCount > 0 && <span className="absolute top-0 right-0 flex items-center justify-center h-4 w-4 text-white text-xs rounded-full" style={{backgroundColor: COLORS.accent}}>{wishlistCount}</span>}
                 </button>
                 <Link to="/cart" className="relative p-2 rounded-full hover:bg-gray-100 transition-colors">
                     <CartIcon />
@@ -373,6 +386,7 @@ const Header: React.FC<HeaderProps> = ({ user, logout }) => {
                       </div>
                       <div className="border-t pt-4">
                            <p className="text-xs font-bold uppercase text-gray-400 px-2 mb-2">More</p>
+                           <Link to="/track-order" className="block font-medium p-2 rounded-md hover:bg-gray-100 text-blue-600">Track Order</Link>
                            {headerSettings.mainNavLinks.map(link => (
                                <a key={link._id || link.text} href={link.url} className="block font-medium p-2 rounded-md hover:bg-gray-100">{link.text}</a>
                            ))}

@@ -138,6 +138,30 @@ router.put('/:id', protect, admin, async (req, res) => {
     }
 });
 
+// @desc    Admin: Reset User Password
+// @route   PUT /api/users/:id/reset-password
+// @access  Private/Admin
+router.put('/:id/reset-password', protect, admin, async (req, res) => {
+    try {
+        const { newPassword } = req.body;
+        if (!newPassword || newPassword.length < 6) {
+            return res.status(400).json({ message: 'Password must be at least 6 characters long.' });
+        }
+
+        const user = await User.findById(req.params.id);
+        if (user) {
+            user.password = newPassword; // Pre-save hook will hash this
+            await user.save();
+            res.json({ message: `Password for ${user.name} has been reset successfully.` });
+        } else {
+            res.status(404).json({ message: 'User not found' });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
 // @desc    Delete a user
 // @route   DELETE /api/users/:id
 // @access  Private/Admin

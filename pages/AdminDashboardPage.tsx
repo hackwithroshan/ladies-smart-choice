@@ -8,6 +8,7 @@ import Dashboard from '../components/admin/Dashboard';
 import Analytics from '../components/admin/Analytics';
 import ProductList from '../components/admin/ProductList';
 import OrderList from '../components/admin/OrderList';
+import CreateOrder from '../components/admin/CreateOrder';
 import Customers from '../components/admin/Customers';
 import Marketing from '../components/admin/Marketing';
 import Discounts from '../components/admin/Discounts';
@@ -16,12 +17,13 @@ import CMSManagement from '../components/admin/CMSManagement';
 import MediaLibrary from '../components/admin/MediaLibrary';
 import ContactSubmissions from '../components/admin/ContactSubmissions';
 import AdminProfile from '../components/admin/AdminProfile';
+import ShippingIntegrations from '../components/admin/ShippingIntegrations';
 import { COLORS } from '../constants';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { User, Product, Order } from '../types';
 import { getApiUrl } from '../utils/apiHelper';
 
-type AdminView = 'dashboard' | 'analytics' | 'products' | 'inventory' | 'categories' | 'orders' | 'customers' | 'marketing' | 'discounts' | 'settings' | 'cms' | 'shop-videos' | 'slider' | 'media' | 'blogs' | 'pages' | 'contact-messages' | 'admin-profile';
+type AdminView = 'dashboard' | 'analytics' | 'products' | 'inventory' | 'categories' | 'orders' | 'create-order' | 'customers' | 'marketing' | 'discounts' | 'settings' | 'cms' | 'shop-videos' | 'slider' | 'media' | 'blogs' | 'pages' | 'contact-messages' | 'admin-profile' | 'shipping-integrations';
 
 interface AdminDashboardPageProps {
   user: User;
@@ -88,6 +90,8 @@ const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ user: initialUs
         return <ProductList token={token} />;
       case 'orders':
         return <OrderList token={token} />;
+      case 'create-order':
+        return <CreateOrder token={token} onOrderCreated={() => setCurrentView('orders')} />;
       case 'customers':
         return <Customers token={token} />;
       case 'marketing':
@@ -102,6 +106,8 @@ const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ user: initialUs
         return <ContactSubmissions token={token} />;
       case 'admin-profile':
         return <AdminProfile user={user} token={token} onUpdateUser={handleUpdateUser} />;
+      case 'shipping-integrations':
+        return <ShippingIntegrations token={token} />;
       
       // CMS deep links
       case 'categories': 

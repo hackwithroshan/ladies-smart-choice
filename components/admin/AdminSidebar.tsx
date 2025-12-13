@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Icons, COLORS } from '../../constants';
 import { User } from '../../types';
 
-type AdminView = 'dashboard' | 'analytics' | 'products' | 'inventory' | 'categories' | 'orders' | 'customers' | 'marketing' | 'discounts' | 'settings' | 'cms' | 'shop-videos' | 'slider' | 'media' | 'blogs' | 'pages' | 'contact-messages' | 'admin-profile';
+type AdminView = 'dashboard' | 'analytics' | 'products' | 'inventory' | 'categories' | 'orders' | 'create-order' | 'customers' | 'marketing' | 'discounts' | 'settings' | 'cms' | 'shop-videos' | 'slider' | 'media' | 'blogs' | 'pages' | 'contact-messages' | 'admin-profile' | 'shipping-integrations';
 
 interface AdminSidebarProps {
   user: User;
@@ -71,8 +71,10 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ user, currentView, setCurre
       icon: Icons.orders,
       children: [
         { id: 'orders-list', label: 'All Orders', view: 'orders' },
+        { id: 'create-order', label: 'Create Order', view: 'create-order' },
         { id: 'customers', label: 'Customers', view: 'customers' },
         { id: 'discounts', label: 'Coupons & Discounts', view: 'discounts' },
+        { id: 'shipping', label: 'Courier Partners', view: 'shipping-integrations' },
         { id: 'contact-messages', label: 'Contact Messages', view: 'contact-messages' },
       ]
     },

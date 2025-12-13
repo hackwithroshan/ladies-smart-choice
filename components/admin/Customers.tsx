@@ -26,6 +26,9 @@ const Customers: React.FC<{token: string | null}> = ({token}) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editRole, setEditRole] = useState<string>('');
   const [actionLoading, setActionLoading] = useState(false);
+  
+  // Password Reset State
+  const [adminResetPassword, setAdminResetPassword] = useState('');
 
   const fetchUsers = async () => {
     try {
@@ -78,6 +81,7 @@ const Customers: React.FC<{token: string | null}> = ({token}) => {
   const openUserModal = (user: AdminUser) => {
       setSelectedUser(user);
       setEditRole(user.role);
+      setAdminResetPassword(''); // Reset password field
       setIsModalOpen(true);
   };
 
@@ -103,6 +107,39 @@ const Customers: React.FC<{token: string | null}> = ({token}) => {
           }
       } catch (error) {
           console.error(error);
+      } finally {
+          setActionLoading(false);
+      }
+  };
+
+  const handleAdminPasswordReset = async () => {
+      if (!selectedUser) return;
+      if (adminResetPassword.length < 6) {
+          alert("Password must be at least 6 characters.");
+          return;
+      }
+      if (!window.confirm(`Are you sure you want to reset the password for ${selectedUser.name}?`)) return;
+
+      setActionLoading(true);
+      try {
+          const res = await fetch(getApiUrl(`/api/users/${selectedUser.id}/reset-password`), {
+              method: 'PUT',
+              headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({ newPassword: adminResetPassword })
+          });
+          const data = await res.json();
+          if (res.ok) {
+              alert(data.message);
+              setAdminResetPassword('');
+          } else {
+              alert(data.message || 'Failed to reset password.');
+          }
+      } catch (e) {
+          console.error(e);
+          alert('Network error.');
       } finally {
           setActionLoading(false);
       }
@@ -253,10 +290,10 @@ const Customers: React.FC<{token: string | null}> = ({token}) => {
         {/* --- User Details Modal --- */}
         {isModalOpen && selectedUser && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm p-4 animate-fade-in">
-                <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden">
+                <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
                     
                     {/* Modal Header */}
-                    <div className="bg-gray-50 px-6 py-6 border-b border-gray-200">
+                    <div className="bg-gray-50 px-6 py-6 border-b border-gray-200 flex-shrink-0">
                         <div className="flex justify-between items-start">
                              <div className="flex items-center gap-4">
                                 {selectedUser.avatarUrl ? (
@@ -282,7 +319,7 @@ const Customers: React.FC<{token: string | null}> = ({token}) => {
                     </div>
 
                     {/* Modal Body */}
-                    <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto">
+                    <div className="p-6 space-y-6 overflow-y-auto flex-1">
                         
                         {/* Stats Grid */}
                         <div className="grid grid-cols-2 gap-4">
@@ -325,6 +362,7 @@ const Customers: React.FC<{token: string | null}> = ({token}) => {
                             <h4 className="text-sm font-bold text-gray-800 mb-4 uppercase tracking-wide">Account Management</h4>
                             
                             <div className="space-y-4">
+                                {/* Role Management */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Change User Role</label>
                                     <div className="flex gap-2">
@@ -349,10 +387,33 @@ const Customers: React.FC<{token: string | null}> = ({token}) => {
                                     </div>
                                 </div>
 
-                                <div className="pt-4 flex justify-between items-center border-t border-gray-100 mt-4 bg-red-50 p-3 rounded-lg border border-red-200">
+                                {/* Security: Password Reset */}
+                                <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                                    <h5 className="text-sm font-bold text-yellow-800 mb-2">Security: Force Password Reset</h5>
+                                    <div className="flex gap-2 items-center">
+                                        <input 
+                                            type="text" 
+                                            placeholder="Enter new password"
+                                            value={adminResetPassword}
+                                            onChange={(e) => setAdminResetPassword(e.target.value)}
+                                            className="flex-1 border border-yellow-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:border-yellow-500"
+                                        />
+                                        <button 
+                                            onClick={handleAdminPasswordReset}
+                                            disabled={actionLoading || adminResetPassword.length < 6}
+                                            className="bg-yellow-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-yellow-700 disabled:opacity-50 whitespace-nowrap"
+                                        >
+                                            Set Password
+                                        </button>
+                                    </div>
+                                    <p className="text-xs text-yellow-600 mt-2">Warning: This will immediately change the user's password.</p>
+                                </div>
+
+                                {/* Danger Zone */}
+                                <div className="flex justify-between items-center border-t border-gray-100 mt-4 bg-red-50 p-3 rounded-lg border border-red-200">
                                     <div>
                                         <p className="text-sm font-medium text-red-700">Danger Zone</p>
-                                        <p className="text-xs text-red-600">This action cannot be undone.</p>
+                                        <p className="text-xs text-red-600">Delete this user permanently.</p>
                                     </div>
                                     <button 
                                         onClick={handleDeleteUser}

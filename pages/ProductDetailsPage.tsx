@@ -333,7 +333,7 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
               </div>
 
               <div className="lg:col-span-5 relative">
-                  <div className="sticky top-8 space-y-8 bg-white z-10">
+                  <div className="sticky top-8 space-y-8 bg-white z-30">
                       <div className="border-b border-gray-100 pb-6">
                           <h2 className="text-xs font-bold text-gray-400 uppercase tracking-[0.2em] mb-3">{product.brand || 'LADIES SMART CHOICE'}</h2>
                           <h1 className="text-3xl md:text-4xl font-serif text-gray-900 leading-tight mb-4">{product.name}</h1>

@@ -46,6 +46,8 @@ app.use('/api/notifications', require('./routes/notifications'));
 // Refactored: All feed/catalog routes are now under /api/catalog
 app.use('/api/catalog', require('./routes/feed')); 
 app.use('/api/integrations', require('./routes/integrations'));
+// NEW: Shipping Integration Routes
+app.use('/api/shipping', require('./routes/shipping'));
 
 // Efficient App Data route
 app.use('/api/app-data', require('./routes/appData'));

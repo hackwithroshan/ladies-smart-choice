@@ -144,6 +144,14 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
   const [filterStatus, setFilterStatus] = useState<string>('All');
   const [searchTerm, setSearchTerm] = useState('');
   
+  // Selection State
+  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
+
+  // Export State
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [exportOption, setExportOption] = useState<'current_page' | 'all' | 'selected' | 'date_range'>('current_page');
+  const [exportFormat, setExportFormat] = useState<'csv' | 'plain_csv'>('csv');
+
   // --- NEW: Date Range State ---
   const [dateRange, setDateRange] = useState<DateRange>(() => {
     const end = new Date();
@@ -165,6 +173,8 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
   
   // Form State for Editing
   const [editFormData, setEditFormData] = useState<Partial<Order>>({});
+
+  const COURIERS = ['BlueDart', 'Delhivery', 'FedEx', 'DHL', 'India Post', 'Other'];
 
   const fetchOrders = async () => {
     try {
@@ -211,7 +221,7 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
               country: order.shippingAddress?.country || ''
           },
           trackingInfo: {
-              carrier: order.trackingInfo?.carrier || '',
+              carrier: order.trackingInfo?.carrier || 'BlueDart',
               trackingNumber: order.trackingInfo?.trackingNumber || ''
           }
       });
@@ -434,6 +444,69 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
       return matchesDate && matchesStatus && matchesSearch;
   });
 
+  // --- EXPORT LOGIC ---
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.checked) {
+          const allIds = filteredOrders.map(o => o.id);
+          setSelectedOrderIds(new Set(allIds));
+      } else {
+          setSelectedOrderIds(new Set());
+      }
+  };
+
+  const handleToggleSelect = (id: string) => {
+      const newSelected = new Set(selectedOrderIds);
+      if (newSelected.has(id)) {
+          newSelected.delete(id);
+      } else {
+          newSelected.add(id);
+      }
+      setSelectedOrderIds(newSelected);
+  };
+
+  const handleExport = () => {
+      let ordersToExport: Order[] = [];
+
+      switch (exportOption) {
+          case 'current_page':
+              // Assuming filteredOrders is the "current page" data as per table view
+              ordersToExport = filteredOrders;
+              break;
+          case 'all':
+              ordersToExport = orders;
+              break;
+          case 'selected':
+              ordersToExport = orders.filter(o => selectedOrderIds.has(o.id));
+              break;
+          case 'date_range':
+              // Reuse current date filter logic for simplicity, or re-filter all orders
+              ordersToExport = filteredOrders; 
+              break;
+      }
+
+      if (ordersToExport.length === 0) {
+          alert("No orders available to export.");
+          return;
+      }
+
+      const headers = ['Order ID,Date,Customer Name,Email,Phone,Total,Status,Payment Status,Items'];
+      const rows = ordersToExport.map(o => {
+          const itemsStr = o.items.map(i => `${i.name} (x${i.quantity})`).join('; ');
+          const dateStr = new Date(o.date).toLocaleDateString();
+          return `${o.id},${dateStr},"${o.customerName}",${o.customerEmail},${o.customerPhone || ''},${o.total},${o.status},${o.paymentInfo?.razorpay_payment_id ? 'Paid' : 'Pending'},"${itemsStr}"`;
+      });
+
+      const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].join("\n");
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `orders_export_${new Date().toISOString().slice(0,10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setIsExportModalOpen(false);
+  };
+
   // --- Helper Components for Modal ---
 
   const StatusTimeline = ({ status }: { status: string }) => {
@@ -517,7 +590,10 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
                     )}
                 </div>
             </div>
-             <button className="bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded-md text-sm transition-colors flex items-center w-full sm:w-auto justify-center">
+             <button 
+                onClick={() => setIsExportModalOpen(true)}
+                className="bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded-md text-sm transition-colors flex items-center w-full sm:w-auto justify-center"
+             >
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                 Export CSV
              </button>
@@ -529,6 +605,9 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
+              <th className="px-4 py-3 w-10">
+                  <input type="checkbox" onChange={handleSelectAll} checked={selectedOrderIds.size === filteredOrders.length && filteredOrders.length > 0} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+              </th>
               <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Order ID</th>
               <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Customer</th>
               <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Date</th>
@@ -539,7 +618,10 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {filteredOrders.map((order) => (
-              <tr key={order.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => handleOpenModal(order)}>
+              <tr key={order.id} className={`hover:bg-gray-50 transition-colors cursor-pointer ${selectedOrderIds.has(order.id) ? 'bg-blue-50' : ''}`} onClick={() => handleOpenModal(order)}>
+                <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
+                    <input type="checkbox" checked={selectedOrderIds.has(order.id)} onChange={() => handleToggleSelect(order.id)} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-mono font-medium text-blue-600">#{order.id.substring(0, 6)}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                     <div className="font-medium">{order.customerName}</div>
@@ -569,14 +651,79 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
               </tr>
             ))}
             {filteredOrders.length === 0 && (
-                <tr><td colSpan={6} className="px-6 py-8 text-center text-gray-500">No orders found matching your criteria.</td></tr>
+                <tr><td colSpan={7} className="px-6 py-8 text-center text-gray-500">No orders found matching your criteria.</td></tr>
             )}
           </tbody>
         </table>
         </div>
       </div>
 
-      {/* --- Enhanced Order Details Modal --- */}
+      {/* --- Export Modal --- */}
+      {isExportModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm p-4">
+              <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in-up">
+                  <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
+                      <h3 className="font-bold text-lg text-gray-800">Export orders</h3>
+                      <button onClick={() => setIsExportModalOpen(false)} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+                  </div>
+                  <div className="p-6 space-y-6">
+                      {/* Export Option Radio Group */}
+                      <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Export</label>
+                          <div className="space-y-2">
+                              <label className="flex items-center space-x-3 cursor-pointer">
+                                  <input type="radio" name="exportOption" value="current_page" checked={exportOption === 'current_page'} onChange={() => setExportOption('current_page')} className="h-4 w-4 text-gray-900 border-gray-300 focus:ring-gray-900" />
+                                  <span className="text-sm text-gray-700">Current page</span>
+                              </label>
+                              <label className="flex items-center space-x-3 cursor-pointer">
+                                  <input type="radio" name="exportOption" value="all" checked={exportOption === 'all'} onChange={() => setExportOption('all')} className="h-4 w-4 text-gray-900 border-gray-300 focus:ring-gray-900" />
+                                  <span className="text-sm text-gray-700">All orders</span>
+                              </label>
+                              <label className={`flex items-center space-x-3 cursor-pointer ${selectedOrderIds.size === 0 ? 'opacity-50 pointer-events-none' : ''}`}>
+                                  <input type="radio" name="exportOption" value="selected" checked={exportOption === 'selected'} onChange={() => setExportOption('selected')} disabled={selectedOrderIds.size === 0} className="h-4 w-4 text-gray-900 border-gray-300 focus:ring-gray-900" />
+                                  <span className="text-sm text-gray-700">Selected: {selectedOrderIds.size} orders</span>
+                              </label>
+                              <label className="flex items-center space-x-3 cursor-pointer">
+                                  <input type="radio" name="exportOption" value="date_range" checked={exportOption === 'date_range'} onChange={() => setExportOption('date_range')} className="h-4 w-4 text-gray-900 border-gray-300 focus:ring-gray-900" />
+                                  <span className="text-sm text-gray-700">{filteredOrders.length} orders matching your search</span>
+                              </label>
+                              <label className="flex items-center space-x-3 cursor-pointer">
+                                  <input type="radio" name="exportOption" value="date_range_option" disabled className="h-4 w-4 text-gray-300 border-gray-300 focus:ring-gray-900" />
+                                  <span className="text-sm text-gray-400">Orders by date (Use filters)</span>
+                              </label>
+                          </div>
+                      </div>
+
+                      {/* Export Format */}
+                      <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Export as</label>
+                          <div className="space-y-2">
+                              <label className="flex items-center space-x-3 cursor-pointer">
+                                  <input type="radio" name="exportFormat" value="csv" checked={exportFormat === 'csv'} onChange={() => setExportFormat('csv')} className="h-4 w-4 text-gray-900 border-gray-300 focus:ring-gray-900" />
+                                  <span className="text-sm text-gray-700">CSV for Excel, Numbers, or other spreadsheet programs</span>
+                              </label>
+                              <label className="flex items-center space-x-3 cursor-pointer">
+                                  <input type="radio" name="exportFormat" value="plain_csv" checked={exportFormat === 'plain_csv'} onChange={() => setExportFormat('plain_csv')} className="h-4 w-4 text-gray-900 border-gray-300 focus:ring-gray-900" />
+                                  <span className="text-sm text-gray-700">Plain CSV file</span>
+                              </label>
+                          </div>
+                      </div>
+                  </div>
+                  <div className="px-6 py-4 bg-gray-50 border-t flex justify-between items-center">
+                      <button onClick={() => setIsExportModalOpen(false)} className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">Cancel</button>
+                      <div className="flex space-x-3">
+                          <button disabled className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-400 bg-white cursor-not-allowed">Export transaction histories</button>
+                          <button onClick={handleExport} className="px-4 py-2 bg-gray-900 text-white rounded-md text-sm font-medium hover:bg-gray-800 flex items-center">
+                              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                              Export orders
+                          </button>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* --- Enhanced Order Details Modal (Existing) --- */}
       {isModalOpen && selectedOrder && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm p-4">
               <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden animate-fade-in-up">
@@ -740,14 +887,23 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
                                        </div>
                                        <div>
                                             <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Courier Service</label>
-                                            <input 
-                                                type="text" 
-                                                value={editFormData.trackingInfo?.carrier || ''} 
-                                                disabled={!editMode}
-                                                onChange={(e) => handleInputChange('trackingInfo', 'carrier', e.target.value)}
-                                                placeholder={editMode ? "e.g. FedEx, BlueDart" : "No courier info"}
-                                                className={`w-full border rounded-md p-2.5 text-sm transition-colors ${!editMode ? 'bg-gray-50 text-gray-700 border-gray-200' : 'bg-white border-gray-300 focus:ring-blue-500 focus:border-blue-500'}`}
-                                            />
+                                            {editMode ? (
+                                                <select
+                                                    value={editFormData.trackingInfo?.carrier || 'BlueDart'} 
+                                                    onChange={(e) => handleInputChange('trackingInfo', 'carrier', e.target.value)}
+                                                    className="w-full border rounded-md p-2.5 text-sm bg-white border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                                                >
+                                                    {COURIERS.map(c => <option key={c} value={c}>{c}</option>)}
+                                                </select>
+                                            ) : (
+                                                <input 
+                                                    type="text" 
+                                                    value={editFormData.trackingInfo?.carrier || ''} 
+                                                    disabled
+                                                    placeholder="No courier info"
+                                                    className="w-full border rounded-md p-2.5 text-sm bg-gray-50 text-gray-700 border-gray-200"
+                                                />
+                                            )}
                                        </div>
                                    </div>
                               </div>
