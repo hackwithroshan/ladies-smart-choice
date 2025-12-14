@@ -1,12 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
-import { Product } from '../../types';
+import { Product, Category } from '../../types';
 import { COLORS } from '../../constants';
 import ProductForm from './ProductForm';
 import { getApiUrl } from '../../utils/apiHelper';
 
 const ProductList: React.FC<{token: string | null}> = ({token}) => {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -17,20 +18,29 @@ const ProductList: React.FC<{token: string | null}> = ({token}) => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  // Bulk Action State
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkAction, setBulkAction] = useState<string>('');
+  const [targetCategory, setTargetCategory] = useState<string>('');
+  const [processingBulk, setProcessingBulk] = useState(false);
+
   const fetchProducts = async () => {
     try {
       setLoading(true);
       setError(null);
-      // FIX: Use the new admin-only endpoint to fetch ALL products (including drafts)
-      const response = await fetch(getApiUrl('/api/products/all'), {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (!response.ok) throw new Error("Failed to fetch products");
-      const data = await response.json();
-      setProducts(data);
+      
+      const [prodRes, catRes] = await Promise.all([
+          fetch(getApiUrl('/api/products/all'), { headers: { 'Authorization': `Bearer ${token}` } }),
+          fetch(getApiUrl('/api/products/categories'))
+      ]);
+
+      if (!prodRes.ok) throw new Error("Failed to fetch products");
+      
+      setProducts(await prodRes.json());
+      if(catRes.ok) setCategories(await catRes.json());
+      
       setCurrentPage(1); // Reset to first page on refresh
+      setSelectedIds(new Set()); // Clear selection
     } catch (error: any) {
       setError(error.message);
     } finally {
@@ -46,6 +56,8 @@ const ProductList: React.FC<{token: string | null}> = ({token}) => {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm]);
+
+  // --- Handlers ---
 
   const handleAddClick = () => {
     setEditingProduct(null);
@@ -96,6 +108,70 @@ const ProductList: React.FC<{token: string | null}> = ({token}) => {
     }
   };
 
+  // --- Bulk Action Handlers ---
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.checked) {
+          // Select all visible on current page
+          const ids = new Set(selectedIds);
+          currentProducts.forEach(p => ids.add(p.id));
+          setSelectedIds(ids);
+      } else {
+          // Deselect all visible on current page
+          const ids = new Set(selectedIds);
+          currentProducts.forEach(p => ids.delete(p.id));
+          setSelectedIds(ids);
+      }
+  };
+
+  const handleSelectOne = (id: string) => {
+      const ids = new Set(selectedIds);
+      if (ids.has(id)) ids.delete(id);
+      else ids.add(id);
+      setSelectedIds(ids);
+  };
+
+  const executeBulkAction = async () => {
+      if (!bulkAction) return;
+      if (bulkAction === 'category' && !targetCategory) return alert("Please select a category.");
+      
+      const confirmMessage = bulkAction === 'delete' 
+        ? `Permanently delete ${selectedIds.size} products?` 
+        : `Apply '${bulkAction}' to ${selectedIds.size} products?`;
+      
+      if (!window.confirm(confirmMessage)) return;
+
+      setProcessingBulk(true);
+      try {
+          const res = await fetch(getApiUrl('/api/products/bulk'), {
+              method: 'POST',
+              headers: { 
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                  ids: Array.from(selectedIds),
+                  action: bulkAction,
+                  data: bulkAction === 'category' ? { category: targetCategory } : undefined
+              })
+          });
+
+          if (res.ok) {
+              await fetchProducts(); // Refresh data and clear selection
+              setBulkAction('');
+              setTargetCategory('');
+          } else {
+              const data = await res.json();
+              alert(`Error: ${data.message}`);
+          }
+      } catch (err) {
+          console.error(err);
+          alert("Failed to execute bulk action.");
+      } finally {
+          setProcessingBulk(false);
+      }
+  };
+
   // --- Filtering Logic (Client-Side Search) ---
   const filteredProducts = products.filter(product => {
     const term = searchTerm.toLowerCase();
@@ -112,6 +188,9 @@ const ProductList: React.FC<{token: string | null}> = ({token}) => {
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
 
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+
+  // Check if all visible items are selected
+  const allVisibleSelected = currentProducts.length > 0 && currentProducts.every(p => selectedIds.has(p.id));
 
   if (loading) return <div>Loading products...</div>;
 
@@ -146,12 +225,64 @@ const ProductList: React.FC<{token: string | null}> = ({token}) => {
           </div>
         </div>
 
+        {/* Bulk Action Bar - Only Visible when items are selected */}
+        {selectedIds.size > 0 && (
+            <div className="mb-4 bg-blue-50 border border-blue-200 p-3 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-4 animate-fade-in">
+                <div className="flex items-center gap-2">
+                    <span className="bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full">{selectedIds.size}</span>
+                    <span className="text-sm text-blue-800 font-medium">products selected</span>
+                </div>
+                
+                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                    <select 
+                        value={bulkAction} 
+                        onChange={(e) => setBulkAction(e.target.value)}
+                        className="text-sm border-blue-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    >
+                        <option value="">-- Choose Action --</option>
+                        <option value="activate">Set Status: Active</option>
+                        <option value="draft">Set Status: Draft</option>
+                        <option value="archive">Set Status: Archived</option>
+                        <option value="category">Move to Category...</option>
+                        <option value="delete">Delete Selected</option>
+                    </select>
+
+                    {bulkAction === 'category' && (
+                        <select
+                            value={targetCategory}
+                            onChange={(e) => setTargetCategory(e.target.value)}
+                            className="text-sm border-blue-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        >
+                            <option value="">Select Category</option>
+                            {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                        </select>
+                    )}
+
+                    <button 
+                        onClick={executeBulkAction} 
+                        disabled={!bulkAction || processingBulk}
+                        className={`px-4 py-2 rounded-md text-sm font-bold text-white transition-colors ${bulkAction === 'delete' ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'} disabled:opacity-50`}
+                    >
+                        {processingBulk ? 'Applying...' : 'Apply'}
+                    </button>
+                </div>
+            </div>
+        )}
+
         {error && <p className="mb-4 text-sm text-red-600 bg-red-100 p-3 rounded-md">{error}</p>}
         
         <div className="overflow-x-auto border border-gray-200 rounded-lg">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                <th className="px-4 py-3 w-10 text-center">
+                    <input 
+                        type="checkbox" 
+                        checked={allVisibleSelected} 
+                        onChange={handleSelectAll}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
+                    />
+                </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
@@ -162,7 +293,15 @@ const ProductList: React.FC<{token: string | null}> = ({token}) => {
             <tbody className="bg-white divide-y divide-gray-200">
               {currentProducts.length > 0 ? (
                   currentProducts.map((product) => (
-                    <tr key={product.id} className="hover:bg-gray-50">
+                    <tr key={product.id} className={`hover:bg-gray-50 transition-colors ${selectedIds.has(product.id) ? 'bg-blue-50' : ''}`}>
+                      <td className="px-4 py-4 text-center">
+                          <input 
+                            type="checkbox" 
+                            checked={selectedIds.has(product.id)} 
+                            onChange={() => handleSelectOne(product.id)}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
+                          />
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-10 w-10">
@@ -197,7 +336,7 @@ const ProductList: React.FC<{token: string | null}> = ({token}) => {
                   ))
               ) : (
                   <tr>
-                      <td colSpan={5} className="px-6 py-10 text-center text-gray-500">
+                      <td colSpan={6} className="px-6 py-10 text-center text-gray-500">
                           {searchTerm ? 'No products found matching your search.' : 'No products available.'}
                       </td>
                   </tr>

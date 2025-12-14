@@ -7,7 +7,8 @@ const CollectionSchema = new mongoose.Schema({
     description: String,
     imageUrl: String,
     products: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
-    isActive: { type: Boolean, default: true }
+    isActive: { type: Boolean, default: true },
+    displayStyle: { type: String, enum: ['Rectangle', 'Square', 'Circle', 'ImageOnly'], default: 'Rectangle' }
 });
 
 CollectionSchema.pre('validate', function(next) {

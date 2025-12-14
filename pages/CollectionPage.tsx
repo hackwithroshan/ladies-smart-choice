@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import * as ReactRouterDom from 'react-router-dom';
-const { useParams, useNavigate } = ReactRouterDom;
+import { useParams, useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import ProductCard from '../components/ProductCard';
@@ -46,23 +45,25 @@ const CollectionPage: React.FC<{ user: any; logout: () => void }> = ({ user, log
             <Header user={user} logout={logout} />
             
             {/* Banner */}
-            <div className="relative w-full h-64 md:h-80 overflow-hidden">
+            <div className="relative w-full h-48 md:h-80 overflow-hidden">
                 <img src={collection.imageUrl} alt={collection.title} className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col items-center justify-center text-center px-4">
-                    <h1 className="text-4xl md:text-5xl font-serif font-bold text-white mb-2">{collection.title}</h1>
-                    {collection.description && <p className="text-white text-lg max-w-2xl">{collection.description}</p>}
+                    <h1 className="text-3xl md:text-5xl font-serif font-bold text-white mb-2">{collection.title}</h1>
+                    {collection.description && <p className="text-white text-sm md:text-lg max-w-2xl">{collection.description}</p>}
                 </div>
             </div>
 
-            <main className="flex-grow container mx-auto px-4 py-12">
-                <h2 className="text-2xl font-bold text-gray-800 mb-6">{collection.products.length} Products Found</h2>
+            <main className="flex-grow container mx-auto px-3 sm:px-6 lg:px-8 py-8 md:py-12">
+                <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-lg md:text-2xl font-bold text-gray-800">{collection.products.length} Products Found</h2>
+                </div>
                 
                 {collection.products.length === 0 ? (
                     <div className="text-center py-12 text-gray-500">
                         <p>No products added to this collection yet.</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
                         {collection.products.map(product => (
                             <ProductCard 
                                 key={product.id} 

@@ -1,13 +1,20 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { FooterSettings, FooterColumn, FooterLink, SocialLink, Product, BlogPost, ContentPage } from '../../types';
 import { COLORS } from '../../constants';
 import { getApiUrl } from '../../utils/apiHelper';
+import MediaPicker from './MediaPicker';
 
 const initialSettings: FooterSettings = {
+    logoUrl: '',
     brandDescription: '',
     copyrightText: '',
     socialLinks: [],
-    columns: []
+    columns: [],
+    backgroundColor: '#881337',
+    backgroundImage: '',
+    overlayColor: '#000000',
+    overlayOpacity: 0
 };
 
 // --- Link Picker Component (Local Definition) ---
@@ -47,8 +54,6 @@ const LinkPicker: React.FC<LinkPickerProps> = ({ value, onChange, data, classNam
     };
 
     const filterItems = (items: any[], key: string) => {
-        // BUG FIX: Ensure item has a slug and the property to search before filtering.
-        // This prevents crashes if an item is malformed or missing a title/name.
         return items.filter(item => 
             item.slug && 
             item[key] && 
@@ -63,8 +68,6 @@ const LinkPicker: React.FC<LinkPickerProps> = ({ value, onChange, data, classNam
         const itemClass = "px-4 py-2 text-xs text-gray-700 hover:bg-blue-50 hover:text-blue-600 cursor-pointer border-b border-gray-100 last:border-0 flex justify-between items-center";
 
         if (view === 'root') {
-            // BUG FIX: Removed redundant "Custom URL" input. The main input is used for this,
-            // creating a cleaner and more consistent user experience.
             return (
                 <div className="py-1">
                     <div className={itemClass} onClick={() => setView('pages')}>
@@ -205,8 +208,6 @@ const FooterSettingsComponent: React.FC<{ token: string | null }> = ({ token }) 
 
                 if (settingsRes.ok) {
                     const fetchedSettings = await settingsRes.json();
-                    // FIX: Merge with initial settings to prevent crashes if API returns an empty object
-                    // or a document without `socialLinks` or `columns`. This ensures they are always arrays.
                     setSettings({ ...initialSettings, ...fetchedSettings });
                 } else {
                     throw new Error('Failed to fetch footer settings.');
@@ -346,6 +347,16 @@ const FooterSettingsComponent: React.FC<{ token: string | null }> = ({ token }) 
                     <h3 className="text-lg font-bold text-gray-800 mb-4 pb-2 border-b">Branding & Copyright</h3>
                     <div className="space-y-4">
                         <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Footer Logo</label>
+                            <MediaPicker 
+                                type="image" 
+                                value={settings.logoUrl || ''} 
+                                onChange={url => setSettings(prev => ({...prev, logoUrl: url}))}
+                                placeholder="Select footer logo (optional)"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">If uploaded, this logo will replace the text brand name in the footer.</p>
+                        </div>
+                        <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Brand Description (About)</label>
                             <textarea 
                                 name="brandDescription" 
@@ -368,7 +379,66 @@ const FooterSettingsComponent: React.FC<{ token: string | null }> = ({ token }) 
                     </div>
                 </div>
 
-                {/* 2. Social Media */}
+                {/* 2. Background & Styling */}
+                <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                    <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
+                        <div className="p-2 bg-purple-50 rounded-lg text-purple-600">
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" /></svg>
+                        </div>
+                        <h3 className="font-bold text-lg text-gray-800">Background & Styling</h3>
+                    </div>
+
+                    <div className="space-y-6">
+                        {/* Background Color & Overlay Color */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Background Color</label>
+                                <div className="flex items-center gap-2">
+                                    <input type="color" name="backgroundColor" value={settings.backgroundColor || '#881337'} onChange={handleInputChange} className="h-10 w-12 rounded cursor-pointer border border-gray-300 p-1" />
+                                    <input type="text" name="backgroundColor" value={settings.backgroundColor || '#881337'} onChange={handleInputChange} className="flex-1 border border-gray-300 rounded-lg text-sm p-2 uppercase" />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Overlay Color</label>
+                                <div className="flex items-center gap-2">
+                                    <input type="color" name="overlayColor" value={settings.overlayColor || '#000000'} onChange={handleInputChange} className="h-10 w-12 rounded cursor-pointer border border-gray-300 p-1" />
+                                    <input type="text" name="overlayColor" value={settings.overlayColor || '#000000'} onChange={handleInputChange} className="flex-1 border border-gray-300 rounded-lg text-sm p-2 uppercase" />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Background Image */}
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">Background Image</label>
+                            <MediaPicker 
+                                type="image" 
+                                value={settings.backgroundImage || ''} 
+                                onChange={url => setSettings(prev => ({...prev, backgroundImage: url}))}
+                                placeholder="Select background image (optional)"
+                            />
+                        </div>
+
+                        {/* Opacity Slider */}
+                        <div>
+                            <div className="flex justify-between items-center mb-1">
+                                <label className="block text-sm font-bold text-gray-700">Overlay Opacity</label>
+                                <span className="text-sm font-medium text-gray-600 bg-gray-100 px-2 py-0.5 rounded">{settings.overlayOpacity}%</span>
+                            </div>
+                            <input 
+                                type="range" 
+                                min="0" 
+                                max="100" 
+                                name="overlayOpacity"
+                                value={settings.overlayOpacity || 0}
+                                onChange={handleInputChange}
+                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                            />
+                            <p className="text-xs text-gray-500 mt-2">Adjust the opacity of the overlay color on top of the background (image or color). Use this to improve text readability.</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 3. Social Media */}
                 <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
                     <div className="flex justify-between items-center mb-4 pb-2 border-b">
                         <h3 className="text-lg font-bold text-gray-800">Social Media Links</h3>
@@ -404,7 +474,7 @@ const FooterSettingsComponent: React.FC<{ token: string | null }> = ({ token }) 
                     </div>
                 </div>
 
-                {/* 3. Navigation Columns */}
+                {/* 4. Navigation Columns */}
                 <div className="space-y-4">
                     <div className="flex justify-between items-center">
                         <h3 className="text-xl font-bold text-gray-800">Navigation Columns</h3>

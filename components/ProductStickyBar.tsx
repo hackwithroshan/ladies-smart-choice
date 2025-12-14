@@ -43,32 +43,16 @@ const ProductStickyBar: React.FC<ProductStickyBarProps> = ({ isVisible, product,
           </div>
 
           {/* Controls Section - Right Side */}
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
               
-              {/* Desktop Variants - Hidden on Mobile to save horizontal space */}
-              {product.hasVariants && product.variants && (
-                <div className="hidden md:flex items-center gap-4 mr-4 border-r border-gray-200 pr-4">
-                  {product.variants.map((variant) => (
-                    <div key={variant.name} className="flex flex-col">
-                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">{variant.name}</label>
-                      <div className="relative">
-                        <select
-                          value={selectedVariants[variant.name] || ''}
-                          onChange={(e) => onVariantChange(variant.name, e.target.value)}
-                          className="appearance-none bg-gray-50 border border-gray-300 text-gray-800 text-xs rounded-md pl-2 pr-7 py-1.5 focus:ring-1 focus:ring-rose-500 focus:border-rose-500 cursor-pointer font-semibold min-w-[80px]"
-                        >
-                          {variant.options.map((opt) => (
-                            <option key={opt.value} value={opt.value}>{opt.value}</option>
-                          ))}
-                        </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-1.5 text-gray-500">
-                          <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              {/* Call Request Button (New) */}
+              <a 
+                href="tel:+919876543210"
+                className="hidden sm:flex items-center justify-center border border-gray-300 text-gray-700 p-2.5 rounded-lg hover:bg-gray-50"
+                title="Call to Order"
+              >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+              </a>
 
               {/* Add to Cart Button */}
               <button
@@ -86,7 +70,7 @@ const ProductStickyBar: React.FC<ProductStickyBarProps> = ({ isVisible, product,
 
         </div>
         
-        {/* Mobile Variant Fallback - Shown in a second row on small screens */}
+        {/* Mobile Variant Fallback */}
         {product.hasVariants && product.variants && (
             <div className="md:hidden mt-3 pt-2 border-t border-gray-100 flex gap-4 overflow-x-auto pb-1 scrollbar-hide">
                  {product.variants.map((variant) => (

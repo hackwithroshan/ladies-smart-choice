@@ -1,11 +1,6 @@
 
-
-
 import React from 'react';
-// FIX: The `react-router-dom` module is not resolving named exports correctly in this environment.
-// Switching to a namespace import (`import * as ...`) and then destructuring is a more robust way to access the exports.
-import * as ReactRouterDom from 'react-router-dom';
-const { Link } = ReactRouterDom;
+import { Link } from 'react-router-dom';
 import { COLORS } from '../constants';
 import { useSiteData } from '../contexts/SiteDataContext';
 
@@ -38,17 +33,44 @@ const Footer: React.FC = () => {
       )
   }
 
+  // --- Dynamic Styling ---
+  const bgStyle: React.CSSProperties = {
+      backgroundColor: footerSettings.backgroundColor || COLORS.primary,
+      backgroundImage: footerSettings.backgroundImage ? `url(${footerSettings.backgroundImage})` : 'none',
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      position: 'relative'
+  };
+
+  const overlayStyle: React.CSSProperties = {
+      position: 'absolute',
+      inset: 0,
+      backgroundColor: footerSettings.overlayColor || '#000000',
+      opacity: (footerSettings.overlayOpacity !== undefined ? footerSettings.overlayOpacity : 0) / 100,
+      pointerEvents: 'none' // Allow clicks to pass through
+  };
+
   return (
-    <footer style={{ backgroundColor: COLORS.primary }} className="text-gray-200">
-      <div className="container mx-auto py-12 px-4 sm:px-6 lg:px-8">
+    <footer style={bgStyle} className="text-gray-200">
+      {/* Overlay Div */}
+      <div style={overlayStyle}></div>
+
+      {/* Content Container (z-10 to sit above overlay) */}
+      <div className="container mx-auto py-12 px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           
           {/* Brand Column */}
           <div className="space-y-6">
-            <span className="text-2xl font-extrabold text-white tracking-wider block">
-              Ladies<span style={{ color: '#FBCFE8' }}>SmartChoice</span>
-            </span>
-            <p className="text-gray-300 text-sm leading-relaxed">
+            {footerSettings.logoUrl ? (
+                <Link to="/">
+                    <img src={footerSettings.logoUrl} alt="Logo" className="h-12 mb-4 object-contain" />
+                </Link>
+            ) : (
+                <span className="text-2xl font-extrabold text-white tracking-wider block">
+                  Ladies<span style={{ color: '#FBCFE8' }}>SmartChoice</span>
+                </span>
+            )}
+            <p className="text-gray-100/80 text-sm leading-relaxed">
               {footerSettings.brandDescription}
             </p>
           </div>
@@ -61,9 +83,9 @@ const Footer: React.FC = () => {
                     {col.links.map((link, lIdx) => (
                         <li key={lIdx}>
                             {link.url.startsWith('http') ? (
-                                <a href={link.url} className="text-sm text-gray-300 hover:text-white transition-colors">{link.text}</a>
+                                <a href={link.url} className="text-sm text-gray-300 hover:text-white transition-colors block">{link.text}</a>
                             ) : (
-                                <Link to={link.url} className="text-sm text-gray-300 hover:text-white transition-colors">{link.text}</Link>
+                                <Link to={link.url} className="text-sm text-gray-300 hover:text-white transition-colors block">{link.text}</Link>
                             )}
                         </li>
                     ))}
@@ -72,11 +94,11 @@ const Footer: React.FC = () => {
           ))}
         </div>
         
-        <div className="mt-12 border-t border-pink-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="mt-12 border-t border-white/20 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-gray-300 text-center md:text-left">{footerSettings.copyrightText}</p>
           <div className="flex space-x-4">
               {footerSettings.socialLinks.map((social, idx) => (
-                  <a key={idx} href={social.url} className="text-gray-300 hover:text-white transition-colors p-1 rounded-full hover:bg-white/10">
+                  <a key={idx} href={social.url} className="text-gray-300 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10">
                       {renderSocialIcon(social.platform)}
                   </a>
               ))}

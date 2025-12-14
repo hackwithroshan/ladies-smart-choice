@@ -73,13 +73,39 @@ const GeneralSettings: React.FC<{ token: string | null }> = ({ token }) => {
                     </button>
                 </div>
 
-                <div>
-                    <label htmlFor="currency" className="block text-sm font-medium text-gray-700">Store Currency</label>
-                    <select id="currency" name="currency" value={settings.currency || 'INR'} onChange={handleChange} className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-rose-500 focus:border-rose-500 sm:text-sm rounded-md border">
-                        <option>INR</option>
-                        <option>USD</option>
-                    </select>
-                    <p className="mt-1 text-xs text-gray-500">This is the main currency for your store.</p>
+                {/* Typography */}
+                <div className="border-t pt-6">
+                    <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">Typography</h3>
+                    <div>
+                        <label htmlFor="fontFamily" className="block text-sm font-medium text-gray-700">Google Font Name</label>
+                        <div className="mt-1 flex rounded-md shadow-sm">
+                            <input 
+                                type="text" 
+                                name="fontFamily" 
+                                id="fontFamily" 
+                                value={settings.fontFamily || 'Montserrat'} 
+                                onChange={handleChange} 
+                                className="flex-1 min-w-0 block w-full px-3 py-2 rounded-md border border-gray-300 focus:ring-rose-500 focus:border-rose-500 sm:text-sm" 
+                                placeholder="e.g. Roboto, Open Sans, Poppins" 
+                            />
+                        </div>
+                        <p className="mt-2 text-xs text-gray-500">
+                            Enter the exact name of a font from <a href="https://fonts.google.com" target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">Google Fonts</a>. 
+                            The website will automatically load and apply it.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="border-t pt-6">
+                    <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">Localization</h3>
+                    <div>
+                        <label htmlFor="currency" className="block text-sm font-medium text-gray-700">Store Currency</label>
+                        <select id="currency" name="currency" value={settings.currency || 'INR'} onChange={handleChange} className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-rose-500 focus:border-rose-500 sm:text-sm rounded-md border">
+                            <option>INR</option>
+                            <option>USD</option>
+                        </select>
+                        <p className="mt-1 text-xs text-gray-500">This is the main currency for your store.</p>
+                    </div>
                 </div>
 
                 <div className="border-t pt-6">

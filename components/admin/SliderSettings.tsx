@@ -7,6 +7,7 @@ import MediaPicker from './MediaPicker';
 
 const emptySlide: Omit<Slide, '_id'> = {
     imageUrl: '',
+    mobileImageUrl: '',
     title: '',
     subtitle: '',
     buttonText: ''
@@ -117,12 +118,17 @@ const SliderSettings: React.FC<{ token: string | null }> = ({ token }) => {
             <div className="bg-white p-6 rounded-lg shadow-md">
                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {slides.map(slide => (
-                        <div key={slide._id} className="border rounded-lg overflow-hidden shadow">
-                            <img src={slide.imageUrl} alt={slide.title} className="h-40 w-full object-cover" />
-                            <div className="p-4">
+                        <div key={slide._id} className="border rounded-lg overflow-hidden shadow flex flex-col">
+                            <img src={slide.imageUrl} alt={slide.title} className="h-32 w-full object-cover" />
+                            {slide.mobileImageUrl && (
+                                <div className="h-8 bg-gray-100 text-xs flex items-center justify-center text-gray-500 border-t border-b">
+                                    Mobile Version Available
+                                </div>
+                            )}
+                            <div className="p-4 flex-1 flex flex-col">
                                 <h3 className="font-bold text-lg truncate">{slide.title || 'Untitled Slide'}</h3>
                                 <p className="text-sm text-gray-600 truncate">{slide.subtitle || 'No subtitle'}</p>
-                                <div className="mt-4 flex justify-end space-x-2">
+                                <div className="mt-auto pt-4 flex justify-end space-x-2">
                                     <button onClick={() => handleOpenModal(slide)} className="text-sm text-blue-600 hover:text-blue-800 font-medium">Edit</button>
                                     <button onClick={() => handleDeleteSlide(slide._id!)} className="text-sm text-red-600 hover:text-red-800 font-medium">Delete</button>
                                 </div>
@@ -134,29 +140,44 @@ const SliderSettings: React.FC<{ token: string | null }> = ({ token }) => {
 
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 z-40 flex justify-center items-center p-4 animate-fade-in">
-                    <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl z-50">
+                    <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl z-50 max-h-[90vh] overflow-y-auto">
                         <h3 className="text-xl font-bold mb-4">{'_id' in editingSlide ? 'Edit Slide' : 'Add New Slide'}</h3>
-                        <div className="space-y-4">
+                        <div className="space-y-6">
+                            {/* Desktop Image */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Slide Image <span className="text-red-500">*</span></label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Desktop Image <span className="text-red-500">*</span></label>
                                 <MediaPicker 
                                     value={editingSlide.imageUrl || ''} 
                                     onChange={url => setEditingSlide(prev => ({ ...prev, imageUrl: url }))} 
                                     type="image" 
                                 />
-                                <p className="mt-2 text-xs text-gray-500">Recommended size: 1905x600 pixels for best desktop appearance.</p>
+                                <p className="mt-1 text-xs text-gray-500">Recommended size: 1920x600 pixels (Landscape)</p>
                             </div>
-                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Title <span className="text-gray-400 font-normal">(Optional)</span></label>
-                                <input type="text" name="title" value={editingSlide.title || ''} onChange={handleInputChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-orange-500 focus:border-orange-500"/>
+
+                            {/* Mobile Image */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Mobile Image <span className="text-gray-400 font-normal">(Optional)</span></label>
+                                <MediaPicker 
+                                    value={editingSlide.mobileImageUrl || ''} 
+                                    onChange={url => setEditingSlide(prev => ({ ...prev, mobileImageUrl: url }))} 
+                                    type="image" 
+                                />
+                                <p className="mt-1 text-xs text-gray-500">Recommended size: 800x1000 pixels (Portrait). If left empty, Desktop image is used.</p>
                             </div>
-                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Subtitle <span className="text-gray-400 font-normal">(Optional)</span></label>
-                                <input type="text" name="subtitle" value={editingSlide.subtitle || ''} onChange={handleInputChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-orange-500 focus:border-orange-500"/>
-                            </div>
-                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Button Text <span className="text-gray-400 font-normal">(Optional)</span></label>
-                                <input type="text" name="buttonText" value={editingSlide.buttonText || ''} onChange={handleInputChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-orange-500 focus:border-orange-500"/>
+
+                            <div className="border-t border-gray-200 pt-4 space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Title <span className="text-gray-400 font-normal">(Optional)</span></label>
+                                    <input type="text" name="title" value={editingSlide.title || ''} onChange={handleInputChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-orange-500 focus:border-orange-500"/>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Subtitle <span className="text-gray-400 font-normal">(Optional)</span></label>
+                                    <input type="text" name="subtitle" value={editingSlide.subtitle || ''} onChange={handleInputChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-orange-500 focus:border-orange-500"/>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Button Text <span className="text-gray-400 font-normal">(Optional)</span></label>
+                                    <input type="text" name="buttonText" value={editingSlide.buttonText || ''} onChange={handleInputChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-orange-500 focus:border-orange-500"/>
+                                </div>
                             </div>
                         </div>
                         <div className="mt-6 flex justify-end space-x-3">

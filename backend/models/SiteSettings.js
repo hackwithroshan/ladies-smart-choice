@@ -7,6 +7,9 @@ const SiteSettingsSchema = new mongoose.Schema({
     shippingCharge: { type: Number, default: 0 },
     videoAutoplay: { type: Boolean, default: true },
     
+    // Branding
+    fontFamily: { type: String, default: 'Montserrat' }, // Default font
+
     // Meta Pixel & CAPI Settings
     metaPixelId: String, // Consolidated from facebookPixelId
     metaAccessToken: String,

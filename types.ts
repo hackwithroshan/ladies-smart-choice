@@ -142,10 +142,31 @@ export interface User {
   segment?: 'VIP' | 'New' | 'Returning' | 'High-Value'; 
 }
 
+// --- Navigation Types (Enhanced for Mega Menu) ---
+
+export interface SubLink {
+  text: string;
+  url: string;
+}
+
+export interface MegaMenuColumn {
+  id?: string;
+  title: string; // Column Header
+  links: SubLink[]; // Links inside this column
+}
+
 export interface HeaderLink {
   _id?: string;
   text: string;
   url: string;
+  isSpecial?: boolean; // Highlight flag
+  
+  // Navigation Mode
+  isMegaMenu?: boolean; 
+
+  // Data Containers
+  subLinks?: SubLink[]; // For Standard Dropdown
+  megaColumns?: MegaMenuColumn[]; // For Mega Menu Layout
 }
 
 export interface HeaderSettings {
@@ -154,7 +175,14 @@ export interface HeaderSettings {
   logoUrl?: string;
   brandColor?: string;
   phoneNumber: string;
-  topBarLinks: HeaderLink[];
+  
+  // Announcement Bar
+  announcementMessages?: string[]; 
+  announcementMessage?: string; 
+  announcementBgColor?: string;
+  announcementTextColor?: string;
+
+  topBarLinks: HeaderLink[]; 
   mainNavLinks: HeaderLink[];
 }
 
@@ -176,15 +204,23 @@ export interface SocialLink {
 
 export interface FooterSettings {
   _id?: string;
+  logoUrl?: string;
   brandDescription: string;
   copyrightText: string;
   socialLinks: SocialLink[];
   columns: FooterColumn[];
+  
+  // Background Styling
+  backgroundColor?: string;
+  backgroundImage?: string;
+  overlayColor?: string;
+  overlayOpacity?: number;
 }
 
 export interface Slide {
   _id?: string;
   imageUrl: string;
+  mobileImageUrl?: string;
   title: string;
   subtitle: string;
   buttonText: string;
@@ -237,6 +273,9 @@ export interface SiteSettings {
   shippingCharge: number;
   videoAutoplay?: boolean;
   
+  // Typography
+  fontFamily?: string;
+
   // Meta Pixel & CAPI Settings
   metaPixelId?: string;
   metaAccessToken?: string;
@@ -279,6 +318,10 @@ export interface Collection {
     title: string;
     imageUrl: string;
     slug?: string;
+    displayStyle?: 'Rectangle' | 'Square' | 'Circle' | 'ImageOnly';
+    description?: string;
+    isActive?: boolean;
+    products?: (Product | string)[];
 }
 
 export interface ShoppableVideo {

@@ -147,6 +147,9 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
   // Selection State
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
 
+  // Sorting State
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' });
+
   // Export State
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [exportOption, setExportOption] = useState<'current_page' | 'all' | 'selected' | 'date_range'>('current_page');
@@ -237,6 +240,15 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
           label: `${formatDate(newRange.startDate)} - ${formatDate(newRange.endDate)}`
       });
       setIsDateSelectorOpen(false);
+  };
+
+  // --- Sorting Handler ---
+  const requestSort = (key: string) => {
+      let direction: 'asc' | 'desc' = 'asc';
+      if (sortConfig.key === key && sortConfig.direction === 'asc') {
+          direction = 'desc';
+      }
+      setSortConfig({ key, direction });
   };
 
   const handleSaveChanges = async () => {
@@ -432,22 +444,39 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
     printWindow.document.close();
   };
 
-  // --- UPDATED: Filtering now includes date range ---
-  const filteredOrders = orders.filter(order => {
-      const orderDate = new Date(order.date);
-      const matchesDate = orderDate >= dateRange.startDate && orderDate <= dateRange.endDate;
-      const matchesStatus = filterStatus === 'All' || order.status === filterStatus;
-      const matchesSearch = searchTerm === '' || 
+  // --- Filter & Sort Logic ---
+  const processedOrders = orders
+    .filter(order => {
+        const orderDate = new Date(order.date);
+        const matchesDate = orderDate >= dateRange.startDate && orderDate <= dateRange.endDate;
+        const matchesStatus = filterStatus === 'All' || order.status === filterStatus;
+        const matchesSearch = searchTerm === '' || 
                             order.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
                             order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             (order.customerEmail && order.customerEmail.toLowerCase().includes(searchTerm.toLowerCase()));
-      return matchesDate && matchesStatus && matchesSearch;
-  });
+        return matchesDate && matchesStatus && matchesSearch;
+    })
+    .sort((a, b) => {
+        if (sortConfig.key === 'date') {
+            const dateA = new Date(a.date).getTime();
+            const dateB = new Date(b.date).getTime();
+            return sortConfig.direction === 'asc' ? dateA - dateB : dateB - dateA;
+        }
+        if (sortConfig.key === 'total') {
+            return sortConfig.direction === 'asc' ? a.total - b.total : b.total - a.total;
+        }
+        if (sortConfig.key === 'status') {
+            return sortConfig.direction === 'asc' 
+                ? a.status.localeCompare(b.status) 
+                : b.status.localeCompare(a.status);
+        }
+        return 0;
+    });
 
   // --- EXPORT LOGIC ---
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.checked) {
-          const allIds = filteredOrders.map(o => o.id);
+          const allIds = processedOrders.map(o => o.id);
           setSelectedOrderIds(new Set(allIds));
       } else {
           setSelectedOrderIds(new Set());
@@ -469,8 +498,8 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
 
       switch (exportOption) {
           case 'current_page':
-              // Assuming filteredOrders is the "current page" data as per table view
-              ordersToExport = filteredOrders;
+              // Assuming processedOrders is the "current page" data as per table view
+              ordersToExport = processedOrders;
               break;
           case 'all':
               ordersToExport = orders;
@@ -480,7 +509,7 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
               break;
           case 'date_range':
               // Reuse current date filter logic for simplicity, or re-filter all orders
-              ordersToExport = filteredOrders; 
+              ordersToExport = processedOrders; 
               break;
       }
 
@@ -538,6 +567,11 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
               </div>
           </div>
       );
+  };
+
+  const SortIcon = ({ column }: { column: string }) => {
+      if (sortConfig.key !== column) return <span className="text-gray-300 ml-1 text-xs opacity-50">⇅</span>;
+      return <span className="ml-1 text-blue-600 font-bold">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>;
   };
   
   if (loading) return <div>Loading orders...</div>;
@@ -606,18 +640,45 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-4 py-3 w-10">
-                  <input type="checkbox" onChange={handleSelectAll} checked={selectedOrderIds.size === filteredOrders.length && filteredOrders.length > 0} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                  <input type="checkbox" onChange={handleSelectAll} checked={selectedOrderIds.size === processedOrders.length && processedOrders.length > 0} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
               </th>
               <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Order ID</th>
               <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Customer</th>
-              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Total</th>
-              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
+              
+              {/* Sortable Date Header */}
+              <th 
+                className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                onClick={() => requestSort('date')}
+              >
+                  <div className="flex items-center">
+                      Date <SortIcon column="date" />
+                  </div>
+              </th>
+
+              {/* Sortable Total Header */}
+              <th 
+                className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                onClick={() => requestSort('total')}
+              >
+                  <div className="flex items-center">
+                      Total <SortIcon column="total" />
+                  </div>
+              </th>
+
+              {/* Sortable Status Header */}
+              <th 
+                className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                onClick={() => requestSort('status')}
+              >
+                  <div className="flex items-center">
+                      Status <SortIcon column="status" />
+                  </div>
+              </th>
               <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Action</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {filteredOrders.map((order) => (
+            {processedOrders.map((order) => (
               <tr key={order.id} className={`hover:bg-gray-50 transition-colors cursor-pointer ${selectedOrderIds.has(order.id) ? 'bg-blue-50' : ''}`} onClick={() => handleOpenModal(order)}>
                 <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
                     <input type="checkbox" checked={selectedOrderIds.has(order.id)} onChange={() => handleToggleSelect(order.id)} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
@@ -650,7 +711,7 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
                 </td>
               </tr>
             ))}
-            {filteredOrders.length === 0 && (
+            {processedOrders.length === 0 && (
                 <tr><td colSpan={7} className="px-6 py-8 text-center text-gray-500">No orders found matching your criteria.</td></tr>
             )}
           </tbody>
@@ -685,7 +746,7 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
                               </label>
                               <label className="flex items-center space-x-3 cursor-pointer">
                                   <input type="radio" name="exportOption" value="date_range" checked={exportOption === 'date_range'} onChange={() => setExportOption('date_range')} className="h-4 w-4 text-gray-900 border-gray-300 focus:ring-gray-900" />
-                                  <span className="text-sm text-gray-700">{filteredOrders.length} orders matching your search</span>
+                                  <span className="text-sm text-gray-700">{processedOrders.length} orders matching your search</span>
                               </label>
                               <label className="flex items-center space-x-3 cursor-pointer">
                                   <input type="radio" name="exportOption" value="date_range_option" disabled className="h-4 w-4 text-gray-300 border-gray-300 focus:ring-gray-900" />

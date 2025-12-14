@@ -1,7 +1,6 @@
 
 import React from 'react';
-import * as ReactRouterDom from 'react-router-dom';
-const { Link, useNavigate } = ReactRouterDom;
+import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import Header from '../components/Header';
 import Footer from '../components/Footer';

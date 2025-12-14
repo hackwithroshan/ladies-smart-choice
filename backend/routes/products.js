@@ -96,6 +96,43 @@ router.get('/all', protect, admin, async (req, res) => {
     }
 });
 
+// POST Bulk Actions
+router.post('/bulk', protect, admin, async (req, res) => {
+    const { ids, action, data } = req.body;
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ message: 'No products selected' });
+    }
+
+    try {
+        let result;
+        switch (action) {
+            case 'activate':
+                result = await Product.updateMany({ _id: { $in: ids } }, { status: 'Active' });
+                break;
+            case 'draft':
+                result = await Product.updateMany({ _id: { $in: ids } }, { status: 'Draft' });
+                break;
+            case 'archive':
+                result = await Product.updateMany({ _id: { $in: ids } }, { status: 'Archived' });
+                break;
+            case 'category':
+                if (!data || !data.category) return res.status(400).json({ message: 'Category is required' });
+                result = await Product.updateMany({ _id: { $in: ids } }, { category: data.category });
+                break;
+            case 'delete':
+                result = await Product.deleteMany({ _id: { $in: ids } });
+                break;
+            default:
+                return res.status(400).json({ message: 'Invalid action' });
+        }
+        
+        res.json({ message: 'Bulk action completed', result });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 // POST a new product
 router.post('/', protect, admin, async (req, res) => {
     try {

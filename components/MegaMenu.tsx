@@ -1,9 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-// FIX: The `react-router-dom` module is not resolving named exports correctly in this environment.
-// Switching to a namespace import (`import * as ...`) and then destructuring is a more robust way to access the exports.
-import * as ReactRouterDom from 'react-router-dom';
-const { Link } = ReactRouterDom;
+import { Link } from 'react-router-dom';
 import { Product } from '../types';
 import { useSiteData } from '../contexts/SiteDataContext';
 import { getApiUrl } from '../utils/apiHelper';

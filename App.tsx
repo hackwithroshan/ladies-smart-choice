@@ -1,18 +1,16 @@
 
 import React, { useState, useEffect, Suspense, lazy, useRef } from 'react';
-import * as ReactRouterDom from 'react-router-dom';
-// FIX: Property 'as' does not exist on type 'typeof import(...)'. This indicates an issue with aliasing during destructuring from a namespace import.
-// This also caused a downstream error where `Router` was incorrectly typed, expecting props like `location` and `navigator`.
-// We will separate the alias assignment to ensure `Router` correctly points to `BrowserRouter`.
-const { Routes, Route, Navigate, useLocation, useNavigate } = ReactRouterDom;
-const Router = ReactRouterDom.BrowserRouter;
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { CartProvider } from './contexts/CartContext';
+import { WishlistProvider } from './contexts/WishlistContext';
 import { SiteDataProvider, useSiteData } from './contexts/SiteDataContext';
 import { initFacebookPixel } from './utils/metaPixel';
 import { masterTracker } from './utils/tracking';
 import { getApiUrl } from './utils/apiHelper';
 import ErrorBoundary from './components/ErrorBoundary';
+import SmartPopup from './components/SmartPopup';
+import WhatsAppWidget from './components/WhatsAppWidget';
 
 // --- Lazy Load Pages for Code Splitting & Performance ---
 const HomePage = lazy(() => import('./pages/HomePage'));
@@ -146,6 +144,14 @@ const AppContent: React.FC = () => {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
+        
+        {/* --- Global Smart Features --- */}
+        {!user?.isAdmin && (
+          <>
+            <SmartPopup />
+            <WhatsAppWidget />
+          </>
+        )}
       </div>
     </>
   );
@@ -156,13 +162,15 @@ const App: React.FC = () => {
   return (
     <HelmetProvider>
       <CartProvider>
-        <SiteDataProvider>
-          <Router>
-            <ErrorBoundary>
-              <AppContent />
-            </ErrorBoundary>
-          </Router>
-        </SiteDataProvider>
+        <WishlistProvider>
+          <SiteDataProvider>
+            <Router>
+              <ErrorBoundary>
+                <AppContent />
+              </ErrorBoundary>
+            </Router>
+          </SiteDataProvider>
+        </WishlistProvider>
       </CartProvider>
     </HelmetProvider>
   );

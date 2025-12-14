@@ -1,5 +1,4 @@
 
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { 
     HeaderSettings, 
@@ -107,6 +106,37 @@ export const SiteDataProvider: React.FC<{ children: ReactNode }> = ({ children }
 
         fetchSiteData();
     }, []);
+
+    // --- Dynamic Font Injection ---
+    useEffect(() => {
+        if (siteSettings?.fontFamily) {
+            const fontName = siteSettings.fontFamily;
+            const linkId = 'dynamic-font-link';
+            const styleId = 'dynamic-font-style';
+
+            // Remove existing dynamic font tags
+            document.getElementById(linkId)?.remove();
+            document.getElementById(styleId)?.remove();
+
+            if (fontName !== 'Montserrat') { // Montserrat is already loaded by default in index.html
+                // Inject Link Tag for Google Fonts
+                const link = document.createElement('link');
+                link.id = linkId;
+                link.rel = 'stylesheet';
+                // Replace spaces with + for URL
+                link.href = `https://fonts.googleapis.com/css2?family=${fontName.replace(/ /g, '+')}:wght@300;400;500;600;700;800&display=swap`;
+                document.head.appendChild(link);
+
+                // Inject CSS Variable/Style override
+                const style = document.createElement('style');
+                style.id = styleId;
+                style.innerHTML = `
+                    body { font-family: '${fontName}', sans-serif !important; }
+                `;
+                document.head.appendChild(style);
+            }
+        }
+    }, [siteSettings?.fontFamily]);
 
     const value = { 
         headerSettings, 

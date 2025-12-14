@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MediaItem } from '../../types';
 import { COLORS } from '../../constants';
+import { getApiUrl } from '../../utils/apiHelper';
 
 // Cloudinary config
 const CLOUDINARY_UPLOAD_PRESET = 'ladiesh';
@@ -13,9 +14,10 @@ interface MediaPickerProps {
     onChange: (url: string) => void;
     type?: 'image' | 'video' | 'any';
     placeholder?: string;
+    renderTrigger?: (open: () => void) => React.ReactNode; // NEW: Custom trigger prop
 }
 
-const MediaPicker: React.FC<MediaPickerProps> = ({ value, onChange, type = 'any', placeholder = "Select Media" }) => {
+const MediaPicker: React.FC<MediaPickerProps> = ({ value, onChange, type = 'any', placeholder = "Select Media", renderTrigger }) => {
     const [isOpen, setIsOpen] = useState(false);
     const token = localStorage.getItem('token');
 
@@ -35,7 +37,7 @@ const MediaPicker: React.FC<MediaPickerProps> = ({ value, onChange, type = 'any'
             const fetchMedia = async () => {
                 setLoading(true);
                 try {
-                    const res = await fetch('/api/media', {
+                    const res = await fetch(getApiUrl('/api/media'), {
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
                     if (res.ok) {
@@ -75,7 +77,7 @@ const MediaPicker: React.FC<MediaPickerProps> = ({ value, onChange, type = 'any'
                 if (data.secure_url) {
                     if (index === 0) firstUrl = data.secure_url;
                     
-                    await fetch('/api/media', {
+                    await fetch(getApiUrl('/api/media'), {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -141,34 +143,41 @@ const MediaPicker: React.FC<MediaPickerProps> = ({ value, onChange, type = 'any'
 
     return (
         <div>
-            <div className="flex items-center gap-2">
-                <div className="flex-1 relative">
-                    <input 
-                        type="text" 
-                        value={value} 
-                        onChange={(e) => onChange(e.target.value)} 
-                        className="block w-full border-gray-300 rounded-l-lg shadow-sm p-2.5 border text-sm focus:ring-rose-500 focus:border-rose-500" 
-                        placeholder={placeholder || "https://..."}
-                    />
-                </div>
-                <button 
-                    type="button" 
-                    onClick={() => { setIsOpen(true); setActiveTab('upload'); }} // Default to upload tab
-                    className="px-4 py-2.5 bg-gray-100 border border-l-0 border-gray-300 rounded-r-lg hover:bg-gray-200 text-sm font-medium text-gray-700"
-                >
-                    Choose
-                </button>
-            </div>
-            
-            {value && (
-                <div className="mt-2 w-20 h-20 rounded-md border border-gray-200 overflow-hidden relative bg-gray-50">
-                    {value.match(/\.(mp4|webm|ogg)$/i) ? (
-                         <video src={value} className="w-full h-full object-cover" />
-                    ) : (
-                        <img src={value} alt="Preview" className="w-full h-full object-cover" />
+            {/* Render Custom Trigger if provided, else Default Input UI */}
+            {renderTrigger ? (
+                renderTrigger(() => { setIsOpen(true); setActiveTab('library'); })
+            ) : (
+                <>
+                    <div className="flex items-center gap-2">
+                        <div className="flex-1 relative">
+                            <input 
+                                type="text" 
+                                value={value} 
+                                onChange={(e) => onChange(e.target.value)} 
+                                className="block w-full border-gray-300 rounded-l-lg shadow-sm p-2.5 border text-sm focus:ring-rose-500 focus:border-rose-500" 
+                                placeholder={placeholder || "https://..."}
+                            />
+                        </div>
+                        <button 
+                            type="button" 
+                            onClick={() => { setIsOpen(true); setActiveTab('upload'); }} 
+                            className="px-4 py-2.5 bg-gray-100 border border-l-0 border-gray-300 rounded-r-lg hover:bg-gray-200 text-sm font-medium text-gray-700"
+                        >
+                            Choose
+                        </button>
+                    </div>
+                    
+                    {value && (
+                        <div className="mt-2 w-20 h-20 rounded-md border border-gray-200 overflow-hidden relative bg-gray-50">
+                            {value.match(/\.(mp4|webm|ogg)$/i) ? (
+                                <video src={value} className="w-full h-full object-cover" />
+                            ) : (
+                                <img src={value} alt="Preview" className="w-full h-full object-cover" />
+                            )}
+                            <button type="button" onClick={() => onChange('')} className="absolute top-0 right-0 bg-black/50 text-white p-0.5 rounded-bl hover:bg-red-600">×</button>
+                        </div>
                     )}
-                    <button type="button" onClick={() => onChange('')} className="absolute top-0 right-0 bg-black/50 text-white p-0.5 rounded-bl hover:bg-red-600">×</button>
-                </div>
+                </>
             )}
 
             {isOpen && (

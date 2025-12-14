@@ -1,11 +1,9 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Product } from '../types';
-import { COLORS } from '../constants';
+import { useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
-import * as ReactRouterDom from 'react-router-dom';
-const { useNavigate } = ReactRouterDom;
-import { masterTracker } from '../utils/tracking';
+import { useWishlist } from '../contexts/WishlistContext';
 
 interface ProductCardProps {
   product: Product;
@@ -13,84 +11,152 @@ interface ProductCardProps {
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClick }) => {
-  const { addToCart } = useCart();
   const navigate = useNavigate();
+  const { addToCart } = useCart();
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+  
+  // --- State ---
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
 
-  const handleAddToCart = (e: React.MouseEvent) => {
+  // Combine main image and gallery for the slideshow
+  const images = [product.imageUrl, ...(product.galleryImages || [])].filter(Boolean);
+  const isWishlisted = isInWishlist(product.id);
+
+  // --- Effects ---
+
+  // Handle Image Slideshow on Hover
+  useEffect(() => {
+    let interval: any;
+    if (isHovered && images.length > 1) {
+      interval = setInterval(() => {
+        setCurrentImageIndex((prev) => (prev + 1) % images.length);
+      }, 1200); // Change image every 1.2 seconds
+    } else {
+      setCurrentImageIndex(0); // Reset to cover image when not hovering
+    }
+    return () => clearInterval(interval);
+  }, [isHovered, images.length]);
+
+  // --- Handlers ---
+
+  const handleCardClick = () => {
+    if (onProductClick && product.slug) {
+      onProductClick(product.slug);
+    } else if (product.slug) {
+        navigate(`/product/${product.slug}`);
+    }
+  };
+
+  const handleWishlistClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    addToCart(product);
+    if (isWishlisted) {
+      removeFromWishlist(product.id);
+    } else {
+      addToWishlist(product.id);
+    }
+  };
 
-    const eventPayload = {
-        contents: [{
-            id: product.sku || product.id,
-            quantity: 1,
-            item_price: product.price,
-        }],
-        content_name: product.name,
-        content_type: 'product',
-        value: product.price,
-        currency: 'INR'
-    };
+  const handleQuickAdd = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsAdding(true);
+    addToCart(product, 1);
     
-    // Use the master tracker for dual browser/server events with deduplication
-    masterTracker('AddToCart', eventPayload, eventPayload);
-
-    // Since this action immediately redirects to checkout, it's considered a "magic checkout" event.
-    masterTracker('magic_checkout_requested', eventPayload, eventPayload);
-    
+    // Redirect to Checkout immediately
     navigate('/checkout');
   };
 
-  const discount = product.mrp && product.mrp > product.price 
-    ? Math.round(((product.mrp - product.price) / product.mrp) * 100) 
+  // Metrics
+  const hasDiscount = product.mrp && product.mrp > product.price;
+  const discountPercentage = hasDiscount 
+    ? Math.round(((product.mrp! - product.price) / product.mrp!) * 100) 
     : 0;
 
   return (
     <div 
-      className="group relative bg-white border border-gray-100 rounded-lg shadow-sm overflow-hidden transition-all duration-300 hover:shadow-xl lg:hover:-translate-y-1 cursor-pointer flex flex-col h-full"
-      onClick={() => onProductClick && product.slug && onProductClick(product.slug)}
+      className="group relative flex flex-col w-full cursor-pointer"
+      onClick={handleCardClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="aspect-[3/4] w-full overflow-hidden relative">
+      {/* 1. IMAGE CONTAINER (Taller Aspect Ratio 2:3 for Full Portrait) */}
+      <div className="relative aspect-[2/3] w-full overflow-hidden rounded-lg md:rounded-2xl bg-gray-100 shadow-sm transition-all duration-500 hover:shadow-xl border border-gray-100">
+        
+        {/* Images - Full Cover */}
         <img
-          src={product.imageUrl}
+          src={images[currentImageIndex]}
           alt={product.name}
-          className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+          className={`h-full w-full object-cover object-top transition-transform duration-700 ease-out ${isHovered ? 'scale-110' : 'scale-100'}`}
+          loading="lazy"
         />
-        <div className="absolute top-3 left-3 flex flex-col gap-1.5">
-            {discount > 0 && (
-                <span className="bg-rose-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-sm uppercase tracking-wider shadow-md">
-                    {discount}% OFF
+
+        {/* Discount Badge */}
+        {hasDiscount && (
+            <div className="absolute top-2 left-2 md:top-3 md:left-3 z-20">
+                <span className="inline-flex items-center justify-center rounded bg-rose-600 px-1.5 py-0.5 md:px-2.5 md:py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-md">
+                    -{discountPercentage}%
                 </span>
-            )}
-            {product.stock > 0 && product.stock < 10 && (
-                 <span className="bg-black text-white text-[10px] font-bold px-2.5 py-1 rounded-sm uppercase tracking-wider shadow-md">
-                    Low Stock
-                </span>
-            )}
+            </div>
+        )}
+
+        {/* Wishlist Button - Glassmorphism Transparent Type */}
+        <button
+          onClick={handleWishlistClick}
+          className="absolute top-2 right-2 md:top-3 md:right-3 z-20 flex h-8 w-8 md:h-10 md:w-10 items-center justify-center rounded-full bg-white/40 backdrop-blur-md border border-white/50 shadow-sm transition-all duration-300 hover:bg-white/60 hover:shadow-md hover:scale-110 active:scale-95"
+          aria-label="Add to wishlist"
+        >
+          {isWishlisted ? (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4 md:h-5 md:w-5 text-rose-600 animate-bounce">
+              <path d="m11.645 20.91-.007-.003-.022-.012a15.247 15.247 0 0 1-.383-.218 25.18 25.18 0 0 1-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0 1 12 5.052 5.5 5.5 0 0 1 16.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 0 1-4.244 3.17 15.247 15.247 0 0 1-.383.219l-.022.012-.007.004-.003.001a.752.752 0 0 1-.704 0l-.003-.001Z" />
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-4 w-4 md:h-5 md:w-5 text-gray-800">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
+            </svg>
+          )}
+        </button>
+
+        {/* GLASS PRISM ADD TO CART BUTTON (Desktop Only Hover) */}
+        <div className="absolute inset-x-4 bottom-4 z-20 translate-y-12 opacity-0 transition-all duration-500 ease-out group-hover:translate-y-0 group-hover:opacity-100 hidden md:block">
+            <button
+                onClick={handleQuickAdd}
+                className={`w-full relative overflow-hidden rounded-xl border border-white/40 bg-white/30 py-3.5 text-sm font-bold text-gray-900 shadow-lg backdrop-blur-md transition-all hover:bg-white/50 hover:text-black active:scale-95 flex items-center justify-center gap-2 ${isAdding ? 'bg-green-500/80 text-white border-green-400' : ''}`}
+            >
+                {isAdding ? (
+                    <>
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>Added</span>
+                    </>
+                ) : (
+                    <>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                        </svg>
+                        <span>Buy Now</span>
+                    </>
+                )}
+            </button>
         </div>
       </div>
-      <div className="p-4 flex-1 flex flex-col">
-        <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">{product.category}</p>
-        <h3 className="text-sm font-bold text-gray-800 line-clamp-2 mb-2 flex-grow">
-          <span aria-hidden="true" className="absolute inset-0" />
+
+      {/* 2. PRODUCT INFO - Left Aligned */}
+      <div className="mt-2 md:mt-4 flex flex-col items-start text-left px-1">
+        <h3 className="line-clamp-2 text-xs md:text-base font-medium text-gray-900 group-hover:text-rose-600 transition-colors leading-snug font-serif">
           {product.name}
         </h3>
-        
-        <div className="mt-auto">
-            <div className="flex items-baseline gap-2 mb-3">
-                <p className="text-lg font-extrabold text-gray-900">₹{product.price.toLocaleString('en-IN')}</p>
-                {product.mrp && product.mrp > product.price && (
-                    <p className="text-sm text-gray-400 line-through decoration-1">₹{product.mrp.toLocaleString('en-IN')}</p>
-                )}
-            </div>
-            
-            <button 
-              onClick={handleAddToCart}
-              className="w-full text-center px-4 py-2.5 text-xs font-bold text-white rounded-md shadow-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-rose-500" 
-              style={{ backgroundColor: COLORS.accent }}
-             >
-              Add to Cart
-            </button>
+
+        <div className="mt-1 md:mt-2 flex flex-wrap items-baseline gap-1 md:gap-2">
+            <span className="text-sm md:text-lg font-bold text-gray-900">
+                RS {product.price.toLocaleString('en-IN')}
+            </span>
+            {hasDiscount && (
+                <span className="text-xs md:text-sm text-gray-400 line-through decoration-gray-400">
+                    RS {product.mrp?.toLocaleString('en-IN')}
+                </span>
+            )}
         </div>
       </div>
     </div>

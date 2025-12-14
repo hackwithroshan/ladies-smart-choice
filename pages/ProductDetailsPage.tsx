@@ -1,15 +1,13 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import * as ReactRouterDom from 'react-router-dom';
-const { useParams, Link, useNavigate } = ReactRouterDom;
-import { Helmet } from 'react-helmet-async';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Product, Review } from '../types';
 import { useCart } from '../contexts/CartContext';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import Accordion from '../components/Accordion';
-import ProductCard from '../components/ProductCard';
 import ProductStickyBar from '../components/ProductStickyBar';
+import SEO from '../components/SEO';
 import { StarIcon, PlayIcon } from '../components/Icons';
 import { masterTracker } from '../utils/tracking';
 import { handleApiError, getFriendlyErrorMessage } from '../utils/errorHandler';
@@ -17,6 +15,7 @@ import ErrorMessage from '../components/ErrorMessage';
 import { getApiUrl } from '../utils/apiHelper';
 import ErrorBoundary from '../components/ErrorBoundary';
 import MediaPicker from '../components/admin/MediaPicker';
+import { stripHtml, truncateText } from '../utils/seoHelper';
 
 interface ShopVideo {
     _id: string;
@@ -129,14 +128,9 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
-        // When the main "Add to Cart" button is NOT visible in the viewport, show the sticky bar.
-        // This is more reliable than checking scroll position.
         setIsStickyBarVisible(!entry.isIntersecting);
       },
-      { 
-        // Trigger when the element is fully out of view.
-        threshold: 0 
-      }
+      { threshold: 0 }
     );
 
     const currentRef = addToCartRef.current;
@@ -149,7 +143,7 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
         observer.unobserve(currentRef);
       }
     };
-  }, [product]); // Re-observe if the product (and thus the layout) changes
+  }, [product]);
 
   const handleVariantChange = (name: string, value: string) => {
       setSelectedVariants(prev => ({ ...prev, [name]: value }));
@@ -237,25 +231,33 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
   const images = [product.imageUrl, ...(product.galleryImages || [])];
   const discount = product.mrp ? Math.round(((product.mrp - product.price) / product.mrp) * 100) : 0;
   
-  // --- UPDATED: More accurate review calculation ---
   const reviews = product.reviews || [];
   const reviewCount = reviews.length;
   const avgRating = reviewCount > 0 ? (reviews.reduce((a, b) => a + b.rating, 0) / reviewCount).toFixed(1) : null;
 
-  // --- ADDED: Helper for cleaning HTML and generating JSON-LD Schema ---
-  const stripHtml = (html: string) => {
-    if (typeof DOMParser === 'undefined') return html.replace(/<[^>]*>?/gm, '');
-    const doc = new DOMParser().parseFromString(html, 'text/html');
-    return doc.body.textContent || "";
-  };
+  // --- SEO: Schema Generation ---
+  const plainDescription = truncateText(stripHtml(product.description));
   
+  // 1. Breadcrumb Schema
+  const breadcrumbSchema = {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": window.location.origin },
+        { "@type": "ListItem", "position": 2, "name": product.category, "item": `${window.location.origin}/collections` },
+        { "@type": "ListItem", "position": 3, "name": product.name, "item": window.location.href }
+      ]
+  };
+
+  // 2. Product Schema
   const productSchema: any = {
     "@context": "https://schema.org/",
     "@type": "Product",
     "name": product.name,
-    "image": product.imageUrl,
-    "description": product.seoDescription || product.shortDescription || stripHtml(product.description),
+    "image": images,
+    "description": product.seoDescription || product.shortDescription || plainDescription,
     "sku": product.sku || product.id,
+    "mpn": product.sku || product.id, // Manufacturer Part Number
     "brand": {
       "@type": "Brand",
       "name": product.brand || "Ladies Smart Choice"
@@ -265,6 +267,7 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
       "url": window.location.href,
       "priceCurrency": "INR",
       "price": product.price,
+      "itemCondition": "https://schema.org/NewCondition",
       "availability": product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
       "priceValidUntil": new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString()
     }
@@ -276,22 +279,26 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
       "ratingValue": avgRating,
       "reviewCount": reviewCount
     };
+    
+    // Add top 3 reviews
+    productSchema.review = reviews.slice(0, 3).map(r => ({
+        "@type": "Review",
+        "reviewRating": { "@type": "Rating", "ratingValue": r.rating },
+        "author": { "@type": "Person", "name": r.name },
+        "datePublished": r.date
+    }));
   }
 
   return (
     <div className="bg-white min-h-screen font-sans text-[#333]">
-      <Helmet>
-        <title>{product.seoTitle || product.name} | Ladies Smart Choice</title>
-        <meta name="description" content={product.seoDescription || product.shortDescription || stripHtml(product.description).substring(0, 160)} />
-        <meta property="og:title" content={product.seoTitle || product.name} />
-        <meta property="og:description" content={product.seoDescription || product.shortDescription} />
-        <meta property="og:image" content={product.imageUrl} />
-        <meta property="og:type" content="product" />
-        <meta property="og:url" content={window.location.href} />
-        <meta property="product:price:amount" content={String(product.price)} />
-        <meta property="product:price:currency" content="INR" />
-        <script type="application/ld+json">{JSON.stringify(productSchema)}</script>
-      </Helmet>
+      <SEO 
+        title={product.seoTitle || product.name}
+        description={product.seoDescription || product.shortDescription || plainDescription}
+        image={product.imageUrl}
+        type="product"
+        keywords={product.seoKeywords}
+        schema={[breadcrumbSchema, productSchema]}
+      />
       
       <Header user={user} logout={logout} />
       <ErrorBoundary>
@@ -303,22 +310,42 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
             </nav>
         </div>
 
-        <main className="container mx-auto px-4 max-w-[1400px] pb-20">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16">
+        <main className="container mx-auto px-0 md:px-4 max-w-[1400px] pb-20">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-16">
+              
+              {/* Product Images (Mobile: Horizontal Scroll, Desktop: Grid) */}
               <div className="lg:col-span-7 flex flex-col gap-6">
-                  <div className="relative w-full aspect-[3/4] bg-gray-50 overflow-hidden rounded-sm group cursor-zoom-in">
+                  {/* Mobile Scroll Snap / Desktop Zoom Container */}
+                  <div className="relative w-full bg-gray-50 overflow-x-auto flex snap-x snap-mandatory scrollbar-hide lg:block lg:overflow-visible lg:rounded-sm group cursor-zoom-in">
+                      {images.map((img, idx) => (
+                          <div key={idx} className="min-w-full lg:min-w-0 snap-center lg:hidden">
+                              <img src={img} alt={`${product.name} ${idx}`} className="w-full h-auto aspect-[3/4] object-cover" />
+                          </div>
+                      ))}
+                      
+                      {/* Desktop Active Image */}
                       <img 
                           src={activeImage} 
                           alt={product.name} 
-                          className="w-full h-full object-cover transition-transform duration-700 ease-in-out group-hover:scale-110"
+                          className="hidden lg:block w-full h-full object-cover aspect-[3/4] transition-transform duration-700 ease-in-out group-hover:scale-110"
                       />
-                      <div className="absolute top-4 left-4 flex flex-col gap-2">
+
+                      <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
                           {discount > 0 && <span className="bg-rose-600 text-white text-[10px] font-bold px-3 py-1 uppercase tracking-widest">-{discount}% Sale</span>}
                           {product.stock < 5 && product.stock > 0 && <span className="bg-black text-white text-[10px] font-bold px-3 py-1 uppercase tracking-widest">Low Stock</span>}
                       </div>
+                      
+                      {/* Mobile Dots Indicator */}
+                      <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2 lg:hidden">
+                          {images.map((_, idx) => (
+                              <div key={idx} className={`w-2 h-2 rounded-full ${idx === 0 ? 'bg-black' : 'bg-black/20'}`}></div>
+                          ))}
+                      </div>
                   </div>
+
+                  {/* Desktop Thumbnail Grid */}
                   {images.length > 1 && (
-                      <div className="grid grid-cols-5 gap-4">
+                      <div className="hidden lg:grid grid-cols-5 gap-4">
                           {images.map((img, idx) => (
                               <button 
                                   key={idx} 
@@ -332,11 +359,12 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
                   )}
               </div>
 
-              <div className="lg:col-span-5 relative">
+              {/* Details Column */}
+              <div className="lg:col-span-5 relative px-4 pt-6 lg:px-0 lg:pt-0">
                   <div className="sticky top-8 space-y-8 bg-white z-30">
                       <div className="border-b border-gray-100 pb-6">
                           <h2 className="text-xs font-bold text-gray-400 uppercase tracking-[0.2em] mb-3">{product.brand || 'LADIES SMART CHOICE'}</h2>
-                          <h1 className="text-3xl md:text-4xl font-serif text-gray-900 leading-tight mb-4">{product.name}</h1>
+                          <h1 className="text-2xl md:text-4xl font-serif text-gray-900 leading-tight mb-4">{product.name}</h1>
                           <div className="flex items-center justify-between">
                               <div className="flex items-baseline gap-4">
                                   <span className="text-2xl font-bold text-gray-900">₹{product.price.toLocaleString()}</span>
@@ -359,7 +387,7 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
                       </div>
 
                       <p className="text-gray-600 text-sm leading-relaxed">
-                          {product.shortDescription || product.description.substring(0, 150) + "..."}
+                          {product.shortDescription || plainDescription.substring(0, 150) + "..."}
                       </p>
 
                       <div className="space-y-6">
@@ -432,7 +460,7 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
           </div>
 
           {shopVideos.length > 0 && (
-              <div className="mt-24 border-t border-gray-100 pt-16">
+              <div className="mt-24 border-t border-gray-100 pt-16 px-4 lg:px-0">
                   <h3 className="text-2xl font-serif font-bold text-gray-900 mb-8 text-center">Style Inspiration</h3>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
                       {shopVideos.slice(0, 4).map(video => (
@@ -464,7 +492,7 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
               </div>
           )}
 
-          <div id="reviews" className="mt-24 border-t border-gray-100 pt-16 pb-16">
+          <div id="reviews" className="mt-24 border-t border-gray-100 pt-16 pb-16 px-4 lg:px-0">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
                   <div className="lg:col-span-4">
                       {user ? (

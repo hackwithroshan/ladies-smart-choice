@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import * as ReactRouterDom from 'react-router-dom';
-const { useSearchParams } = ReactRouterDom;
+import { useSearchParams } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { getApiUrl } from '../utils/apiHelper';

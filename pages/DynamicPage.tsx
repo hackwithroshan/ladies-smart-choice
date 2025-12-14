@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import * as ReactRouterDom from 'react-router-dom';
-const { useParams, Link } = ReactRouterDom;
+import { useParams, Link } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { ContentPage } from '../types';

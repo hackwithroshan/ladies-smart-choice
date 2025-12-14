@@ -1,10 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-// FIX: The `react-router-dom` module is not resolving named exports correctly in this environment.
-// Switching to a namespace import (`import * as ...`) and then destructuring is a more robust way to access the exports.
-import * as ReactRouterDom from 'react-router-dom';
-const { useNavigate } = ReactRouterDom;
-import { Helmet } from 'react-helmet-async';
+import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import ProductCard from '../components/ProductCard';
@@ -13,6 +9,7 @@ import { useSiteData } from '../contexts/SiteDataContext';
 import { COLORS } from '../constants';
 import { ChevronLeftIcon, ChevronRightIcon, PlayIcon } from '../components/Icons';
 import ErrorBoundary from '../components/ErrorBoundary';
+import SEO from '../components/SEO';
 
 interface HomePageProps {
   user: any;
@@ -131,78 +128,180 @@ const HomePage: React.FC<HomePageProps> = ({ user, logout }) => {
   const newArrivals = products.slice(0, 4);
   const bestSellers = products.length > 4 ? products.slice(4, 8) : products.slice(0, 4);
 
+  // --- SEO Schemas ---
+  const orgSchema = {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Ladies Smart Choice",
+      "url": window.location.origin,
+      "logo": `${window.location.origin}/logo.png`, // Assumes logo.png exists in public or handle dynamically
+      "contactPoint": {
+          "@type": "ContactPoint",
+          "telephone": "+91 987 654 3210",
+          "contactType": "customer service"
+      }
+  };
+
+  const websiteSchema = {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Ladies Smart Choice",
+      "url": window.location.origin,
+      "potentialAction": {
+          "@type": "SearchAction",
+          "target": `${window.location.origin}/search?q={search_term_string}`,
+          "query-input": "required name=search_term_string"
+      }
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-white">
-      <Helmet>
-        <title>{seoSettings?.seoTitle || 'Ladies Smart Choice | Fashion & Lifestyle'}</title>
-        <meta name="description" content={seoSettings?.seoDescription || "The premier online destination for women's fashion, clothing, accessories, and lifestyle products."} />
-      </Helmet>
+      <SEO 
+        title={seoSettings?.seoTitle || 'Ladies Smart Choice | Fashion & Lifestyle'}
+        description={seoSettings?.seoDescription || "The premier online destination for women's fashion, clothing, accessories, and lifestyle products."}
+        keywords={seoSettings?.seoKeywords}
+        schema={[orgSchema, websiteSchema]}
+      />
+
       <Header user={user} logout={logout} />
       <ErrorBoundary>
         <main className="flex-grow">
           
           {/* HERO SECTION SLIDER */}
-          <div className="relative bg-gray-800 h-[400px] md:h-[500px] lg:h-[600px] overflow-hidden">
+          {/* Updated Strategy: "Separate Banners + Cover" */}
+          {/* We use <picture> to show a different image for mobile vs desktop */}
+          <div className="relative bg-gray-100 h-[450px] md:h-[500px] lg:h-[600px] overflow-hidden group">
             {slides.length > 0 ? slides.map((slide, index) => (
               <div
                 key={slide._id || index}
-                className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentSlide ? 'opacity-100' : 'opacity-0'}`}
+                className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
               >
-                <img className="w-full h-full object-cover" src={slide.imageUrl} alt={slide.title}/>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
-                <div className="absolute inset-0 flex items-center justify-center">
+                {/* The Picture Element switches source based on media query */}
+                <picture className="absolute inset-0 w-full h-full">
+                    {/* If mobileImageUrl exists, use it for screens <= 768px */}
+                    <source media="(max-width: 768px)" srcSet={slide.mobileImageUrl || slide.imageUrl} />
+                    {/* Default (Desktop) Image */}
+                    <img 
+                        src={slide.imageUrl} 
+                        alt={slide.title || 'Slide Image'} 
+                        className="w-full h-full object-cover"
+                    />
+                </picture>
+
+                {/* Text Content Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-20"></div>
+                
+                <div className="absolute inset-0 flex items-center justify-center z-30">
                   <div className="relative max-w-7xl mx-auto py-24 px-4 sm:py-32 sm:px-6 lg:px-8 text-center">
-                      <h1 className="text-4xl font-serif font-bold tracking-tight text-white sm:text-5xl lg:text-7xl mb-6 drop-shadow-lg animate-fade-in-up">
-                          {slide.title}
-                      </h1>
-                      <p className="mt-4 max-w-xl mx-auto text-lg sm:text-xl text-gray-100 drop-shadow-md font-light mb-8">
-                          {slide.subtitle}
-                      </p>
-                      <div className="mt-8 sm:mt-10 max-w-sm mx-auto sm:max-w-none sm:flex sm:justify-center">
-                          {slide.buttonText && (
-                              <button className="px-8 py-3.5 border border-transparent text-base font-semibold rounded-full text-white shadow-lg hover:opacity-90 transition-transform transform hover:scale-105" style={{backgroundColor: COLORS.accent}}>
+                      {slide.title && (
+                          <h1 className="text-3xl md:text-5xl lg:text-6xl font-serif font-bold tracking-tight text-white mb-4 drop-shadow-lg animate-fade-in-up leading-tight">
+                              {slide.title}
+                          </h1>
+                      )}
+                      {slide.subtitle && (
+                          <p className="mt-2 max-w-xl mx-auto text-base md:text-xl text-gray-100 drop-shadow-md font-light mb-8 px-4">
+                              {slide.subtitle}
+                          </p>
+                      )}
+                      {slide.buttonText && (
+                          <div className="mt-2">
+                              <button className="px-8 py-3 text-sm md:text-base font-bold rounded-full text-white shadow-xl hover:opacity-90 transition-transform transform hover:scale-105 border-2 border-white/20 backdrop-blur-sm" style={{backgroundColor: COLORS.accent}}>
                                   {slide.buttonText}
                               </button>
-                          )}
-                      </div>
+                          </div>
+                      )}
                   </div>
                 </div>
               </div>
             )) : (
-              <div className="flex items-center justify-center h-full text-white">
+              <div className="flex items-center justify-center h-full text-gray-400 bg-gray-200">
                   <p>Loading slides...</p>
               </div>
             )}
             
             {slides.length > 1 && <>
-              <button onClick={prevSlide} className="absolute top-1/2 left-2 sm:left-4 transform -translate-y-1/2 bg-white/20 backdrop-blur-md text-white p-3 rounded-full hover:bg-white/40 z-10 transition-all border border-white/30">
+              <button 
+                onClick={prevSlide} 
+                className="absolute top-1/2 left-2 sm:left-4 transform -translate-y-1/2 bg-black/30 backdrop-blur-md text-white p-3 rounded-full hover:bg-black/50 z-40 transition-all border border-white/10 opacity-0 group-hover:opacity-100 hidden md:block"
+              >
                 <ChevronLeftIcon />
               </button>
-              <button onClick={nextSlide} className="absolute top-1/2 right-2 sm:right-4 transform -translate-y-1/2 bg-white/20 backdrop-blur-md text-white p-3 rounded-full hover:bg-white/40 z-10 transition-all border border-white/30">
+              <button 
+                onClick={nextSlide} 
+                className="absolute top-1/2 right-2 sm:right-4 transform -translate-y-1/2 bg-black/30 backdrop-blur-md text-white p-3 rounded-full hover:bg-black/50 z-40 transition-all border border-white/10 opacity-0 group-hover:opacity-100 hidden md:block"
+              >
                 <ChevronRightIcon />
               </button>
+              
+              {/* Dots Indicator */}
+              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2 z-40">
+                  {slides.map((_, idx) => (
+                      <button 
+                          key={idx}
+                          onClick={() => setCurrentSlide(idx)}
+                          className={`w-2 h-2 rounded-full transition-all ${idx === currentSlide ? 'bg-white w-6' : 'bg-white/50 hover:bg-white/80'}`}
+                      />
+                  ))}
+              </div>
             </>}
           </div>
 
           {/* COLLECTIONS (Dynamic Shop By Category) */}
           <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-              <h2 className="text-3xl font-serif font-bold text-gray-900 text-center mb-8">Curated Collections</h2>
+              <h2 className="text-2xl md:text-3xl font-serif font-bold text-gray-900 text-center mb-8 md:mb-10">Curated Collections</h2>
               {collections.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                      {collections.map((col) => (
-                          <div 
-                              key={col.id} 
-                              onClick={() => navigate(`/collections/${col.id}`)}
-                              className="group relative h-64 rounded-xl overflow-hidden cursor-pointer shadow-md hover:shadow-xl transition-all"
-                          >
-                              <img src={col.imageUrl} alt={col.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"/>
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
-                              <div className="absolute bottom-0 left-0 p-6">
-                                  <h3 className="text-xl font-bold text-white mb-1">{col.title}</h3>
-                                  <span className="text-xs text-gray-200 uppercase tracking-widest font-semibold group-hover:text-rose-400 transition-colors">Explore Collection &rarr;</span>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-8 items-start">
+                      {collections.map((col) => {
+                          const style = col.displayStyle || 'Rectangle';
+                          const isImageOnly = style === 'ImageOnly';
+                          
+                          let containerClass = "w-full rounded-2xl overflow-hidden relative shadow-sm";
+                          let imgClass = "w-full h-auto block transition-transform duration-700 ease-in-out group-hover:scale-105";
+
+                          if (style === 'Circle') {
+                              containerClass = "w-32 h-32 sm:w-48 sm:h-48 md:w-80 md:h-80 rounded-full mx-auto shadow-xl border-4 border-white overflow-hidden relative";
+                              imgClass = "w-full h-full object-cover transition-transform duration-700 ease-in-out group-hover:scale-110";
+                          } else if (style === 'Square') {
+                              containerClass = "w-full aspect-square rounded-2xl overflow-hidden relative shadow-sm";
+                              imgClass = "w-full h-full object-cover transition-transform duration-700 ease-in-out group-hover:scale-110";
+                          }
+
+                          return (
+                              <div 
+                                  key={col.id} 
+                                  onClick={() => navigate(`/collections/${col.id}`)}
+                                  className="group cursor-pointer flex flex-col items-center"
+                              >
+                                  <div className={containerClass}>
+                                      <img 
+                                          src={col.imageUrl} 
+                                          alt={col.title} 
+                                          className={imgClass}
+                                      />
+                                      {/* NEW: Glass Overlay for ImageOnly style */}
+                                      {isImageOnly && (
+                                          <div className="absolute bottom-0 left-0 right-0 p-2 md:p-4 bg-black/40 backdrop-blur-md border-t border-white/10 text-center transition-all duration-300 group-hover:bg-black/50">
+                                              <h3 className="text-sm md:text-lg font-bold text-white drop-shadow-md tracking-wide truncate">
+                                                  {col.title}
+                                              </h3>
+                                          </div>
+                                      )}
+                                  </div>
+                                  
+                                  {/* Title Below Image - Only if NOT ImageOnly */}
+                                  {!isImageOnly && (
+                                      <div className="mt-3 md:mt-4 text-center">
+                                          <h3 className="text-sm md:text-lg font-bold text-gray-900 group-hover:text-rose-600 transition-colors">
+                                              {col.title}
+                                          </h3>
+                                          <p className="hidden md:flex text-sm text-gray-500 mt-1 items-center justify-center gap-1 group-hover:translate-x-1 transition-transform">
+                                              Explore <span aria-hidden="true">&rarr;</span>
+                                          </p>
+                                      </div>
+                                  )}
                               </div>
-                          </div>
-                      ))}
+                          );
+                      })}
                   </div>
               ) : (
                   <p className="text-center text-gray-500">No collections found.</p>
@@ -210,18 +309,18 @@ const HomePage: React.FC<HomePageProps> = ({ user, logout }) => {
           </div>
 
           {/* NEW ARRIVALS */}
-          <div className="bg-gray-50 py-16">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex justify-between items-end mb-8">
+          <div className="bg-gray-50 py-12 md:py-16">
+            <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+              <div className="flex justify-between items-end mb-6 md:mb-8 px-1">
                   <div>
-                      <h2 className="text-3xl font-serif font-bold text-gray-900">New Arrivals</h2>
-                      <p className="text-gray-500 mt-1">Fresh styles just for you</p>
+                      <h2 className="text-2xl md:text-3xl font-serif font-bold text-gray-900">New Arrivals</h2>
+                      <p className="text-sm md:text-base text-gray-500 mt-1">Fresh styles just for you</p>
                   </div>
-                  <a href="#" className="text-rose-600 font-medium hover:underline hidden sm:block">View All</a>
+                  <a href="#" className="text-rose-600 font-medium hover:underline text-sm md:text-base">View All</a>
               </div>
               
               {loading ? <p className="text-center">Loading...</p> : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
                   {newArrivals.map((product) => (
                     <ProductCard key={product.id} product={product} onProductClick={handleProductClick} />
                   ))}
@@ -232,30 +331,31 @@ const HomePage: React.FC<HomePageProps> = ({ user, logout }) => {
 
           {/* SHOP FROM VIDEO */}
           {videos.length > 0 && (
-              <div className="max-w-7xl mx-auto py-16 px-4 sm:px-6 lg:px-8">
-                  <h2 className="text-3xl font-serif font-bold text-gray-900 text-center mb-10">Shop From Video</h2>
-                  <div className="flex overflow-x-auto pb-4 gap-4 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-hidden scrollbar-hide">
+              <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+                  <h2 className="text-2xl md:text-3xl font-serif font-bold text-gray-900 text-center mb-8 md:mb-10">Shop From Video</h2>
+                  <div className="flex overflow-x-auto pb-6 gap-4 snap-x snap-mandatory scrollbar-hide md:grid md:grid-cols-2 lg:grid-cols-4 md:overflow-visible">
                       {videos.map((video) => (
-                          <VideoListItem 
-                              key={video._id} 
-                              video={video} 
-                              autoplay={videoAutoplay} 
-                              onClick={() => setSelectedVideo(video)} 
-                          />
+                          <div key={video._id} className="snap-center">
+                            <VideoListItem 
+                                video={video} 
+                                autoplay={videoAutoplay} 
+                                onClick={() => setSelectedVideo(video)} 
+                            />
+                          </div>
                       ))}
                   </div>
               </div>
           )}
 
           {/* BEST SELLERS */}
-          <div className="bg-white py-16 border-t border-gray-100">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="text-center mb-12">
-                  <h2 className="text-3xl font-serif font-bold text-gray-900">Best Sellers</h2>
-                  <p className="text-gray-500 mt-2">Our most loved styles this season</p>
+          <div className="bg-white py-12 md:py-16 border-t border-gray-100">
+            <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+              <div className="text-center mb-8 md:mb-12">
+                  <h2 className="text-2xl md:text-3xl font-serif font-bold text-gray-900">Best Sellers</h2>
+                  <p className="text-sm md:text-base text-gray-500 mt-2">Our most loved styles this season</p>
               </div>
               {loading ? <p className="text-center">Loading...</p> : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
                   {bestSellers.map((product) => (
                     <ProductCard key={product.id} product={product} onProductClick={handleProductClick} />
                   ))}
@@ -266,19 +366,19 @@ const HomePage: React.FC<HomePageProps> = ({ user, logout }) => {
 
           {/* HAPPY CUSTOMERS */}
           {testimonials.length > 0 && (
-              <div className="bg-rose-50 py-16">
+              <div className="bg-rose-50 py-12 md:py-16">
                   <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                      <h2 className="text-3xl font-serif font-bold text-gray-900 text-center mb-12">Happy Customers</h2>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                      <h2 className="text-2xl md:text-3xl font-serif font-bold text-gray-900 text-center mb-8 md:mb-12">Happy Customers</h2>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
                           {testimonials.map((review) => (
-                              <div key={review._id} className="bg-white p-8 rounded-xl shadow-sm border border-rose-100 flex flex-col items-center text-center hover:shadow-md transition-shadow">
-                                  <img src={review.imageUrl || 'https://via.placeholder.com/100?text=User'} alt={review.name} className="w-16 h-16 rounded-full object-cover mb-4 border-2 border-rose-200"/>
+                              <div key={review._id} className="bg-white p-6 md:p-8 rounded-xl shadow-sm border border-rose-100 flex flex-col items-center text-center hover:shadow-md transition-shadow">
+                                  <img src={review.imageUrl || 'https://via.placeholder.com/100?text=User'} alt={review.name} className="w-14 h-14 md:w-16 md:h-16 rounded-full object-cover mb-4 border-2 border-rose-200"/>
                                   <div className="flex mb-4 text-yellow-400">
                                       {[...Array(5)].map((_, i) => (
-                                          <svg key={i} className={`w-5 h-5 ${i < review.rating ? 'fill-current' : 'text-gray-300'}`} viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                                          <svg key={i} className={`w-4 h-4 md:w-5 md:h-5 ${i < review.rating ? 'fill-current' : 'text-gray-300'}`} viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
                                       ))}
                                   </div>
-                                  <p className="text-gray-600 italic mb-6 leading-relaxed">"{review.comment}"</p>
+                                  <p className="text-sm md:text-base text-gray-600 italic mb-4 md:mb-6 leading-relaxed">"{review.comment}"</p>
                                   <h4 className="font-bold text-gray-900">{review.name}</h4>
                                   <span className="text-xs text-gray-400 uppercase tracking-wide mt-1">{review.role}</span>
                               </div>
@@ -289,10 +389,10 @@ const HomePage: React.FC<HomePageProps> = ({ user, logout }) => {
           )}
 
           {/* NEWSLETTER */}
-          <div className="bg-gray-900 py-20">
+          <div className="bg-gray-900 py-16 md:py-20">
               <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
-                  <h2 className="text-3xl sm:text-4xl font-serif font-bold text-white mb-6">Join the Smart Choice Club</h2>
-                  <p className="text-gray-300 text-lg mb-8">Subscribe to our newsletter and get 10% off your first purchase.</p>
+                  <h2 className="text-2xl md:text-4xl font-serif font-bold text-white mb-4 md:mb-6">Join the Smart Choice Club</h2>
+                  <p className="text-gray-300 text-sm md:text-lg mb-8">Subscribe to our newsletter and get 10% off your first purchase.</p>
                   <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-lg mx-auto">
                       <input type="email" placeholder="Enter your email address" className="w-full px-5 py-3.5 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-rose-500"/>
                       <button className="w-full sm:w-auto px-8 py-3.5 rounded-md font-bold text-white transition-colors bg-rose-600 hover:bg-rose-700">Subscribe</button>

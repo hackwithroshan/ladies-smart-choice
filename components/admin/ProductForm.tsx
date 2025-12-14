@@ -53,6 +53,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
   // Gallery State
   const [isUploading, setIsUploading] = useState(false);
   const [draggedImageIndex, setDraggedImageIndex] = useState<number | null>(null);
+  
+  // We use this ref only for the fallback direct input
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Category Management State
@@ -125,15 +127,41 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
   const handleGalleryUpload = async (files: FileList | null) => {
       if (!files || files.length === 0) return;
       setIsUploading(true);
+      const token = localStorage.getItem('token');
 
       const uploads = Array.from(files).map(async (file) => {
           const formData = new FormData();
           formData.append('file', file);
           formData.append('upload_preset', CLOUDINARY.UPLOAD_PRESET);
           try {
+              // 1. Upload to Cloudinary
               const res = await fetch(CLOUDINARY.UPLOAD_URL, { method: 'POST', body: formData });
               const data = await res.json();
-              return data.secure_url;
+
+              if (data.secure_url) {
+                  // 2. Save to Central Media Library (Database)
+                  // This ensures images show up in the "Media" section of admin
+                  try {
+                      await fetch(getApiUrl('/api/media'), {
+                          method: 'POST',
+                          headers: {
+                              'Content-Type': 'application/json',
+                              'Authorization': `Bearer ${token}`
+                          },
+                          body: JSON.stringify({
+                              url: data.secure_url,
+                              public_id: data.public_id,
+                              format: data.format,
+                              type: 'image'
+                          })
+                      });
+                  } catch (dbError) {
+                      console.error("Failed to save image to media library DB:", dbError);
+                  }
+
+                  return data.secure_url;
+              }
+              return null;
           } catch (error) {
               console.error("Upload failed for file", file.name, error);
               return null;
@@ -345,34 +373,33 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
                                  </div>
                              ))}
 
-                             {/* Upload Drop Zone */}
-                             <div 
-                                className={`aspect-square border-2 border-dashed rounded-lg flex flex-col items-center justify-center cursor-pointer transition-colors hover:bg-blue-50 hover:border-blue-400 ${isUploading ? 'bg-blue-50 border-blue-400' : 'border-gray-300'}`}
-                                onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                                onDrop={handleFileDrop}
-                                onClick={() => fileInputRef.current?.click()}
-                             >
-                                <input 
-                                    type="file" 
-                                    multiple 
-                                    accept="image/*" 
-                                    className="hidden" 
-                                    ref={fileInputRef} 
-                                    onChange={(e) => handleGalleryUpload(e.target.files)}
-                                />
-                                {isUploading ? (
-                                    <div className="animate-pulse flex flex-col items-center">
-                                        <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-2"></div>
-                                        <span className="text-xs text-blue-600 font-medium">Uploading...</span>
-                                    </div>
-                                ) : (
-                                    <div className="text-center p-2">
-                                        <svg className="w-8 h-8 text-gray-400 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-                                        <span className="text-xs font-medium text-blue-600">Add Images</span>
-                                        <p className="text-[10px] text-gray-400 mt-1 hidden sm:block">Drag & Drop</p>
+                             {/* Upload Drop Zone / Media Picker Wrapper */}
+                             <MediaPicker
+                                value=""
+                                onChange={(url) => setFormData(prev => ({ ...prev, galleryImages: [...(prev.galleryImages || []), url] }))}
+                                renderTrigger={(openModal) => (
+                                    <div 
+                                        className={`aspect-square border-2 border-dashed rounded-lg flex flex-col items-center justify-center cursor-pointer transition-colors hover:bg-blue-50 hover:border-blue-400 ${isUploading ? 'bg-blue-50 border-blue-400' : 'border-gray-300'}`}
+                                        onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                                        onDrop={handleFileDrop}
+                                        onClick={openModal}
+                                    >
+                                        {/* Hidden input for direct file drops is handled by handleFileDrop -> handleGalleryUpload */}
+                                        {isUploading ? (
+                                            <div className="animate-pulse flex flex-col items-center">
+                                                <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-2"></div>
+                                                <span className="text-xs text-blue-600 font-medium">Uploading...</span>
+                                            </div>
+                                        ) : (
+                                            <div className="text-center p-2">
+                                                <svg className="w-8 h-8 text-gray-400 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                                                <span className="text-xs font-medium text-blue-600">Add Images</span>
+                                                <p className="text-[10px] text-gray-400 mt-1 hidden sm:block">Drag & Drop or Click</p>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
-                             </div>
+                             />
                          </div>
                     </div>
 
