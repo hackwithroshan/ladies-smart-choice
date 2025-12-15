@@ -4,6 +4,7 @@ import { Product } from '../types';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { useWishlist } from '../contexts/WishlistContext';
+import { useToast } from '../contexts/ToastContext';
 
 interface ProductCardProps {
   product: Product;
@@ -14,6 +15,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClick }) =>
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+  const { showToast } = useToast();
   
   // --- State ---
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -53,8 +55,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClick }) =>
     e.stopPropagation();
     if (isWishlisted) {
       removeFromWishlist(product.id);
+      showToast('Removed from wishlist', 'info');
     } else {
       addToWishlist(product.id);
+      showToast('Added to wishlist', 'success');
     }
   };
 
@@ -62,9 +66,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClick }) =>
     e.stopPropagation();
     setIsAdding(true);
     addToCart(product, 1);
+    showToast(`${product.name} added to cart!`, 'success');
     
-    // Redirect to Checkout immediately
-    navigate('/checkout');
+    // Redirect to Checkout immediately as per requirement
+    navigate('/checkout'); 
+    
+    // Reset loading state after a brief moment
+    setTimeout(() => setIsAdding(false), 1000);
   };
 
   // Metrics
@@ -135,7 +143,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClick }) =>
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                         </svg>
-                        <span>Buy Now</span>
+                        <span>Add to Cart</span>
                     </>
                 )}
             </button>

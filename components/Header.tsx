@@ -33,6 +33,7 @@ const Header: React.FC<HeaderProps> = ({ user, logout }) => {
   // --- Enhanced Search State ---
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<Product[]>([]);
+  const [recommendedProducts, setRecommendedProducts] = useState<Product[]>([]);
   const [isSearchPanelOpen, setIsSearchPanelOpen] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
   
@@ -59,6 +60,23 @@ const Header: React.FC<HeaderProps> = ({ user, logout }) => {
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // --- Fetch Recommended Products on Mount ---
+  useEffect(() => {
+      const fetchRecommended = async () => {
+          try {
+              const res = await fetch(getApiUrl('/api/products/featured'));
+              if (res.ok) {
+                  const data = await res.json();
+                  // Take top 4 for desktop grid, or more for mobile
+                  setRecommendedProducts(data.slice(0, 4));
+              }
+          } catch (e) {
+              console.error("Failed to fetch search recommendations", e);
+          }
+      };
+      fetchRecommended();
   }, []);
   
   // --- Search Logic ---
@@ -177,11 +195,10 @@ const Header: React.FC<HeaderProps> = ({ user, logout }) => {
                 {/* Search Results Dropdown */}
                 {isSearchPanelOpen && (
                     <div className="absolute top-full left-4 right-4 lg:left-8 lg:right-8 mt-2 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden animate-fade-in-up z-[60]">
-                        {/* (Search Results Content - Same as before) */}
                         {searchTerm.length < 2 && searchResults.length === 0 ? (
                             <div className="p-5">
                                 <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Trending Searches</h4>
-                                <div className="flex flex-wrap gap-2">
+                                <div className="flex flex-wrap gap-2 mb-6">
                                     {trendingSearches.map((term, idx) => (
                                         <button 
                                             key={idx}
@@ -193,6 +210,28 @@ const Header: React.FC<HeaderProps> = ({ user, logout }) => {
                                         </button>
                                     ))}
                                 </div>
+
+                                {recommendedProducts.length > 0 && (
+                                    <>
+                                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Recommended For You</h4>
+                                        <div className="grid grid-cols-4 gap-4">
+                                            {recommendedProducts.map(product => (
+                                                <Link 
+                                                    key={product.id} 
+                                                    to={`/product/${product.slug}`}
+                                                    onClick={() => setIsSearchPanelOpen(false)}
+                                                    className="group block"
+                                                >
+                                                    <div className="aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 mb-2 relative border border-gray-100">
+                                                        <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-in-out"/>
+                                                    </div>
+                                                    <p className="text-xs font-bold text-gray-800 line-clamp-1 group-hover:text-rose-600 transition-colors">{product.name}</p>
+                                                    <p className="text-xs text-gray-500">₹{product.price.toLocaleString()}</p>
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         ) : searchLoading ? (
                             <div className="p-5">
@@ -256,8 +295,8 @@ const Header: React.FC<HeaderProps> = ({ user, logout }) => {
                 </button>
 
                 {/* Wishlist */}
-                <button 
-                    onClick={() => navigate('/dashboard')} // Or specific wishlist page if you have one
+                <Link 
+                    to="/wishlist" 
                     className="relative group text-gray-800 hover:text-black transition-colors p-1"
                 >
                     <HeartIcon />
@@ -266,7 +305,7 @@ const Header: React.FC<HeaderProps> = ({ user, logout }) => {
                             {wishlistCount}
                         </span>
                     )}
-                </button>
+                </Link>
 
                 {/* Cart */}
                 <Link to="/cart" className="relative group text-gray-800 hover:text-black transition-colors p-1">
@@ -447,7 +486,7 @@ const Header: React.FC<HeaderProps> = ({ user, logout }) => {
                   {searchTerm.length < 2 && searchResults.length === 0 ? (
                       <div className="mt-4">
                           <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Trending</h4>
-                          <div className="flex flex-wrap gap-2">
+                          <div className="flex flex-wrap gap-2 mb-6">
                               {trendingSearches.map((term, idx) => (
                                   <button 
                                       key={idx}
@@ -458,6 +497,29 @@ const Header: React.FC<HeaderProps> = ({ user, logout }) => {
                                   </button>
                               ))}
                           </div>
+
+                          {/* Mobile Recommended Products */}
+                          {recommendedProducts.length > 0 && (
+                              <div>
+                                  <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Recommended</h4>
+                                  <div className="grid grid-cols-2 gap-3">
+                                      {recommendedProducts.map(product => (
+                                          <Link 
+                                              key={product.id} 
+                                              to={`/product/${product.slug}`}
+                                              onClick={() => setIsSearchPanelOpen(false)}
+                                              className="flex flex-col bg-white p-2 rounded-lg border border-gray-100 shadow-sm"
+                                          >
+                                              <div className="aspect-square bg-gray-100 rounded-md overflow-hidden mb-2">
+                                                  <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover"/>
+                                              </div>
+                                              <p className="text-xs font-bold text-gray-900 truncate">{product.name}</p>
+                                              <p className="text-xs text-rose-600 font-bold">₹{product.price}</p>
+                                          </Link>
+                                      ))}
+                                  </div>
+                              </div>
+                          )}
                       </div>
                   ) : (
                       // Search Results (Mobile List)

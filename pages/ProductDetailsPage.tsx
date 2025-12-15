@@ -3,10 +3,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Product, Review } from '../types';
 import { useCart } from '../contexts/CartContext';
+import { useToast } from '../contexts/ToastContext';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import Accordion from '../components/Accordion';
 import ProductStickyBar from '../components/ProductStickyBar';
+import ProductCard from '../components/ProductCard';
 import SEO from '../components/SEO';
 import { StarIcon, PlayIcon } from '../components/Icons';
 import { masterTracker } from '../utils/tracking';
@@ -16,6 +18,7 @@ import { getApiUrl } from '../utils/apiHelper';
 import ErrorBoundary from '../components/ErrorBoundary';
 import MediaPicker from '../components/admin/MediaPicker';
 import { stripHtml, truncateText } from '../utils/seoHelper';
+import { COLORS } from '../constants';
 
 interface ShopVideo {
     _id: string;
@@ -29,12 +32,14 @@ interface ShopVideo {
 const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user, logout }) => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const { addToCart } = useCart();
+  const { addToCart, addMultipleToCart } = useCart();
+  const { showToast } = useToast();
   const token = localStorage.getItem('token');
 
   // --- Data State ---
   const [product, setProduct] = useState<Product | null>(null);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
+  const [fbtProducts, setFbtProducts] = useState<Product[]>([]);
   const [recentlyViewed, setRecentlyViewed] = useState<Product[]>([]);
   const [shopVideos, setShopVideos] = useState<ShopVideo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,6 +50,9 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
   const [selectedVariants, setSelectedVariants] = useState<{[key: string]: string}>({});
   const [selectedVideo, setSelectedVideo] = useState<ShopVideo | null>(null);
   
+  // --- FBT Selection State ---
+  const [selectedFbtIds, setSelectedFbtIds] = useState<Set<string>>(new Set());
+
   // --- Reviews State ---
   const [newReview, setNewReview] = useState({ rating: 5, comment: '', imageUrl: '' });
   const [submittingReview, setSubmittingReview] = useState(false);
@@ -60,23 +68,16 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
       if (!slug) return;
       setLoading(true);
       try {
-        const [productRes, allProductsRes, videosRes] = await Promise.all([
-            fetch(getApiUrl(`/api/products/slug/${slug}`)),
-            fetch(getApiUrl('/api/products')),
-            fetch(getApiUrl('/api/content/videos'))
-        ]);
-
-        if (!productRes.ok) {
-            throw new Error("Product not found");
-        }
+        const productRes = await fetch(getApiUrl(`/api/products/slug/${slug}`));
+        if (!productRes.ok) throw new Error("Product not found");
         
         const foundProduct: Product = await productRes.json();
-        const allProducts: Product[] = await allProductsRes.json();
         
         if (foundProduct) {
             setProduct(foundProduct);
             setActiveImage(foundProduct.imageUrl);
             
+            // Set Default Variants
             if (foundProduct.hasVariants && foundProduct.variants) {
                 const defaults: {[key: string]: string} = {};
                 foundProduct.variants.forEach(v => {
@@ -85,8 +86,37 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
                 setSelectedVariants(defaults);
             }
 
-            setRelatedProducts(allProducts.filter(p => p.category === foundProduct.category && p.id !== foundProduct.id).slice(0, 4));
+            // Parallel Data Fetching based on found product
+            const [allProductsRes, fbtRes, videosRes] = await Promise.all([
+                fetch(getApiUrl('/api/products')),
+                fetch(getApiUrl(`/api/products/${foundProduct.id}/frequently-bought-together`)),
+                fetch(getApiUrl('/api/content/videos'))
+            ]);
 
+            const allProducts: Product[] = await allProductsRes.json();
+            
+            // Set Related Products (Same category, excluding current, fallback to others if empty)
+            let related = allProducts.filter(p => p.category === foundProduct.category && p.id !== foundProduct.id);
+            if (related.length < 4) {
+                const others = allProducts.filter(p => p.category !== foundProduct.category && p.id !== foundProduct.id);
+                related = [...related, ...others];
+            }
+            setRelatedProducts(related.slice(0, 4));
+
+            // Set FBT Data
+            if (fbtRes.ok) {
+                const fbtData = await fbtRes.json();
+                setFbtProducts(fbtData);
+                // Select all by default
+                setSelectedFbtIds(new Set(fbtData.map((p: Product) => p.id)));
+            }
+
+            // Set Shop Videos
+            if (videosRes.ok) {
+                setShopVideos(await videosRes.json());
+            }
+
+            // History Management
             const viewedIds: string[] = JSON.parse(localStorage.getItem('recentlyViewed') || '[]');
             const history = viewedIds.map(vid => allProducts.find(p => p.id === vid)).filter((p): p is Product => !!p && p.id !== foundProduct.id);
             setRecentlyViewed(history);
@@ -109,10 +139,6 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
             masterTracker('ViewContent', eventPayload, eventPayload);
         }
 
-        if (videosRes.ok) {
-            setShopVideos(await videosRes.json());
-        }
-
       } catch (error) {
         console.error('Failed to fetch product data', error);
       } finally {
@@ -128,7 +154,10 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
-        setIsStickyBarVisible(!entry.isIntersecting);
+        // Show sticky bar only when main button is NOT intersecting (scrolled past)
+        // Check if bounding rect top is negative to ensure we scrolled DOWN past it
+        const isScrolledPast = entry.boundingClientRect.top < 0;
+        setIsStickyBarVisible(!entry.isIntersecting && isScrolledPast);
       },
       { threshold: 0 }
     );
@@ -163,6 +192,7 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
       };
 
       addToCart(cartItem, quantity);
+      showToast(`${quantity} x ${product.name} added to cart!`, 'success');
 
       // Meta Pixel & CAPI Tracking for AddToCart
       const eventPayload = {
@@ -178,8 +208,36 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
       };
       masterTracker('AddToCart', eventPayload, eventPayload);
       
+      // Auto-redirect to Checkout
+      navigate('/checkout'); 
+  };
+
+  // --- FBT Logic ---
+  const handleToggleFbt = (id: string) => {
+      const newSelected = new Set(selectedFbtIds);
+      if (newSelected.has(id)) newSelected.delete(id);
+      else newSelected.add(id);
+      setSelectedFbtIds(newSelected);
+  };
+
+  const handleAddFbtBundle = () => {
+      if (!product) return;
+      
+      const bundleItems = [
+          { product: product, quantity: 1 }, // Main product
+          ...fbtProducts.filter(p => selectedFbtIds.has(p.id)).map(p => ({ product: p, quantity: 1 }))
+      ];
+
+      addMultipleToCart(bundleItems);
+      showToast(`Bundle of ${bundleItems.length} items added to cart!`, 'success');
+      // Redirect bundle to Checkout
       navigate('/checkout');
   };
+
+  const fbtSellingTotal = (product ? product.price : 0) + fbtProducts.filter(p => selectedFbtIds.has(p.id)).reduce((sum, p) => sum + p.price, 0);
+  const fbtMrpTotal = (product ? (product.mrp || product.price) : 0) + fbtProducts.filter(p => selectedFbtIds.has(p.id)).reduce((sum, p) => sum + (p.mrp || p.price), 0);
+  const fbtSavings = fbtMrpTotal - fbtSellingTotal;
+  const selectedCount = selectedFbtIds.size + 1; // +1 for current product
 
   const submitReview = async (e: React.FormEvent) => {
       e.preventDefault();
@@ -203,6 +261,7 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
               const saved = await res.json();
               setProduct(prev => prev ? ({ ...prev, reviews: [saved, ...(prev.reviews || [])] }) : null);
               setNewReview({ rating: 5, comment: '', imageUrl: '' });
+              showToast('Review submitted successfully!', 'success');
           } else {
               throw res;
           }
@@ -459,6 +518,101 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
               </div>
           </div>
 
+          {/* --- Enhanced Frequently Bought Together Section (Amazon Style) --- */}
+          {fbtProducts.length > 0 && (
+              <div className="mt-16 border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+                  <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+                      <h3 className="text-lg font-bold text-gray-800">Frequently Bought Together</h3>
+                  </div>
+                  
+                  <div className="p-6 flex flex-col xl:flex-row gap-8 items-start">
+                      
+                      {/* Visual Equation: A + B + C */}
+                      <div className="flex flex-wrap items-center justify-center gap-4 flex-1">
+                          {/* Main Product */}
+                          <div className="relative group">
+                              <div className="w-32 h-40 rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-white">
+                                <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+                              </div>
+                              <div className="absolute -top-2 -right-2 bg-gray-900 text-white text-[10px] px-2 py-0.5 rounded-full font-bold shadow">This Item</div>
+                          </div>
+
+                          {fbtProducts.map((fbt, idx) => (
+                              <React.Fragment key={fbt.id}>
+                                  <div className="text-gray-400 font-light text-2xl">+</div>
+                                  <div className="relative">
+                                      <Link to={`/product/${fbt.slug}`} className="block w-32 h-40 rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-white transition-all hover:border-gray-400">
+                                          <img src={fbt.imageUrl} alt={fbt.name} className={`w-full h-full object-cover transition-opacity ${selectedFbtIds.has(fbt.id) ? 'opacity-100' : 'opacity-40 grayscale'}`} />
+                                      </Link>
+                                      {/* Checkmark Overlay if Selected */}
+                                      {selectedFbtIds.has(fbt.id) && (
+                                          <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-0.5 shadow-sm">
+                                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                                          </div>
+                                      )}
+                                  </div>
+                              </React.Fragment>
+                          ))}
+                      </div>
+
+                      {/* Summary & Action Box */}
+                      <div className="w-full xl:w-96 flex-shrink-0">
+                          <div className="bg-white rounded-xl">
+                              <div className="mb-5">
+                                  <div className="flex items-baseline gap-2 mb-1">
+                                      <span className="text-gray-600 font-medium">Total Price:</span>
+                                      <span className="text-2xl font-bold text-rose-600">₹{fbtSellingTotal.toLocaleString()}</span>
+                                  </div>
+                                  {fbtSavings > 0 && (
+                                      <p className="text-sm text-green-600 font-medium bg-green-50 inline-block px-2 py-1 rounded">
+                                          Save ₹{fbtSavings.toLocaleString()} (Bundle Deal)
+                                      </p>
+                                  )}
+                              </div>
+
+                              <button 
+                                  onClick={handleAddFbtBundle}
+                                  className="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 mb-6"
+                              >
+                                  <span>Add All {selectedCount} to Cart</span>
+                              </button>
+
+                              {/* Selection List */}
+                              <div className="space-y-3">
+                                  {/* Main Item (Disabled Checkbox) */}
+                                  <div className="flex items-start gap-3">
+                                      <div className="mt-1 relative flex items-center justify-center">
+                                          <input type="checkbox" checked disabled className="w-4 h-4 text-gray-400 bg-gray-100 border-gray-300 rounded focus:ring-0 cursor-not-allowed" />
+                                      </div>
+                                      <div className="text-sm">
+                                          <span className="font-bold text-gray-900">This item:</span> {product.name}
+                                          <span className="block font-bold text-gray-900 mt-0.5">₹{product.price.toLocaleString()}</span>
+                                      </div>
+                                  </div>
+
+                                  {/* Suggested Items */}
+                                  {fbtProducts.map((fbt) => (
+                                      <div key={fbt.id} className="flex items-start gap-3">
+                                          <input 
+                                              type="checkbox" 
+                                              id={`fbt-${fbt.id}`}
+                                              checked={selectedFbtIds.has(fbt.id)} 
+                                              onChange={() => handleToggleFbt(fbt.id)} 
+                                              className="mt-1 w-4 h-4 text-rose-600 border-gray-300 rounded focus:ring-rose-500 cursor-pointer" 
+                                          />
+                                          <label htmlFor={`fbt-${fbt.id}`} className={`text-sm cursor-pointer ${selectedFbtIds.has(fbt.id) ? 'text-gray-900' : 'text-gray-400 line-through'}`}>
+                                              <span className="hover:text-rose-600 hover:underline transition-colors">{fbt.name}</span>
+                                              <span className="block font-bold mt-0.5">₹{fbt.price.toLocaleString()}</span>
+                                          </label>
+                                      </div>
+                                  ))}
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          )}
+
           {shopVideos.length > 0 && (
               <div className="mt-24 border-t border-gray-100 pt-16 px-4 lg:px-0">
                   <h3 className="text-2xl font-serif font-bold text-gray-900 mb-8 text-center">Style Inspiration</h3>
@@ -576,6 +730,25 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
               </div>
           </div>
 
+          {/* Related Products Section (Updated Logic) */}
+          {relatedProducts.length > 0 && (
+              <div className="mt-16 border-t border-gray-100 pt-16 px-4 lg:px-0">
+                  <h3 className="text-2xl font-serif font-bold text-gray-900 mb-8 text-center">You Might Also Like</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
+                      {relatedProducts.map((p) => (
+                          <ProductCard 
+                            key={p.id} 
+                            product={p} 
+                            onProductClick={(s) => {
+                                navigate(`/product/${s}`);
+                                window.scrollTo(0,0);
+                            }} 
+                          />
+                      ))}
+                  </div>
+              </div>
+          )}
+
           {selectedVideo && (
               <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-fade-in">
                   <div className="absolute inset-0" onClick={() => setSelectedVideo(null)}></div>
@@ -631,6 +804,7 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
         onVariantChange={handleVariantChange}
         onAddToCart={handleAddToCart}
         quantity={quantity}
+        onQuantityChange={setQuantity}
       />
       
       <Footer />

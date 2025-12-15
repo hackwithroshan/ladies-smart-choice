@@ -1,12 +1,21 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Product } from '../types';
 import { useSiteData } from '../contexts/SiteDataContext';
+import { useCart } from '../contexts/CartContext';
+import { useWishlist } from '../contexts/WishlistContext';
+import { useToast } from '../contexts/ToastContext';
 import { getApiUrl } from '../utils/apiHelper';
+import { HeartIcon } from './Icons';
 
 const MegaMenu: React.FC = () => {
+  const navigate = useNavigate();
   const { categories } = useSiteData();
+  const { addToCart } = useCart();
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+  const { showToast } = useToast();
+
   const [featuredProduct, setFeaturedProduct] = useState<Product | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const featuredProductFetched = useRef(false); // Ref to prevent re-fetching
@@ -16,7 +25,7 @@ const MegaMenu: React.FC = () => {
     if (isOpen && !featuredProductFetched.current) {
       const fetchFeatured = async () => {
         try {
-          const res = await fetch(getApiUrl('/products/featured'));
+          const res = await fetch(getApiUrl('/api/products/featured')); // Fixed API path
           if (res.ok) {
             const data = await res.json();
             setFeaturedProduct(data[0] || null); // API now returns an array, take the first item
@@ -31,6 +40,25 @@ const MegaMenu: React.FC = () => {
     }
   }, [isOpen]); // Depend on isOpen to trigger the fetch
 
+  const handleAddToCart = (e: React.MouseEvent) => {
+      e.preventDefault();
+      if (!featuredProduct) return;
+      addToCart(featuredProduct, 1);
+      showToast(`${featuredProduct.name} added to cart!`, 'success');
+      navigate('/checkout'); // Redirect to Checkout
+  };
+
+  const handleWishlist = (e: React.MouseEvent) => {
+      e.preventDefault();
+      if (!featuredProduct) return;
+      if (isInWishlist(featuredProduct.id)) {
+          removeFromWishlist(featuredProduct.id);
+          showToast('Removed from wishlist', 'info');
+      } else {
+          addToWishlist(featuredProduct.id);
+          showToast('Added to wishlist', 'success');
+      }
+  };
 
   return (
     <div 
@@ -57,27 +85,41 @@ const MegaMenu: React.FC = () => {
                       <ul className="mt-4 space-y-2">
                         {category.subcategories.map((sub) => (
                           <li key={sub.id}>
-                            <Link to="/" className="text-base font-medium text-gray-900 hover:text-gray-700 transition duration-150 ease-in-out">{sub.name}</Link>
+                            <Link to={`/search?category=${encodeURIComponent(category.name)}&q=${encodeURIComponent(sub.name)}`} className="text-base font-medium text-gray-900 hover:text-gray-700 transition duration-150 ease-in-out">{sub.name}</Link>
                           </li>
                         ))}
                       </ul>
                     </div>
                   ))}
                   {featuredProduct ? (
-                    <div className="lg:col-span-1 bg-gray-50 rounded-lg p-4 flex flex-col justify-between">
-                      <div>
-                          <h3 className="text-sm tracking-wide font-semibold uppercase text-gray-500">Featured Product</h3>
-                          <div className="mt-4">
-                              <img src={featuredProduct.imageUrl} alt={featuredProduct.name} className="rounded-lg object-cover h-40 w-full" />
-                              <h4 className="mt-4 text-base font-bold text-gray-900">{featuredProduct.name}</h4>
-                              <p className="text-sm text-gray-600 mt-1 line-clamp-2">{featuredProduct.description}</p>
+                    <div className="lg:col-span-1 bg-gray-50 rounded-lg p-4 flex flex-col justify-between group">
+                      <Link to={`/product/${featuredProduct.slug}`} className="block">
+                          <div className="flex justify-between items-start">
+                              <h3 className="text-sm tracking-wide font-semibold uppercase text-gray-500">Featured Product</h3>
+                              {/* Wishlist Icon */}
+                              <button onClick={handleWishlist} className="text-gray-400 hover:text-rose-600 transition-colors">
+                                  {isInWishlist(featuredProduct.id) ? (
+                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-rose-600 fill-current" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" /></svg>
+                                  ) : (
+                                      <HeartIcon />
+                                  )}
+                              </button>
                           </div>
+                          <div className="mt-4 overflow-hidden rounded-lg relative">
+                              <img src={featuredProduct.imageUrl} alt={featuredProduct.name} className="object-cover h-40 w-full transform group-hover:scale-105 transition-transform duration-500" />
+                          </div>
+                          <h4 className="mt-4 text-base font-bold text-gray-900 line-clamp-1">{featuredProduct.name}</h4>
+                          <p className="text-sm font-bold text-rose-600 mt-1">₹{featuredProduct.price.toLocaleString()}</p>
+                      </Link>
+                      
+                      <div className="mt-4 grid grid-cols-2 gap-2">
+                           <Link to={`/product/${featuredProduct.slug}`} className="block w-full text-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">View</Link>
+                           <button onClick={handleAddToCart} className="block w-full text-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 shadow-sm">Add to Cart</button>
                       </div>
-                       <Link to={`/product/${featuredProduct.slug}`} className="mt-6 block w-full text-center px-4 py-2 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 shadow-sm">Shop Now</Link>
                     </div>
                   ) : (
                      <div className="lg:col-span-1 bg-gray-50 rounded-lg p-4 flex items-center justify-center">
-                        <p>Loading feature...</p>
+                        <p className="text-gray-400 text-sm">Loading feature...</p>
                      </div>
                   )}
                 </div>

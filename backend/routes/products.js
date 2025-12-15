@@ -1,8 +1,10 @@
 
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const Product = require('../models/Product');
 const Category = require('../models/Category');
+const Order = require('../models/Order'); // Required for FBT logic
 const { protect, admin } = require('../middleware/authMiddleware');
 
 // --- PUBLIC ROUTES ---
@@ -48,6 +50,74 @@ router.get('/featured', async (req, res) => {
         }
         res.json(products);
     } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// NEW: Get Frequently Bought Together
+router.get('/:id/frequently-bought-together', async (req, res) => {
+    try {
+        const productId = req.params.id;
+        
+        // MongoDB Aggregation to find products often ordered with the current product
+        const recommendations = await Order.aggregate([
+            // 1. Find all orders that contain this product
+            { $match: { 'items.productId': new mongoose.Types.ObjectId(productId) } },
+            
+            // 2. Unwind items to process them individually
+            { $unwind: '$items' },
+            
+            // 3. Filter out the original product itself
+            { $match: { 'items.productId': { $ne: new mongoose.Types.ObjectId(productId) } } },
+            
+            // 4. Group by product ID and count occurrences
+            { $group: { _id: '$items.productId', count: { $sum: 1 } } },
+            
+            // 5. Sort by most frequent
+            { $sort: { count: -1 } },
+            
+            // 6. Limit to top 2
+            { $limit: 2 },
+            
+            // 7. Lookup product details from products collection
+            {
+                $lookup: {
+                    from: 'products',
+                    localField: '_id',
+                    foreignField: '_id',
+                    as: 'productDetails'
+                }
+            },
+            
+            // 8. Unwind the product details array (lookup returns array)
+            { $unwind: '$productDetails' },
+            
+            // 9. Format output - Replace root with product details
+            { $replaceRoot: { newRoot: '$productDetails' } },
+            
+            // 10. Only return Active products
+            { $match: { status: 'Active' } }
+        ]);
+
+        // Fallback: If not enough data (less than 2), fill with related products from same category
+        if (recommendations.length < 2) {
+            const currentProduct = await Product.findById(productId);
+            if (currentProduct) {
+                const existingIds = [productId, ...recommendations.map(r => r._id.toString())];
+                
+                const filler = await Product.find({
+                    category: currentProduct.category,
+                    _id: { $nin: existingIds },
+                    status: 'Active'
+                }).limit(2 - recommendations.length);
+                
+                recommendations.push(...filler);
+            }
+        }
+
+        res.json(recommendations);
+    } catch (err) {
+        console.error("FBT Error:", err);
         res.status(500).json({ message: err.message });
     }
 });

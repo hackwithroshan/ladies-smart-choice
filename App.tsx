@@ -5,6 +5,7 @@ import { HelmetProvider } from 'react-helmet-async';
 import { CartProvider } from './contexts/CartContext';
 import { WishlistProvider } from './contexts/WishlistContext';
 import { SiteDataProvider, useSiteData } from './contexts/SiteDataContext';
+import { ToastProvider } from './contexts/ToastContext';
 import { initFacebookPixel } from './utils/metaPixel';
 import { masterTracker } from './utils/tracking';
 import { getApiUrl } from './utils/apiHelper';
@@ -25,6 +26,7 @@ const DynamicPage = lazy(() => import('./pages/DynamicPage'));
 const CollectionPage = lazy(() => import('./pages/CollectionPage'));
 const ContactPage = lazy(() => import('./pages/ContactPage'));
 const OrderTrackingPage = lazy(() => import('./pages/OrderTrackingPage'));
+const WishlistPage = lazy(() => import('./pages/WishlistPage'));
 
 // --- Loading Spinner for Suspense Fallback ---
 const LoadingSpinner: React.FC = () => (
@@ -134,6 +136,7 @@ const AppContent: React.FC = () => {
             />
             <Route path="/pages/:slug" element={<DynamicPage user={user} logout={handleLogout} />} />
             <Route path="/cart" element={<CartPage user={user} logout={handleLogout} />} />
+            <Route path="/wishlist" element={<WishlistPage user={user} logout={handleLogout} />} />
             <Route 
               path="/checkout" 
               element={<CheckoutPage user={user} logout={handleLogout} />} 
@@ -164,11 +167,13 @@ const App: React.FC = () => {
       <CartProvider>
         <WishlistProvider>
           <SiteDataProvider>
-            <Router>
-              <ErrorBoundary>
-                <AppContent />
-              </ErrorBoundary>
-            </Router>
+            <ToastProvider>
+                <Router>
+                  <ErrorBoundary>
+                    <AppContent />
+                  </ErrorBoundary>
+                </Router>
+            </ToastProvider>
           </SiteDataProvider>
         </WishlistProvider>
       </CartProvider>

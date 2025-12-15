@@ -98,28 +98,36 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ user, logout, toggleSidebar, 
 
     return (
         <header className="bg-white shadow-sm p-4 flex justify-between items-center z-40 border-b flex-shrink-0 h-20">
-            <div className="flex items-center">
-                <button onClick={toggleSidebar} className="lg:hidden text-gray-500 mr-4 p-2 rounded-full hover:bg-gray-100">
+            <div className="flex items-center gap-3">
+                <button onClick={toggleSidebar} className="lg:hidden text-gray-500 p-2 rounded-full hover:bg-gray-100">
                      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
                 </button>
 
-                {/* Global Search Trigger */}
-                <div className="relative w-64 lg:w-96">
-                    <button onClick={openGlobalSearch} className="w-full flex items-center text-left text-sm text-gray-500 bg-gray-100 border border-gray-200 rounded-lg py-2 px-4 hover:bg-gray-200 transition-colors">
+                {/* Global Search Trigger - Responsive */}
+                {/* Hidden on very small screens, expanded on desktop */}
+                <div className="relative">
+                    <button 
+                        onClick={openGlobalSearch} 
+                        className="hidden sm:flex items-center text-left text-sm text-gray-500 bg-gray-100 border border-gray-200 rounded-lg py-2 px-4 hover:bg-gray-200 transition-colors w-64 lg:w-96"
+                    >
                         <svg className="w-5 h-5 mr-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                         Search products, orders...
                         <span className="ml-auto text-xs border border-gray-300 rounded px-1.5 py-0.5 font-mono hidden md:inline">Ctrl K</span>
+                    </button>
+                    {/* Mobile Search Icon */}
+                    <button onClick={openGlobalSearch} className="sm:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-full">
+                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                     </button>
                 </div>
             </div>
 
             <div className="flex items-center space-x-2 md:space-x-4">
-                <a href="/" target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 font-medium hover:underline flex items-center gap-1 p-2 rounded-md hover:bg-blue-50 transition-colors">
-                    <span className="hidden md:inline">View Store</span>
+                <a href="/" target="_blank" rel="noopener noreferrer" className="hidden md:flex text-sm text-blue-600 font-medium hover:underline items-center gap-1 p-2 rounded-md hover:bg-blue-50 transition-colors">
+                    <span>View Store</span>
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                 </a>
                 
-                <div className="w-px h-6 bg-gray-200"></div>
+                <div className="w-px h-6 bg-gray-200 hidden md:block"></div>
 
                 {/* Icons */}
                 <div className="flex items-center space-x-1">
@@ -129,7 +137,7 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ user, logout, toggleSidebar, 
                         className="relative p-2 text-gray-500 rounded-full hover:bg-gray-100 hover:text-gray-800 transition-colors"
                         title="Contact Messages"
                     >
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                         {unreadMessages > 0 && <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-blue-500 text-white text-[10px] font-bold">{unreadMessages}</span>}
                     </button>
                     

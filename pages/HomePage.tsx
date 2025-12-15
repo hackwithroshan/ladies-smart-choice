@@ -10,6 +10,7 @@ import { COLORS } from '../constants';
 import { ChevronLeftIcon, ChevronRightIcon, PlayIcon } from '../components/Icons';
 import ErrorBoundary from '../components/ErrorBoundary';
 import SEO from '../components/SEO';
+import { useToast } from '../contexts/ToastContext';
 
 interface HomePageProps {
   user: any;
@@ -86,9 +87,12 @@ const HomePage: React.FC<HomePageProps> = ({ user, logout }) => {
     loading 
   } = useSiteData();
   
+  const { showToast } = useToast();
+  
   // --- Local UI State ---
   const [currentSlide, setCurrentSlide] = useState(0);
   const [selectedVideo, setSelectedVideo] = useState<ShoppableVideo | null>(null);
+  const [email, setEmail] = useState('');
   const navigate = useNavigate();
 
   // --- Derived settings from context ---
@@ -123,6 +127,16 @@ const HomePage: React.FC<HomePageProps> = ({ user, logout }) => {
           navigate(target);
       }
       setSelectedVideo(null);
+  };
+
+  const handleSubscribe = (e: React.FormEvent) => {
+      e.preventDefault();
+      if(email.trim()) {
+          showToast('Thank you for subscribing!', 'success');
+          setEmail('');
+      } else {
+          showToast('Please enter a valid email.', 'error');
+      }
   };
 
   const newArrivals = products.slice(0, 4);
@@ -393,10 +407,16 @@ const HomePage: React.FC<HomePageProps> = ({ user, logout }) => {
               <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
                   <h2 className="text-2xl md:text-4xl font-serif font-bold text-white mb-4 md:mb-6">Join the Smart Choice Club</h2>
                   <p className="text-gray-300 text-sm md:text-lg mb-8">Subscribe to our newsletter and get 10% off your first purchase.</p>
-                  <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-lg mx-auto">
-                      <input type="email" placeholder="Enter your email address" className="w-full px-5 py-3.5 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-rose-500"/>
-                      <button className="w-full sm:w-auto px-8 py-3.5 rounded-md font-bold text-white transition-colors bg-rose-600 hover:bg-rose-700">Subscribe</button>
-                  </div>
+                  <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-3 justify-center max-w-lg mx-auto">
+                      <input 
+                        type="email" 
+                        placeholder="Enter your email address" 
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full px-5 py-3.5 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                      />
+                      <button type="submit" className="w-full sm:w-auto px-8 py-3.5 rounded-md font-bold text-white transition-colors bg-rose-600 hover:bg-rose-700">Subscribe</button>
+                  </form>
               </div>
           </div>
 
