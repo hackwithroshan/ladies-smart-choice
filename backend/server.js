@@ -14,10 +14,21 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Database Connection
-mongoose.connect(process.env.MONGO_URI)
-    .then(() => console.log('MongoDB Connected...'))
-    .catch(err => console.error('MongoDB Connection Error:', err));
+// Database Connection - Simplified for stability
+const connectDB = async () => {
+    try {
+        if (!process.env.MONGO_URI) {
+            console.error('CRITICAL: MONGO_URI is not defined in environment variables.');
+            return;
+        }
+        await mongoose.connect(process.env.MONGO_URI);
+        console.log('MongoDB Connected Successfully');
+    } catch (err) {
+        console.error('MongoDB Connection Error:', err.message);
+        // Don't exit the process, let the server run so we can see logs
+    }
+};
+connectDB();
 
 // API Routes
 app.use('/api/auth', require('./routes/auth'));
@@ -42,27 +53,34 @@ app.use('/api/shipping', require('./routes/shipping'));
 app.use('/api/app-data', require('./routes/appData'));
 
 // --- Serve Frontend in Production ---
-// Check for standard production flags OR Railway environment
-if (process.env.NODE_ENV === 'production' || process.env.RAILWAY_ENVIRONMENT || process.env.PORT) {
-    // Resolve the dist path relative to backend/server.js
-    // path.resolve(__dirname, '..', 'dist') handles both VPS and Railway folder structures
-    const distPath = path.resolve(__dirname, '..', 'dist');
+// We use process.cwd() to get the project root where 'dist' lives
+const distPath = path.join(process.cwd(), 'dist');
+
+if (process.env.NODE_ENV === 'production' || process.env.RAILWAY_ENVIRONMENT) {
+    console.log('Production mode detected. Serving from:', distPath);
     
-    // Serve static files from /dist
+    // Serve static files
     app.use(express.static(distPath));
 
-    // Catch-all route to serve index.html for React Router
+    // Catch-all route
     app.get('*', (req, res) => {
         const indexPath = path.join(distPath, 'index.html');
         res.sendFile(indexPath, (err) => {
             if (err) {
-                console.error("Error sending index.html:", err);
-                res.status(500).send("Frontend build (dist folder) not found. Run 'npm run build' first.");
+                console.error("Dist folder or index.html not found at:", indexPath);
+                res.status(404).send("Frontend build not found. Please run 'npm run build' first.");
             }
         });
     });
+} else {
+    app.get('/', (req, res) => {
+        res.send('API is running in development mode...');
+    });
 }
 
-// Port: Use environment variable or default to 5000
+// Port: Railway automatically sets PORT
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log('Current directory:', process.cwd());
+});
