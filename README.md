@@ -1,124 +1,36 @@
 
 # 🚀 Ladies Smart Choice - Full Stack E-commerce
 
-This project is a high-performance e-commerce platform built with React (Frontend) and Node.js/Express (Backend) using MongoDB.
+This project is built with React (Frontend) and Node.js/Express (Backend) using MongoDB.
 
 ---
 
 ## 1. Local Development Setup
-
-### Prerequisites
-- Node.js (v18+)
-- MongoDB Atlas Account or Local MongoDB
-
-### Installation
-1. **Clone the repository:**
-   ```bash
-   git clone <your-repo-url>
-   cd ladies-smart-choice
-   ```
-
-2. **Install all dependencies:**
-   ```bash
-   npm install
-   ```
-   *(This will automatically install backend dependencies as well via the postinstall script)*
-
-3. **Configure Environment Variables:**
-   Create a `.env` file in the `backend` folder:
-   ```ini
-   PORT=5000
-   MONGO_URI=your_mongodb_connection_string
-   JWT_SECRET=your_random_secret_key
-   RAZORPAY_KEY_ID=your_key
-   RAZORPAY_KEY_SECRET=your_secret
-   ```
-
-4. **Run the App:**
-   - Terminal 1 (Frontend): `npm run dev`
-   - Terminal 2 (Backend): `cd backend && npm run dev`
+1. `npm install` (Installs frontend and backend deps)
+2. Create `backend/.env` with your `MONGO_URI` and `JWT_SECRET`.
+3. `npm run build`
+4. `npm start`
 
 ---
 
-## 2. Deployment Guide: Railway (Easiest)
-
-Railway is recommended for automatic builds and zero-config SSL.
-
-1. **Connect GitHub:** Link your repository to a new project on Railway.
-2. **Set Variables:** In the Railway dashboard, add these under "Variables":
-   - `MONGO_URI`: (Your MongoDB connection string)
-   - `JWT_SECRET`: (Any long random string)
-   - `NODE_ENV`: `production`
-   - `RAZORPAY_KEY_ID`: (Your key)
-   - `RAZORPAY_KEY_SECRET`: (Your secret)
-3. **Build Settings:** 
-   - Railway will automatically detect the root `package.json`.
-   - It will run `npm run build` (to create `/dist`) and then `npm start`.
-   - **No further config needed.**
+## 2. Deployment: Railway
+1. Connect your GitHub repo.
+2. Add Variables: `MONGO_URI`, `JWT_SECRET`, `NODE_ENV=production`.
+3. Railway will automatically run `npm install`, `npm run build`, and `npm start`.
 
 ---
 
-## 3. Deployment Guide: Hostinger VPS (Ubuntu)
-
-For full control using Nginx and PM2.
-
-### Step 1: Server Prep
-```bash
-sudo apt update
-curl -sL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-sudo apt install -y nodejs nginx git
-sudo npm install -g pm2
-```
-
-### Step 2: Code Setup
-```bash
-cd /var/www
-git clone <your-repo-url>
-cd ladies-smart-choice
-npm install
-npm run build
-```
-
-### Step 3: PM2 Process Management
-Create the `.env` file in `backend/` and then start the server:
-```bash
-pm2 start backend/server.js --name "ladies-choice"
-pm2 save
-```
-
-### Step 4: Nginx Configuration
-Create a config file: `sudo nano /etc/nginx/sites-available/ladiessmartchoice.com`
-```nginx
-server {
-    listen 80;
-    server_name ladiessmartchoice.com;
-
-    root /var/www/ladies-smart-choice/dist;
-    index index.html;
-
-    location /api {
-        proxy_pass http://localhost:5000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-    }
-
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-}
-```
-Enable and restart:
-```bash
-sudo ln -s /etc/nginx/sites-available/ladiessmartchoice.com /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl restart nginx
-```
+## 3. Deployment: Hostinger VPS
+1. **Clone Repo:** `git clone <url> && cd ladies-smart-choice`
+2. **Install:** `npm install`
+3. **Build:** `npm run build`
+4. **Environment:** Create `backend/.env` file.
+5. **Run with PM2:** `pm2 start backend/server.js --name "ladies-choice"`
+6. **Nginx:** Point your `root` to `/var/www/ladies-smart-choice/dist` and `proxy_pass` `/api` to `http://localhost:5000`.
 
 ---
 
 ## Why this works on both?
-1. **Dynamic Paths:** The backend uses `path.resolve(__dirname, '..', 'dist')`, making it compatible with both Railway's root execution and PM2's folder-based execution.
-2. **Unified Port:** It detects `process.env.PORT` (Railway) or defaults to `5000` (VPS).
-3. **Automated Build:** The root `package.json` contains a `postinstall` script that ensures backend dependencies are always ready.
+1. **Relative Paths:** Backend uses `path.resolve(__dirname, '..', 'dist')` which works regardless of where the app is installed.
+2. **Post-Install:** `npm install` at root now automatically installs backend dependencies.
+3. **Dynamic Port:** Works with Railway's dynamic ports and VPS fixed ports.

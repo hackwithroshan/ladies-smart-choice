@@ -14,11 +14,6 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Serve Publicly Generated Files (e.g., Product Feeds)
-// Using path.resolve for absolute path consistency
-const publicFeedsPath = path.resolve(__dirname, 'public');
-app.use('/feeds', express.static(publicFeedsPath));
-
 // Database Connection
 mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log('MongoDB Connected...'))
@@ -49,7 +44,8 @@ app.use('/api/app-data', require('./routes/appData'));
 // --- Serve Frontend in Production ---
 // Check for standard production flags OR Railway environment
 if (process.env.NODE_ENV === 'production' || process.env.RAILWAY_ENVIRONMENT || process.env.PORT) {
-    // Resolve the dist path relative to this file's directory
+    // Resolve the dist path relative to backend/server.js
+    // path.resolve(__dirname, '..', 'dist') handles both VPS and Railway folder structures
     const distPath = path.resolve(__dirname, '..', 'dist');
     
     // Serve static files from /dist
@@ -61,7 +57,7 @@ if (process.env.NODE_ENV === 'production' || process.env.RAILWAY_ENVIRONMENT || 
         res.sendFile(indexPath, (err) => {
             if (err) {
                 console.error("Error sending index.html:", err);
-                res.status(500).send("Frontend build not found. Ensure 'npm run build' has been executed.");
+                res.status(500).send("Frontend build (dist folder) not found. Run 'npm run build' first.");
             }
         });
     });
