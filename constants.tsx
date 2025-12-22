@@ -2,14 +2,15 @@
 import React from 'react';
 
 export const COLORS = {
-  primary: '#881337', // Rose 900 - Deep elegant red/pink
-  accent: '#E11D48', // Rose 600 - Vibrant pink/red
-  secondary: '#FFF1F2', // Rose 50
+  primary: '#16423C', // Deep Forest Green
+  accent: '#6A9C89',  // Sage Green
+  secondary: '#F1F8E8', // Soft Minty White
   body: '#1E293B',
+  earth: '#C7B7A3', // Muted Clay/Sand
 };
 
 export const CLOUDINARY = {
-  UPLOAD_PRESET: 'ladiesh',
+  UPLOAD_PRESET: 'ayushree',
   CLOUD_NAME: 'djbv48acj',
   API_KEY: '985258492834513',
   UPLOAD_URL: `https://api.cloudinary.com/v1_1/djbv48acj/auto/upload`
@@ -23,10 +24,7 @@ export const Icons = {
   ),
   products: (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <path d="m7.5 4.27 9 5.15" />
-      <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
-      <path d="m3.3 7 8.7 5 8.7-5" />
-      <path d="M12 22V12" />
+      <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
     </svg>
   ),
   orders: (
@@ -52,9 +50,7 @@ export const Icons = {
   ),
   content: (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 2L2 7l10 5 10-5-10-5z" />
-      <path d="m2 17 10 5 10-5" />
-      <path d="m2 12 10 5 10-5" />
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
     </svg>
   ),
   settings: (

@@ -29,12 +29,11 @@ interface SiteDataContextType {
     loading: boolean;
 }
 
-// Define initial empty states for settings to prevent errors on first render
 const initialHeaderSettings: HeaderSettings = {
-    logoText: 'Ladies Smart Choice',
+    logoText: 'Ayushree Ayurveda',
     logoUrl: '',
-    brandColor: COLORS.primary,
-    phoneNumber: '... ...',
+    brandColor: '#16423C',
+    phoneNumber: '',
     topBarLinks: [],
     mainNavLinks: [],
 };
@@ -71,20 +70,15 @@ export const SiteDataProvider: React.FC<{ children: ReactNode }> = ({ children }
     const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
     const [siteSettings, setSiteSettings] = useState<SiteSettings | null>(null);
     const [homePageSettings, setHomePageSettings] = useState<HomePageSettings | null>(null);
-
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchSiteData = async () => {
             try {
-                // Use a single, efficient endpoint to fetch all initial data
                 const response = await fetch(getApiUrl('/app-data'));
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
+                if (!response.ok) throw new Error('Network response was not ok');
                 const data = await response.json();
 
-                // Populate all state from the aggregated response
                 setHeaderSettings(data.headerSettings || initialHeaderSettings);
                 setFooterSettings(data.footerSettings || initialFooterSettings);
                 setCategories(data.categories || []);
@@ -96,73 +90,57 @@ export const SiteDataProvider: React.FC<{ children: ReactNode }> = ({ children }
                 setSiteSettings(data.siteSettings || null);
                 setHomePageSettings(data.homePageSettings || null);
 
+                // --- Apply Dynamic Colors to CSS Variables ---
+                if (data.siteSettings) {
+                    const root = document.documentElement;
+                    root.style.setProperty('--brand-primary', data.siteSettings.primaryColor || '#16423C');
+                    root.style.setProperty('--brand-accent', data.siteSettings.accentColor || '#6A9C89');
+                }
+
             } catch (error) {
                 console.error("Failed to fetch site data:", error);
-                // In case of API error, app can still run with initial empty data
             } finally {
                 setLoading(false);
             }
         };
-
         fetchSiteData();
     }, []);
 
-    // --- Dynamic Font Injection ---
     useEffect(() => {
         if (siteSettings?.fontFamily) {
             const fontName = siteSettings.fontFamily;
             const linkId = 'dynamic-font-link';
             const styleId = 'dynamic-font-style';
 
-            // Remove existing dynamic font tags
             document.getElementById(linkId)?.remove();
             document.getElementById(styleId)?.remove();
 
-            if (fontName !== 'Montserrat') { // Montserrat is already loaded by default in index.html
-                // Inject Link Tag for Google Fonts
-                const link = document.createElement('link');
-                link.id = linkId;
-                link.rel = 'stylesheet';
-                // Replace spaces with + for URL
-                link.href = `https://fonts.googleapis.com/css2?family=${fontName.replace(/ /g, '+')}:wght@300;400;500;600;700;800&display=swap`;
-                document.head.appendChild(link);
+            const link = document.createElement('link');
+            link.id = linkId;
+            link.rel = 'stylesheet';
+            link.href = `https://fonts.googleapis.com/css2?family=${fontName.replace(/ /g, '+')}:wght@300;400;500;600;700;800&display=swap`;
+            document.head.appendChild(link);
 
-                // Inject CSS Variable/Style override
-                const style = document.createElement('style');
-                style.id = styleId;
-                style.innerHTML = `
-                    body { font-family: '${fontName}', sans-serif !important; }
-                `;
-                document.head.appendChild(style);
-            }
+            const style = document.createElement('style');
+            style.id = styleId;
+            style.innerHTML = `
+                body { font-family: 'Inter', sans-serif; }
+                h1, h2, h3, h4, .font-brand { font-family: '${fontName}', serif !important; }
+                .bg-brand-primary { background-color: var(--brand-primary) !important; }
+                .text-brand-primary { color: var(--brand-primary) !important; }
+                .bg-brand-accent { background-color: var(--brand-accent) !important; }
+                .text-brand-accent { color: var(--brand-accent) !important; }
+                .border-brand-accent { border-color: var(--brand-accent) !important; }
+            `;
+            document.head.appendChild(style);
         }
     }, [siteSettings?.fontFamily]);
 
-    const value = { 
-        headerSettings, 
-        footerSettings, 
-        categories,
-        products,
-        slides,
-        collections,
-        videos,
-        testimonials,
-        siteSettings,
-        homePageSettings,
-        loading 
-    };
-
     return (
-        <SiteDataContext.Provider value={value}>
+        <SiteDataContext.Provider value={{ headerSettings, footerSettings, categories, products, slides, collections, videos, testimonials, siteSettings, homePageSettings, loading }}>
             {children}
         </SiteDataContext.Provider>
     );
 };
 
-export const useSiteData = () => {
-    const context = useContext(SiteDataContext);
-    if (context === undefined) {
-        throw new Error('useSiteData must be used within a SiteDataProvider');
-    }
-    return context;
-};
+export const useSiteData = () => useContext(SiteDataContext);

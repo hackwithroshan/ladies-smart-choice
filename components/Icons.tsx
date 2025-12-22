@@ -3,8 +3,10 @@ import React from 'react';
 
 export const TailGridsLogo = () => (
     <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M3.33331 20C3.33331 32.375 9.16665 36.6667 20 36.6667C30.8333 36.6667 36.6666 32.375 36.6666 20C36.6666 7.625 30.8333 3.33334 20 3.33334C9.16665 3.33334 3.33331 7.625 3.33331 20Z" stroke="#E11D48" strokeWidth="3" strokeMiterlimit="10"/>
-        <path d="M20 3.33334C25.8333 3.33334 30 7.625 30 15.2083C30 22.7917 20 36.6667 20 36.6667" stroke="#E11D48" strokeWidth="3" strokeMiterlimit="10" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M3.33331 20C3.33331 32.375 9.16665 36.6667 20 36.6667C30.8333 36.6667 36.6666 32.375 36.6666 20C36.6666 7.625 30.8333 3.33334 20 3.33334C9.16665 3.33334 3.33331 7.625 3.33331 20Z" stroke="#16423C" strokeWidth="3" strokeMiterlimit="10"/>
+        <path d="M20 3.33334C25.8333 3.33334 30 7.625 30 15.2083C30 22.7917 20 36.6667 20 36.6667" stroke="#6A9C89" strokeWidth="3" strokeMiterlimit="10" strokeLinecap="round" strokeLinejoin="round"/>
+        {/* Leaf addition for Ayurveda feel */}
+        <path d="M15 15C15 15 17 12 20 12C23 12 25 15 25 15" stroke="#16423C" strokeWidth="2" strokeLinecap="round"/>
     </svg>
 );
 

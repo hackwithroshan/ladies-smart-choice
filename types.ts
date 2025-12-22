@@ -295,6 +295,13 @@ export interface SiteSettings {
   trackAddToCart?: boolean;
   trackInitiateCheckout?: boolean;
   trackPurchase?: boolean;
+
+  // Fix: Added missing branding and identity properties to align with backend and UI usage
+  storeName?: string;
+  logoUrl?: string;
+  faviconUrl?: string;
+  primaryColor?: string;
+  accentColor?: string;
 }
 
 export interface HomePageSettings {
