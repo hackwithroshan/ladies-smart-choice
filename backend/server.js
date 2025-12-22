@@ -11,7 +11,7 @@ require('./cronJobs');
 
 const app = express();
 
-// Middleware
+// Middleware - Allow Vercel to connect
 app.use(cors());
 app.use(express.json());
 
@@ -42,33 +42,23 @@ app.use('/api/integrations', require('./routes/integrations'));
 app.use('/api/shipping', require('./routes/shipping'));
 app.use('/api/app-data', require('./routes/appData'));
 
-// --- Unified Frontend Serving (Railway & VPS) ---
-// Resolve the dist folder path. In standard setup, dist is in the root.
-// If server.js is in /app/backend, dist is at /app/dist.
+// --- Standalone API Mode ---
 const distPath = path.resolve(__dirname, '..', 'dist');
-const indexPath = path.join(distPath, 'index.html');
 
-console.log(`Checking for frontend build at: ${distPath}`);
-
-if (fs.existsSync(distPath)) {
+if (fs.existsSync(distPath) && fs.existsSync(path.join(distPath, 'index.html'))) {
     console.log('Frontend build found. Serving static files...');
     app.use(express.static(distPath));
-
-    // Catch-all route for React Router
     app.get('*', (req, res) => {
-        if (fs.existsSync(indexPath)) {
-            res.sendFile(indexPath);
-        } else {
-            res.status(404).send("Build exists but index.html is missing. Try 'npm run build' again.");
-        }
+        res.sendFile(path.join(distPath, 'index.html'));
     });
 } else {
-    console.warn('WARNING: dist folder not found. API is running, but frontend will not be served.');
+    // If running on Railway and frontend is on Vercel
+    console.log('Standalone API Mode: No local frontend build detected.');
     app.get('/', (req, res) => {
-        res.status(500).json({
-            error: "Frontend build (dist) not found.",
-            instruction: "Please run 'npm run build' in the project root before starting the server.",
-            currentPath: distPath
+        res.json({
+            status: "Online",
+            message: "Ladies Smart Choice API is running.",
+            frontend_location: "External (Vercel)"
         });
     });
 }
