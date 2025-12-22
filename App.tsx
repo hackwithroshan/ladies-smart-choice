@@ -1,6 +1,8 @@
 
 import React, { useState, useEffect, Suspense, lazy, useRef } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+// Fix: Use namespace import and cast to any to resolve "no exported member" errors in this environment
+import * as ReactRouterDom from 'react-router-dom';
+const { BrowserRouter: Router, Routes, Route, Navigate, useLocation, useNavigate } = ReactRouterDom as any;
 import { HelmetProvider } from 'react-helmet-async';
 import { CartProvider } from './contexts/CartContext';
 import { WishlistProvider } from './contexts/WishlistContext';

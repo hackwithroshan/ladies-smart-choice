@@ -1,6 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+// Fix: Use namespace import and cast to any to resolve "no exported member" errors
+import * as ReactRouterDom from 'react-router-dom';
+const { useNavigate } = ReactRouterDom as any;
 import { Order } from '../types';
 import { getApiUrl } from '../utils/apiHelper';
 import { COLORS } from '../constants';

@@ -1,6 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+// Fix: Use namespace import and cast to any to resolve "no exported member" errors
+import * as ReactRouterDom from 'react-router-dom';
+const { useParams, Link } = ReactRouterDom as any;
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { ContentPage } from '../types';
@@ -12,7 +14,8 @@ interface DynamicPageProps {
 }
 
 const DynamicPage: React.FC<DynamicPageProps> = ({ user, logout }) => {
-  const { slug } = useParams<{ slug: string }>();
+  // Fix: Removed type argument from useParams as it's extracted from an untyped source
+  const { slug } = useParams();
   const [page, setPage] = useState<ContentPage | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

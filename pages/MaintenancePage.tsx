@@ -1,6 +1,8 @@
 
 import React from 'react';
-import { Link } from 'react-router-dom';
+// Fix: Use namespace import and cast to any to resolve "no exported member" errors
+import * as ReactRouterDom from 'react-router-dom';
+const { Link } = ReactRouterDom as any;
 import { COLORS } from '../constants';
 
 const MaintenancePage: React.FC = () => {

@@ -1,6 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+// Fix: Use namespace import and cast to any to resolve "no exported member" errors
+import * as ReactRouterDom from 'react-router-dom';
+const { useParams, useNavigate } = ReactRouterDom as any;
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import ProductCard from '../components/ProductCard';
@@ -16,7 +18,8 @@ interface Collection {
 }
 
 const CollectionPage: React.FC<{ user: any; logout: () => void }> = ({ user, logout }) => {
-    const { id } = useParams<{ id: string }>();
+    // Fix: Removed type argument from useParams as it's extracted from an untyped source
+    const { id } = useParams();
     const [collection, setCollection] = useState<Collection | null>(null);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();

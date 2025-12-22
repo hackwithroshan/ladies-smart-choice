@@ -6,8 +6,9 @@ import PageEditor from './PageEditor';
 import VideoSettings from './VideoSettings';
 import TestimonialSettings from './TestimonialSettings';
 import CollectionSettings from './CollectionSettings';
+import HomepageEditor from './HomepageEditor';
 
-type CMSTab = 'slider' | 'collections' | 'blogs' | 'pages' | 'videos' | 'reviews';
+type CMSTab = 'page-builder' | 'slider' | 'collections' | 'blogs' | 'pages' | 'videos' | 'reviews';
 
 interface CMSManagementProps {
     token: string | null;
@@ -15,13 +16,10 @@ interface CMSManagementProps {
 }
 
 const CMSManagement: React.FC<CMSManagementProps> = ({ token, initialTab }) => {
-    const [activeTab, setActiveTab] = useState<CMSTab>(initialTab || 'collections');
+    const [activeTab, setActiveTab] = useState<CMSTab>(initialTab || 'page-builder');
 
-    // Sync if initialTab changes
     useEffect(() => {
-        if (initialTab) {
-            setActiveTab(initialTab);
-        }
+        if (initialTab) setActiveTab(initialTab);
     }, [initialTab]);
 
     const TabButton = ({ id, label }: { id: CMSTab, label: string }) => (
@@ -39,20 +37,20 @@ const CMSManagement: React.FC<CMSManagementProps> = ({ token, initialTab }) => {
                 <h2 className="text-2xl font-bold text-gray-800">Content Management</h2>
             </div>
 
-            {/* Tabs */}
             <div className="border-b border-gray-200 overflow-x-auto">
                 <div className="flex space-x-4 min-w-max">
-                    <TabButton id="collections" label="Collections (Categories)" />
+                    <TabButton id="page-builder" label="Page Builder (New)" />
+                    <TabButton id="collections" label="Collections" />
                     <TabButton id="videos" label="Shop Videos" />
-                    <TabButton id="slider" label="Homepage Slider" />
-                    <TabButton id="reviews" label="Testimonials" />
-                    <TabButton id="blogs" label="Blog Posts" />
-                    <TabButton id="pages" label="Static Pages" />
+                    <TabButton id="slider" label="Banners" />
+                    <TabButton id="reviews" label="Reviews" />
+                    <TabButton id="blogs" label="Blogs" />
+                    <TabButton id="pages" label="Legal" />
                 </div>
             </div>
 
-            {/* Content */}
             <div className="pt-4">
+                {activeTab === 'page-builder' && <HomepageEditor token={token} />}
                 {activeTab === 'collections' && <CollectionSettings token={token} />}
                 {activeTab === 'slider' && <SliderSettings token={token} />}
                 {activeTab === 'videos' && <VideoSettings token={token} />}

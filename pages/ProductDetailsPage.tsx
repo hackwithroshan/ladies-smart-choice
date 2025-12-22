@@ -1,6 +1,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+// Fix: Use namespace import and cast to any to resolve "no exported member" errors
+import * as ReactRouterDom from 'react-router-dom';
+const { useParams, Link, useNavigate } = ReactRouterDom as any;
 import { Product, Review } from '../types';
 import { useCart } from '../contexts/CartContext';
 import { useToast } from '../contexts/ToastContext';
@@ -30,7 +32,8 @@ interface ShopVideo {
 }
 
 const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user, logout }) => {
-  const { slug } = useParams<{ slug: string }>();
+  // Fix: Removed type argument from useParams as it's extracted from an untyped source
+  const { slug } = useParams();
   const navigate = useNavigate();
   const { addToCart, addMultipleToCart } = useCart();
   const { showToast } = useToast();

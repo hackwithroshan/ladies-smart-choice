@@ -1,6 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+// Fix: Use namespace import and cast to any to resolve "no exported member" errors
+import * as ReactRouterDom from 'react-router-dom';
+const { useSearchParams } = ReactRouterDom as any;
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { getApiUrl } from '../utils/apiHelper';

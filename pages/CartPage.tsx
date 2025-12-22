@@ -1,6 +1,8 @@
 
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+// Fix: Use namespace import and cast to any to resolve "no exported member" errors
+import * as ReactRouterDom from 'react-router-dom';
+const { Link, useNavigate } = ReactRouterDom as any;
 import { useCart } from '../contexts/CartContext';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
