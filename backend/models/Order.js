@@ -11,12 +11,13 @@ const OrderItemSchema = new mongoose.Schema({
 
 const TrackingEventSchema = new mongoose.Schema({
     date: { type: Date, default: Date.now },
-    status: String, // e.g., "In Transit", "Out for Delivery"
+    status: String,
     location: String,
     message: String
 });
 
 const OrderSchema = new mongoose.Schema({
+    orderNumber: { type: Number, unique: true }, // Sequential Serial ID (e.g., 1001)
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     customerName: { type: String, required: true },
     customerEmail: { type: String, required: true },
@@ -30,10 +31,10 @@ const OrderSchema = new mongoose.Schema({
     trackingInfo: {
         carrier: String,
         trackingNumber: String,
-        shippingLabelUrl: String, // URL to download label
+        shippingLabelUrl: String,
         estimatedDelivery: Date
     },
-    trackingHistory: [TrackingEventSchema], // Detailed timeline
+    trackingHistory: [TrackingEventSchema],
     date: { type: Date, default: Date.now },
     total: { type: Number, required: true },
     status: { 

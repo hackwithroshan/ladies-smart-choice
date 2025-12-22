@@ -12,8 +12,9 @@ import { getApiUrl } from './utils/apiHelper';
 import ErrorBoundary from './components/ErrorBoundary';
 import SmartPopup from './components/SmartPopup';
 import WhatsAppWidget from './components/WhatsAppWidget';
+import MaintenancePage from './pages/MaintenancePage';
 
-// --- Lazy Load Pages for Code Splitting & Performance ---
+// --- Lazy Load Pages ---
 const HomePage = lazy(() => import('./pages/HomePage'));
 const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
@@ -28,52 +29,40 @@ const ContactPage = lazy(() => import('./pages/ContactPage'));
 const OrderTrackingPage = lazy(() => import('./pages/OrderTrackingPage'));
 const WishlistPage = lazy(() => import('./pages/WishlistPage'));
 
-// --- Loading Spinner for Suspense Fallback ---
 const LoadingSpinner: React.FC = () => (
     <div className="flex justify-center items-center h-screen w-screen bg-gray-50">
         <div className="animate-spin rounded-full h-24 w-24 border-t-2 border-b-2 border-rose-600"></div>
     </div>
 );
 
-// --- Master Tracking Component for Meta Pixel & CAPI ---
 const MasterTracker: React.FC = () => {
     const location = useLocation();
     const { siteSettings, loading: siteDataLoading } = useSiteData();
     const warningLogged = useRef(false);
 
     useEffect(() => {
-        // Don't do anything until site settings (with Pixel ID) are loaded.
-        if (siteDataLoading) {
-            return;
-        }
-
-        // 1. Initialize Pixel if it hasn't been initialized and we have a valid ID.
+        if (siteDataLoading) return;
         if (!(window as any)._pixelInitialized) {
             if (siteSettings?.metaPixelId) {
                 initFacebookPixel(siteSettings.metaPixelId);
-                (window as any)._pixelInitialized = true; // Mark as initialized
+                (window as any)._pixelInitialized = true;
             } else if (!warningLogged.current) {
-                // Log the warning only once to avoid console spam on every navigation.
-                console.warn("M-Tracker: Meta Pixel ID not found in site settings. Pixel not initialized.");
+                console.warn("M-Tracker: Meta Pixel ID not found in site settings.");
                 warningLogged.current = true;
             }
         }
-        
-        // 2. If the pixel is ready, track the PageView for the current location.
-        // This will fire for the initial load and all subsequent route changes.
         if ((window as any)._pixelInitialized) {
             masterTracker('PageView');
         }
-
-    }, [location, siteSettings, siteDataLoading]); // Re-run on location change or when settings finish loading.
+    }, [location, siteSettings, siteDataLoading]);
 
     return null;
 };
 
-// This new component contains all the logic and routes, allowing it to use the `useNavigate` hook.
 const AppContent: React.FC = () => {
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [user, setUser] = useState<any>(JSON.parse(localStorage.getItem('user') || 'null'));
+  const { siteSettings } = useSiteData();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -89,12 +78,8 @@ const AppContent: React.FC = () => {
   const handleAuthSuccess = (data: { token: string; user: any }) => {
     setToken(data.token);
     setUser(data.user);
-    
-    if (data.user?.isAdmin) {
-      navigate('/admin');
-    } else {
-      navigate('/dashboard');
-    }
+    if (data.user?.isAdmin) navigate('/admin');
+    else navigate('/dashboard');
   };
 
   const handleLogout = () => {
@@ -103,53 +88,40 @@ const AppContent: React.FC = () => {
     navigate('/'); 
   };
 
+  // --- Maintenance Mode Logic ---
+  const isMaintenance = siteSettings?.isMaintenanceMode && !user?.isAdmin;
+
   return (
     <>
       <MasterTracker />
       <div className="min-h-screen bg-gray-50">
         <Suspense fallback={<LoadingSpinner />}>
-          <Routes>
-            <Route path="/" element={<HomePage user={user} logout={handleLogout} />} />
-            <Route 
-              path="/login" 
-              element={!user ? <LoginPage onAuthSuccess={handleAuthSuccess} /> : <Navigate to="/" />} 
-            />
-            <Route 
-              path="/register" 
-              element={!user ? <RegisterPage onAuthSuccess={handleAuthSuccess} /> : <Navigate to="/" />} 
-            />
-            <Route 
-              path="/admin/*" 
-              element={user?.isAdmin ? <AdminDashboardPage user={user} logout={handleLogout} /> : <Navigate to="/" />} 
-            />
-            <Route 
-              path="/dashboard" 
-              element={user ? <UserDashboardPage user={user} logout={handleLogout} /> : <Navigate to="/login" />} 
-            />
-            <Route 
-              path="/product/:slug" 
-              element={<ProductDetailsPage user={user} logout={handleLogout} />} 
-            />
-            <Route 
-              path="/collections/:id" 
-              element={<CollectionPage user={user} logout={handleLogout} />} 
-            />
-            <Route path="/pages/:slug" element={<DynamicPage user={user} logout={handleLogout} />} />
-            <Route path="/cart" element={<CartPage user={user} logout={handleLogout} />} />
-            <Route path="/wishlist" element={<WishlistPage user={user} logout={handleLogout} />} />
-            <Route 
-              path="/checkout" 
-              element={<CheckoutPage user={user} logout={handleLogout} />} 
-            />
-            <Route path="/contact" element={<ContactPage user={user} logout={handleLogout} />} />
-            {/* New Tracking Route */}
-            <Route path="/track-order" element={<OrderTrackingPage user={user} logout={handleLogout} />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+          {isMaintenance ? (
+             <Routes>
+                <Route path="/login" element={<LoginPage onAuthSuccess={handleAuthSuccess} />} />
+                <Route path="*" element={<MaintenancePage />} />
+             </Routes>
+          ) : (
+            <Routes>
+              <Route path="/" element={<HomePage user={user} logout={handleLogout} />} />
+              <Route path="/login" element={!user ? <LoginPage onAuthSuccess={handleAuthSuccess} /> : <Navigate to="/" />} />
+              <Route path="/register" element={!user ? <RegisterPage onAuthSuccess={handleAuthSuccess} /> : <Navigate to="/" />} />
+              <Route path="/admin/*" element={user?.isAdmin ? <AdminDashboardPage user={user} logout={handleLogout} /> : <Navigate to="/" />} />
+              <Route path="/dashboard" element={user ? <UserDashboardPage user={user} logout={handleLogout} /> : <Navigate to="/login" />} />
+              <Route path="/product/:slug" element={<ProductDetailsPage user={user} logout={handleLogout} />} />
+              <Route path="/collections/:id" element={<CollectionPage user={user} logout={handleLogout} />} />
+              <Route path="/pages/:slug" element={<DynamicPage user={user} logout={handleLogout} />} />
+              <Route path="/cart" element={<CartPage user={user} logout={handleLogout} />} />
+              <Route path="/wishlist" element={<WishlistPage user={user} logout={handleLogout} />} />
+              <Route path="/checkout" element={<CheckoutPage user={user} logout={handleLogout} />} />
+              <Route path="/contact" element={<ContactPage user={user} logout={handleLogout} />} />
+              <Route path="/track-order" element={<OrderTrackingPage user={user} logout={handleLogout} />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          )}
         </Suspense>
         
-        {/* --- Global Smart Features --- */}
-        {!user?.isAdmin && (
+        {!user?.isAdmin && !isMaintenance && (
           <>
             <SmartPopup />
             <WhatsAppWidget />
@@ -159,7 +131,6 @@ const AppContent: React.FC = () => {
     </>
   );
 };
-
 
 const App: React.FC = () => {
   return (

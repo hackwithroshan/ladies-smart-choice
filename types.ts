@@ -94,6 +94,8 @@ export interface OrderItem {
 
 export interface Order {
   id: string;
+  // Fix: Added orderNumber property to match backend schema and resolve frontend property access errors
+  orderNumber?: number;
   userId?: string;
   customerName: string;
   customerEmail: string;
@@ -272,7 +274,13 @@ export interface SiteSettings {
   taxRate: number;
   shippingCharge: number;
   videoAutoplay?: boolean;
+  /* Added isMaintenanceMode property to SiteSettings interface */
+  isMaintenanceMode?: boolean;
   
+  // WhatsApp Config
+  whatsappNumber?: string;
+  whatsappMessage?: string;
+
   // Typography
   fontFamily?: string;
 

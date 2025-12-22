@@ -1,10 +1,16 @@
 
 import React from 'react';
+import { useSiteData } from '../contexts/SiteDataContext';
 
 const WhatsAppWidget: React.FC = () => {
-    // Replace with your actual business number
-    const phoneNumber = "919876543210"; 
-    const message = "Hi, I need help with my order.";
+    const { siteSettings } = useSiteData();
+    
+    // Default fallback values if not set in admin
+    const phoneNumber = siteSettings?.whatsappNumber || "919876543210"; 
+    const message = siteSettings?.whatsappMessage || "Hi, I need help with my order.";
+
+    // If for some reason the admin removes the number completely, we can hide the widget
+    if (!phoneNumber) return null;
 
     return (
         <a 

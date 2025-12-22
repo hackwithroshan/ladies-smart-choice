@@ -7,11 +7,18 @@ const SiteSettingsSchema = new mongoose.Schema({
     shippingCharge: { type: Number, default: 0 },
     videoAutoplay: { type: Boolean, default: true },
     
+    // Maintenance Mode
+    isMaintenanceMode: { type: Boolean, default: false },
+    
+    // WhatsApp Configuration
+    whatsappNumber: { type: String, default: '919876543210' },
+    whatsappMessage: { type: String, default: 'Hi, I need help with my order.' },
+
     // Branding
     fontFamily: { type: String, default: 'Montserrat' }, // Default font
 
     // Meta Pixel & CAPI Settings
-    metaPixelId: String, // Consolidated from facebookPixelId
+    metaPixelId: String, 
     metaAccessToken: String,
     metaCatalogId: String,
 
