@@ -4,6 +4,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 
 // Initialize Cron Jobs
 require('./cronJobs');
@@ -14,21 +15,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Database Connection - Simplified for stability
-const connectDB = async () => {
-    try {
-        if (!process.env.MONGO_URI) {
-            console.error('CRITICAL: MONGO_URI is not defined in environment variables.');
-            return;
-        }
-        await mongoose.connect(process.env.MONGO_URI);
-        console.log('MongoDB Connected Successfully');
-    } catch (err) {
-        console.error('MongoDB Connection Error:', err.message);
-        // Don't exit the process, let the server run so we can see logs
-    }
-};
-connectDB();
+// Database Connection
+mongoose.connect(process.env.MONGO_URI)
+    .then(() => console.log('MongoDB Connected Successfully'))
+    .catch(err => console.error('MongoDB Connection Error:', err));
 
 // API Routes
 app.use('/api/auth', require('./routes/auth'));
@@ -52,35 +42,36 @@ app.use('/api/integrations', require('./routes/integrations'));
 app.use('/api/shipping', require('./routes/shipping'));
 app.use('/api/app-data', require('./routes/appData'));
 
-// --- Serve Frontend in Production ---
-// We use process.cwd() to get the project root where 'dist' lives
-const distPath = path.join(process.cwd(), 'dist');
+// --- Unified Frontend Serving (Railway & VPS) ---
+// Resolve the dist folder path. In standard setup, dist is in the root.
+// If server.js is in /app/backend, dist is at /app/dist.
+const distPath = path.resolve(__dirname, '..', 'dist');
+const indexPath = path.join(distPath, 'index.html');
 
-if (process.env.NODE_ENV === 'production' || process.env.RAILWAY_ENVIRONMENT) {
-    console.log('Production mode detected. Serving from:', distPath);
-    
-    // Serve static files
+console.log(`Checking for frontend build at: ${distPath}`);
+
+if (fs.existsSync(distPath)) {
+    console.log('Frontend build found. Serving static files...');
     app.use(express.static(distPath));
 
-    // Catch-all route
+    // Catch-all route for React Router
     app.get('*', (req, res) => {
-        const indexPath = path.join(distPath, 'index.html');
-        res.sendFile(indexPath, (err) => {
-            if (err) {
-                console.error("Dist folder or index.html not found at:", indexPath);
-                res.status(404).send("Frontend build not found. Please run 'npm run build' first.");
-            }
-        });
+        if (fs.existsSync(indexPath)) {
+            res.sendFile(indexPath);
+        } else {
+            res.status(404).send("Build exists but index.html is missing. Try 'npm run build' again.");
+        }
     });
 } else {
+    console.warn('WARNING: dist folder not found. API is running, but frontend will not be served.');
     app.get('/', (req, res) => {
-        res.send('API is running in development mode...');
+        res.status(500).json({
+            error: "Frontend build (dist) not found.",
+            instruction: "Please run 'npm run build' in the project root before starting the server.",
+            currentPath: distPath
+        });
     });
 }
 
-// Port: Railway automatically sets PORT
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log('Current directory:', process.cwd());
-});
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
