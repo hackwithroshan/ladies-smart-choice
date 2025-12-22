@@ -5,7 +5,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
 
-// Initialize Cron Jobs for scheduled tasks (e.g., feed generation)
+// Initialize Cron Jobs
 require('./cronJobs');
 
 const app = express();
@@ -14,8 +14,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// --- Serve Publicly Generated Files (e.g., Product Feeds) ---
-app.use('/feeds', express.static(path.join(__dirname, 'public')));
+// Serve Publicly Generated Files (e.g., Product Feeds)
+// Using path.resolve for absolute path consistency
+const publicFeedsPath = path.resolve(__dirname, 'public');
+app.use('/feeds', express.static(publicFeedsPath));
 
 // Database Connection
 mongoose.connect(process.env.MONGO_URI)
@@ -23,10 +25,6 @@ mongoose.connect(process.env.MONGO_URI)
     .catch(err => console.error('MongoDB Connection Error:', err));
 
 // API Routes
-app.get('/api', (req, res) => {
-    res.send('API is running...');
-});
-
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/products', require('./routes/products'));
 app.use('/api/orders', require('./routes/orders'));
@@ -43,32 +41,32 @@ app.use('/api/discounts', require('./routes/discounts'));
 app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api/contact', require('./routes/contact'));
 app.use('/api/notifications', require('./routes/notifications'));
-// Refactored: All feed/catalog routes are now under /api/catalog
 app.use('/api/catalog', require('./routes/feed')); 
 app.use('/api/integrations', require('./routes/integrations'));
-// NEW: Shipping Integration Routes
 app.use('/api/shipping', require('./routes/shipping'));
-
-// Efficient App Data route
 app.use('/api/app-data', require('./routes/appData'));
 
-// Models (for registration with Mongoose)
-require('./models/ContactSubmission');
-require('./models/StoreDetails');
-
-
 // --- Serve Frontend in Production ---
-if (process.env.NODE_ENV === 'production') {
-    // Set static folder - assuming the frontend is built into a 'dist' folder in the root
-    app.use(express.static(path.join(__dirname, '../dist')));
+// Check for standard production flags OR Railway environment
+if (process.env.NODE_ENV === 'production' || process.env.RAILWAY_ENVIRONMENT || process.env.PORT) {
+    // Resolve the dist path relative to this file's directory
+    const distPath = path.resolve(__dirname, '..', 'dist');
+    
+    // Serve static files from /dist
+    app.use(express.static(distPath));
 
-    // For any route that is not an API route, serve the React app's index.html
-    // This should be after all API routes
+    // Catch-all route to serve index.html for React Router
     app.get('*', (req, res) => {
-        res.sendFile(path.resolve(__dirname, '..', 'dist', 'index.html'));
+        const indexPath = path.join(distPath, 'index.html');
+        res.sendFile(indexPath, (err) => {
+            if (err) {
+                console.error("Error sending index.html:", err);
+                res.status(500).send("Frontend build not found. Ensure 'npm run build' has been executed.");
+            }
+        });
     });
 }
 
-
+// Port: Use environment variable or default to 5000
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

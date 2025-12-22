@@ -1,10 +1,13 @@
+
 {
   "name": "autocosmic-frontend",
   "version": "1.0.0",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "node backend/server.js",
+    "postinstall": "cd backend && npm install"
   },
   "dependencies": {
     "react": "^18.2.0",
