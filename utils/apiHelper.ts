@@ -1,22 +1,18 @@
 
 export const getApiUrl = (path: string): string => {
-  // Check if we are in production (on Vercel)
-  // Fix: Accessing env via type casting to bypass ImportMeta missing property error
+  // Production environment check
   const isProduction = (import.meta as any).env.PROD;
   
-  // Get backend URL from environment or default to current origin (for local dev)
-  // On Vercel, you must set VITE_API_URL in your project settings.
-  // Fix: Accessing env via type casting to bypass ImportMeta missing property error
-  const baseUrl = (import.meta as any).env.VITE_API_URL || '';
-
+  // Clean the path
   const cleanPath = path.startsWith('/') ? path.substring(1) : path;
   const apiPath = cleanPath.startsWith('api/') ? cleanPath : `api/${cleanPath}`;
 
-  // If baseUrl is provided (like Railway URL), return absolute URL
-  if (baseUrl) {
-    return `${baseUrl.endsWith('/') ? baseUrl : baseUrl + '/'}${apiPath}`;
+  if (isProduction) {
+    // If we are on production, use the current domain's /api endpoint
+    // This prevents ERR_CERT_COMMON_NAME_INVALID by keeping requests on the same domain
+    return `/${apiPath}`;
   }
 
-  // Fallback for local development or same-server hosting
+  // Development fallback (Vite proxy handles /api to port 5000/5001)
   return `/${apiPath}`;
 };

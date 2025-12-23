@@ -12,18 +12,17 @@ const SafeCustomCode: React.FC<SafeCustomCodeProps> = ({ code, sectionId }) => {
     useEffect(() => {
         if (!containerRef.current) return;
 
-        // 1. Clear previous content to avoid duplicate scripts/styles on re-render
+        // 1. Clear previous content
         containerRef.current.innerHTML = '';
 
-        // 2. Parse the code
+        // 2. Parse HTML string
         const parser = new DOMParser();
         const doc = parser.parseFromString(code, 'text/html');
         
-        // 3. Extract Styles (Link & Style tags)
+        // 3. Inject CSS Styles immediately
         const styles = Array.from(doc.querySelectorAll('link[rel="stylesheet"], style'));
         styles.forEach(style => {
             const head = document.head;
-            // Avoid duplicating identical links
             if (style.tagName === 'LINK') {
                 const href = style.getAttribute('href');
                 if (href && !head.querySelector(`link[href="${href}"]`)) {
@@ -38,61 +37,66 @@ const SafeCustomCode: React.FC<SafeCustomCodeProps> = ({ code, sectionId }) => {
             }
         });
 
-        // 4. Inject Body Content
-        // Filter out scripts and styles we already handled from the HTML body injection
+        // 4. Inject Clean HTML Content
         const contentClone = doc.body.cloneNode(true) as HTMLElement;
-        const inlineScriptsAndStyles = contentClone.querySelectorAll('script, link, style');
-        inlineScriptsAndStyles.forEach(el => el.remove());
+        contentClone.querySelectorAll('script, link, style').forEach(el => el.remove());
         containerRef.current.innerHTML = contentClone.innerHTML;
 
-        // 5. Process Scripts SEQUENTIALLY
-        // This is critical: Dependencies (like Swiper.js) must load BEFORE the init script
+        // 5. Smart Script Runner
         const scripts = Array.from(doc.querySelectorAll('script'));
-
-        const executeScripts = async () => {
-            for (const oldScript of scripts) {
-                if (oldScript.src) {
-                    // Load external script
+        
+        const runScripts = async () => {
+            for (const script of scripts) {
+                if (script.src) {
+                    // Load External JS (like Swiper)
                     await new Promise<void>((resolve, reject) => {
-                        // Check if already loaded
-                        if (document.querySelector(`script[src="${oldScript.src}"]`)) {
-                            resolve();
-                            return;
+                        if (document.querySelector(`script[src="${script.src}"]`)) {
+                            resolve(); return;
                         }
                         const newScript = document.createElement('script');
-                        Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                        Array.from(script.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
                         newScript.onload = () => resolve();
-                        newScript.onerror = () => reject(new Error(`Failed to load script: ${oldScript.src}`));
+                        newScript.onerror = () => reject();
                         document.head.appendChild(newScript);
                     });
                 } else {
-                    // Wait for a frame to ensure CSS has applied and DOM is painted
-                    // Swiper needs to know the width/height of elements to work correctly
-                    await new Promise(resolve => requestAnimationFrame(resolve));
+                    // Execute Inline JS with "Wait-for-Library" logic
+                    const executeWithRetry = (retryCount = 0) => {
+                        const needsSwiper = script.innerHTML.includes('Swiper');
+                        const swiperReady = (window as any).Swiper;
 
-                    // Execute inline script
-                    const newScript = document.createElement('script');
-                    newScript.text = `
-                        (function(sectionId, sectionElement) {
+                        if (needsSwiper && !swiperReady && retryCount < 30) {
+                            // Wait 100ms and try again
+                            setTimeout(() => executeWithRetry(retryCount + 1), 100);
+                            return;
+                        }
+
+                        // Ensure DOM is ready for dimension calculations
+                        requestAnimationFrame(() => {
                             try {
-                                ${oldScript.innerHTML}
-                            } catch (err) {
-                                console.error("Error in Section JS [" + sectionId + "]:", err);
+                                const runner = new Function('sectionId', 'sectionElement', `
+                                    try {
+                                        ${script.innerHTML}
+                                    } catch (e) {
+                                        console.error("Custom JS error in section [" + sectionId + "]:", e);
+                                    }
+                                `);
+                                runner(sectionId, document.getElementById(sectionId));
+                            } catch (e) {
+                                console.error("Script parsing error:", e);
                             }
-                        })("${sectionId}", document.getElementById("${sectionId}"));
-                    `;
-                    document.body.appendChild(newScript);
-                    document.body.removeChild(newScript);
+                        });
+                    };
+
+                    executeWithRetry();
                 }
             }
         };
 
-        executeScripts();
+        runScripts();
 
         return () => {
-            if (containerRef.current) {
-                containerRef.current.innerHTML = '';
-            }
+            if (containerRef.current) containerRef.current.innerHTML = '';
         };
     }, [code, sectionId]);
 
@@ -100,7 +104,7 @@ const SafeCustomCode: React.FC<SafeCustomCodeProps> = ({ code, sectionId }) => {
         <div 
             id={sectionId} 
             ref={containerRef} 
-            className="custom-section-wrapper"
+            className="custom-section-container w-full"
         />
     );
 };

@@ -2,7 +2,6 @@
 const express = require('express');
 const router = express.Router();
 
-// Import all necessary models
 const Product = require('../models/Product');
 const Category = require('../models/Category');
 const HeaderSetting = require('../models/HeaderSetting');
@@ -16,18 +15,8 @@ const Testimonial = require('../models/Testimonial');
 
 router.get('/', async (req, res) => {
     try {
-        const [
-            products,
-            categories,
-            headerSettings,
-            footerSettings,
-            siteSettings,
-            homePageSettings,
-            slides,
-            collections,
-            videos,
-            testimonials
-        ] = await Promise.all([
+        // Fetch everything in parallel with fallbacks to empty arrays if queries fail
+        const results = await Promise.allSettled([
             Product.find({ status: 'Active' }).sort({ _id: -1 }),
             Category.find({}),
             HeaderSetting.findOne(),
@@ -40,21 +29,23 @@ router.get('/', async (req, res) => {
             Testimonial.find({})
         ]);
 
-        res.json({
-            products,
-            categories,
-            headerSettings,
-            footerSettings,
-            siteSettings,
-            homePageSettings,
-            slides,
-            collections,
-            videos,
-            testimonials
-        });
+        const data = {
+            products: results[0].status === 'fulfilled' ? results[0].value : [],
+            categories: results[1].status === 'fulfilled' ? results[1].value : [],
+            headerSettings: results[2].status === 'fulfilled' ? results[2].value : {},
+            footerSettings: results[3].status === 'fulfilled' ? results[3].value : {},
+            siteSettings: results[4].status === 'fulfilled' ? results[4].value : {},
+            homePageSettings: results[5].status === 'fulfilled' ? results[5].value : {},
+            slides: results[6].status === 'fulfilled' ? results[6].value : [],
+            collections: results[7].status === 'fulfilled' ? results[7].value : [],
+            videos: results[8].status === 'fulfilled' ? results[8].value : [],
+            testimonials: results[9].status === 'fulfilled' ? results[9].value : []
+        };
+
+        res.json(data);
     } catch (error) {
-        console.error('Error fetching app data:', error);
-        res.status(500).json({ message: 'Server error while fetching app data.' });
+        console.error('Critical Error in app-data route:', error);
+        res.status(500).json({ message: 'Internal Server Error while loading store data.' });
     }
 });
 
