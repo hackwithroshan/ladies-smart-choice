@@ -8,6 +8,7 @@ const FooterSetting = require('../models/FooterSetting');
 const SiteSettings = require('../models/SiteSettings');
 const HomePageSetting = require('../models/HomePageSetting');
 const HomepageLayout = require('../models/HomepageLayout');
+const StoreDetails = require('../models/StoreDetails');
 
 // --- Layout Editor ---
 router.get('/layout', async (req, res) => {
@@ -34,35 +35,64 @@ router.put('/layout', protect, admin, async (req, res) => {
     res.json(layout);
 });
 
-// ... (Rest of existing settings routes) ...
-router.get('/header', async (req, res) => {
-    const settings = await HeaderSetting.findOne();
-    res.json(settings || {});
+// --- Store Details (Business/Invoicing) ---
+router.get('/store-details', async (req, res) => {
+    try {
+        const details = await StoreDetails.findOne();
+        res.json(details || {});
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching store details' });
+    }
 });
-router.put('/header', protect, admin, async (req, res) => {
-    const settings = await HeaderSetting.findOneAndUpdate({}, req.body, { new: true, upsert: true });
-    res.json(settings);
+
+router.put('/store-details', protect, admin, async (req, res) => {
+    try {
+        const details = await StoreDetails.findOneAndUpdate({}, req.body, { new: true, upsert: true });
+        res.json(details);
+    } catch (error) {
+        res.status(500).json({ message: 'Error saving store details' });
+    }
 });
-router.get('/footer', async (req, res) => {
-    const settings = await FooterSetting.findOne();
-    res.json(settings || {});
-});
-router.put('/footer', protect, admin, async (req, res) => {
-    const settings = await FooterSetting.findOneAndUpdate({}, req.body, { new: true, upsert: true });
-    res.json(settings);
-});
+
+// --- Site Branding/Colors ---
 router.get('/site', async (req, res) => {
     const settings = await SiteSettings.findOne();
     res.json(settings || {});
 });
+
 router.put('/site', protect, admin, async (req, res) => {
     const settings = await SiteSettings.findOneAndUpdate({}, req.body, { new: true, upsert: true });
     res.json(settings);
 });
+
+// --- Header Settings ---
+router.get('/header', async (req, res) => {
+    const settings = await HeaderSetting.findOne();
+    res.json(settings || {});
+});
+
+router.put('/header', protect, admin, async (req, res) => {
+    const settings = await HeaderSetting.findOneAndUpdate({}, req.body, { new: true, upsert: true });
+    res.json(settings);
+});
+
+// --- Footer Settings ---
+router.get('/footer', async (req, res) => {
+    const settings = await FooterSetting.findOne();
+    res.json(settings || {});
+});
+
+router.put('/footer', protect, admin, async (req, res) => {
+    const settings = await FooterSetting.findOneAndUpdate({}, req.body, { new: true, upsert: true });
+    res.json(settings);
+});
+
+// --- SEO Settings ---
 router.get('/homepage', async (req, res) => {
     const settings = await HomePageSetting.findOne();
     res.json(settings || {});
 });
+
 router.put('/homepage', protect, admin, async (req, res) => {
     const settings = await HomePageSetting.findOneAndUpdate({}, req.body, { new: true, upsert: true });
     res.json(settings);

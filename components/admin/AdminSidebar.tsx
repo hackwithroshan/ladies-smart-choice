@@ -44,10 +44,10 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ user, currentView, setCurre
     { id: 'analytics', label: 'Analytics', icon: Icons.marketing, view: 'analytics' },
     {
       id: 'catalog',
-      label: 'Products & Herbs',
+      label: 'Products & Inventory',
       icon: Icons.products,
       children: [
-        { id: 'products-list', label: 'Product Inventory', view: 'products' },
+        { id: 'products-list', label: 'Product List', view: 'products' },
         { id: 'categories', label: 'Categories', view: 'categories' },
         { id: 'shop-videos', label: 'Shop-by-Videos', view: 'shop-videos' },
       ]
@@ -99,10 +99,12 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ user, currentView, setCurre
         
         <div className="h-20 flex items-center justify-between px-6 border-b border-[#2D5A27] bg-[#16423C] flex-shrink-0">
             <div className="flex flex-col">
-                 <span className="text-white text-xl font-serif font-extrabold tracking-tight">
-                    Ayushree<span className="text-[#6A9C89]">Ayurveda</span>
+                 <span className="text-white text-xl font-serif font-extrabold tracking-tight italic">
+                    Indoshopsee
                 </span>
-                <span className="text-[9px] text-gray-400 uppercase tracking-[0.3em] mt-1 font-bold">Wellness Portal</span>
+                <span className="text-[8px] text-brand-accent uppercase tracking-[0.2em] mt-1 font-black">
+                    Powered by Apexnucles
+                </span>
             </div>
             <button onClick={() => setIsOpen(false)} className="lg:hidden text-gray-400 hover:text-white transition-colors">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>

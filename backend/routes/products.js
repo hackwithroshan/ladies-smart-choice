@@ -3,7 +3,7 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const Product = require('../models/Product');
-const Category = require('../models/Category');
+const Collection = require('../models/Collection'); // Changed from Category to Collection
 const Order = require('../models/Order');
 const ActivityLog = require('../models/ActivityLog');
 const { protect, admin } = require('../middleware/authMiddleware');
@@ -24,8 +24,6 @@ const logAction = async (req, action, target, targetId, details) => {
     } catch (e) { console.error("Logging failed", e); }
 };
 
-// ... (previous routes) ...
-
 // POST a new product
 router.post('/', protect, admin, async (req, res) => {
     try {
@@ -34,6 +32,10 @@ router.post('/', protect, admin, async (req, res) => {
         await logAction(req, 'created', 'Product', savedProduct._id, `Added new product: ${savedProduct.name}`);
         res.status(201).json(savedProduct);
     } catch (err) {
+        if (err.code === 11000) {
+            const field = Object.keys(err.keyPattern)[0];
+            return res.status(400).json({ message: `A product with this ${field} already exists.` });
+        }
         res.status(400).json({ message: err.message });
     }
 });
@@ -41,11 +43,15 @@ router.post('/', protect, admin, async (req, res) => {
 // PUT update a product
 router.put('/:id', protect, admin, async (req, res) => {
     try {
-        const updatedProduct = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        const updatedProduct = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
         if (!updatedProduct) return res.status(404).json({ message: 'Product not found' });
         await logAction(req, 'updated', 'Product', updatedProduct._id, `Modified product details for ${updatedProduct.name}`);
         res.json(updatedProduct);
     } catch (err) {
+        if (err.code === 11000) {
+            const field = Object.keys(err.keyPattern)[0];
+            return res.status(400).json({ message: `Another product already uses this ${field}.` });
+        }
         res.status(400).json({ message: err.message });
     }
 });
@@ -62,7 +68,6 @@ router.delete('/:id', protect, admin, async (req, res) => {
     }
 });
 
-// Reuse the rest of the routes as provided in original context
 router.get('/search', async (req, res) => {
     try {
         const query = req.query.q || '';
@@ -130,11 +135,54 @@ router.get('/slug/:slug', async (req, res) => {
     } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
+// @desc    Get all categories (Synchronized with Collections)
+// @route   GET /api/products/categories
 router.get('/categories', async (req, res) => {
     try {
-        const categories = await Category.find({});
+        // Fetch all collections and map them to the expected category format
+        const collections = await Collection.find({}).sort({ title: 1 });
+        const categories = collections.map(col => ({
+            id: col._id,
+            name: col.title,
+            imageUrl: col.imageUrl,
+            isActive: col.isActive
+        }));
         res.json(categories);
     } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+// @desc    Add a new category (Creates a new Collection)
+// @route   POST /api/products/categories
+router.post('/categories', protect, admin, async (req, res) => {
+    try {
+        const { name } = req.body;
+        if (!name) return res.status(400).json({ message: "Category name is required." });
+
+        const existing = await Collection.findOne({ title: name });
+        if (existing) return res.status(400).json({ message: "Category/Collection already exists." });
+
+        const newCollection = new Collection({
+            title: name,
+            isActive: true,
+            displayStyle: 'Rectangle'
+        });
+        
+        await newCollection.save();
+        res.status(201).json({ id: newCollection._id, name: newCollection.title });
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+});
+
+// @desc    Delete a category (Deletes the Collection)
+// @route   DELETE /api/products/categories/:id
+router.delete('/categories/:id', protect, admin, async (req, res) => {
+    try {
+        await Collection.findByIdAndDelete(req.params.id);
+        res.json({ message: 'Category/Collection removed' });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
 });
 
 router.get('/all', protect, admin, async (req, res) => {

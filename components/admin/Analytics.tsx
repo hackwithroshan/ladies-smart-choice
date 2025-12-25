@@ -4,6 +4,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell
 } from 'recharts';
+import { getApiUrl } from '../../utils/apiHelper';
 
 // --- TYPE DEFINITIONS ---
 interface KpiData {
@@ -91,7 +92,7 @@ const SkeletonLoader: React.FC<{className?: string}> = ({ className }) => (
     </div>
 );
 
-// --- UPDATED: Date Range Picker Component matching user-provided image ---
+// --- Date Range Picker Component ---
 interface DateRangePickerProps {
     currentRange: DateRange;
     onApply: (range: { startDate: Date; endDate: Date }) => void;
@@ -133,7 +134,7 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ currentRange, onApply
             case 'Last Month':
                 start.setMonth(start.getMonth() - 1);
                 start.setDate(1);
-                end.setDate(0); // Sets to the last day of the previous month
+                end.setDate(0); 
                 break;
         }
         setStartDate(start);
@@ -194,7 +195,6 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ currentRange, onApply
 
     return (
         <div className="absolute top-full right-4 left-4 md:left-auto md:right-0 mt-2 bg-white rounded-lg shadow-2xl border z-20 animate-fade-in-up flex flex-col md:flex-row w-[calc(100vw-2rem)] max-w-sm md:w-auto md:max-w-none">
-             {/* Left Column: Presets */}
             <div className="w-full md:w-44 border-b md:border-b-0 md:border-r border-gray-200 p-4">
                 <div className="space-y-1">
                     {['Today', 'Yesterday', 'Last 7 Days', 'Last 30 Days', 'This Month', 'Last Month'].map(label => (
@@ -203,9 +203,7 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ currentRange, onApply
                 </div>
             </div>
 
-            {/* Right Column: Calendars & Actions */}
             <div className="flex flex-col p-4">
-                {/* Calendars */}
                 <div className="flex flex-col md:flex-row justify-center gap-x-8">
                      <div className="hidden md:block">
                         {renderCalendar(prevMonthDate)}
@@ -215,7 +213,6 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ currentRange, onApply
                     </div>
                 </div>
 
-                {/* Footer Actions */}
                 <div className="flex flex-col sm:flex-row justify-between items-center border-t border-gray-200 pt-4 mt-4 gap-4">
                     <div className="text-sm">
                         <span className="font-bold text-gray-800">{startDate ? formatDate(startDate) : '...'}</span>
@@ -233,7 +230,7 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ currentRange, onApply
 };
 
 
-// --- UPDATED: Conversion Funnel Step Component ---
+// --- Conversion Funnel Step Component ---
 const FunnelStep: React.FC<{ title: string; value: number; initialValue: number; previousValue?: number; color: string; isLast?: boolean }> = ({ title, value, initialValue, previousValue, color, isLast }) => {
     const conversionFromPrev = previousValue && previousValue > 0 ? (value / previousValue) * 100 : 100;
     const conversionFromStart = initialValue > 0 ? (value / initialValue) * 100 : 100;
@@ -281,15 +278,13 @@ const Analytics: React.FC<{ token: string | null }> = ({ token }) => {
     const [dateRange, setDateRange] = useState<DateRange>(() => {
         const end = new Date();
         const start = new Date();
-        start.setDate(end.getDate() - 29); // Default to last 30 days
+        start.setDate(end.getDate() - 29); 
         return { label: 'Last 30 Days', startDate: start, endDate: end };
     });
     
-    // Date Range Picker state
     const [isDateSelectorOpen, setIsDateSelectorOpen] = useState(false);
     const datePickerRef = useRef<HTMLDivElement>(null);
 
-    // --- Data Fetching ---
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
@@ -299,7 +294,7 @@ const Analytics: React.FC<{ token: string | null }> = ({ token }) => {
                     startDate: dateRange.startDate.toISOString(),
                     endDate: dateRange.endDate.toISOString(),
                 });
-                const res = await fetch(`/api/analytics/summary?${params.toString()}`, {
+                const res = await fetch(getApiUrl(`/api/analytics/summary?${params.toString()}`), {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (!res.ok) throw new Error('Failed to fetch analytics data.');
@@ -313,21 +308,19 @@ const Analytics: React.FC<{ token: string | null }> = ({ token }) => {
         fetchData();
     }, [dateRange, token]);
     
-    // Live data polling
     useEffect(() => {
         const fetchLiveData = async () => {
             try {
-                const res = await fetch('/api/analytics/live', { headers: { 'Authorization': `Bearer ${token}` } });
+                const res = await fetch(getApiUrl('/api/analytics/live'), { headers: { 'Authorization': `Bearer ${token}` } });
                 if (res.ok) setLiveData(await res.json());
             } catch (err) { console.error("Live data fetch failed:", err); }
         };
 
-        fetchLiveData(); // Initial fetch
-        const interval = setInterval(fetchLiveData, 5000); // Poll every 5 seconds
+        fetchLiveData(); 
+        const interval = setInterval(fetchLiveData, 15000); 
         return () => clearInterval(interval);
     }, [token]);
 
-    // Click outside handler for date picker
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (datePickerRef.current && !datePickerRef.current.contains(event.target as Node)) {
@@ -338,7 +331,6 @@ const Analytics: React.FC<{ token: string | null }> = ({ token }) => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
     
-    // --- Data Transformation for Charts ---
     const funnelChartData = data ? [
         { name: 'Visitors', value: data.funnel.visitors, color: '#3b82f6' },
         { name: 'Added to Cart', value: data.funnel.addToCart, color: '#8b5cf6' },
@@ -346,7 +338,6 @@ const Analytics: React.FC<{ token: string | null }> = ({ token }) => {
         { name: 'Purchased', value: data.funnel.purchased, color: '#10b981' },
     ] : [];
     
-    // Date Range Selection Logic
     const handleApplyDateRange = (newRange: { startDate: Date, endDate: Date }) => {
         setDateRange({
             startDate: newRange.startDate,
@@ -356,7 +347,6 @@ const Analytics: React.FC<{ token: string | null }> = ({ token }) => {
         setIsDateSelectorOpen(false);
     };
 
-    // --- Render Logic ---
     if (error) return <div className="p-4 bg-red-100 text-red-700 rounded-md">{error}</div>;
 
     const kpis = data?.kpis;
@@ -366,7 +356,6 @@ const Analytics: React.FC<{ token: string | null }> = ({ token }) => {
 
     return (
         <div className="space-y-8">
-            {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <h2 className="text-2xl font-bold text-gray-800">Marketing Analytics</h2>
                 <div className="relative w-full md:w-auto" ref={datePickerRef}>
@@ -387,7 +376,6 @@ const Analytics: React.FC<{ token: string | null }> = ({ token }) => {
                 </div>
             </div>
 
-            {/* KPIs & Live View */}
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <StatCard isLoading={loading} title="Visitors" value={kpis?.visitors?.toLocaleString() || '0'} color="#3b82f6" />
@@ -410,7 +398,6 @@ const Analytics: React.FC<{ token: string | null }> = ({ token }) => {
                 </div>
             </div>
 
-            {/* Main Charts Row */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {loading ? (
                     <>
@@ -419,7 +406,6 @@ const Analytics: React.FC<{ token: string | null }> = ({ token }) => {
                     </>
                 ) : data && (
                     <>
-                        {/* Time Series Chart */}
                         <div className="lg:col-span-2 bg-white p-6 rounded-lg shadow-sm border border-gray-200">
                             <h3 className="font-bold text-gray-800 mb-4">Visitors & Sales Trend</h3>
                             <div className="h-72">
@@ -442,7 +428,6 @@ const Analytics: React.FC<{ token: string | null }> = ({ token }) => {
                             </div>
                         </div>
 
-                        {/* Revenue by Source */}
                         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 flex flex-col">
                             <h3 className="font-bold text-gray-800 mb-4">Sales by Traffic Source</h3>
                             <div className="relative h-48">
@@ -469,7 +454,7 @@ const Analytics: React.FC<{ token: string | null }> = ({ token }) => {
                                             <span className="capitalize font-medium text-gray-600">{entry.name}</span>
                                         </div>
                                         <div className="font-bold text-gray-800">
-                                            <span>{((entry.value / totalRevenueFromSource) * 100).toFixed(1)}%</span>
+                                            <span>{totalRevenueFromSource > 0 ? ((entry.value / totalRevenueFromSource) * 100).toFixed(1) : 0}%</span>
                                             <span className="text-xs text-gray-400 font-normal ml-2">₹{entry.value.toLocaleString()}</span>
                                         </div>
                                     </div>
@@ -480,7 +465,6 @@ const Analytics: React.FC<{ token: string | null }> = ({ token }) => {
                 )}
             </div>
 
-            {/* Conversion Funnel & Top Pages */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                  {loading ? <SkeletonLoader /> : data && (
                     <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
@@ -519,7 +503,7 @@ const Analytics: React.FC<{ token: string | null }> = ({ token }) => {
                                         <span className="font-bold text-gray-800">{page.views.toLocaleString()}</span>
                                     </div>
                                     <div className="w-full bg-gray-200 rounded-full h-1.5">
-                                        <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${(page.views / (data.topPages[0]?.views || page.views)) * 100}%` }}></div>
+                                        <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${(page.views / (data.topPages[0]?.views || 1)) * 100}%` }}></div>
                                     </div>
                                 </div>
                             ))}

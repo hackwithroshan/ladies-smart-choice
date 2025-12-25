@@ -1,18 +1,12 @@
-
 export const getApiUrl = (path: string): string => {
-  // Production environment check
-  const isProduction = (import.meta as any).env.PROD;
-  
-  // Clean the path
   const cleanPath = path.startsWith('/') ? path.substring(1) : path;
   const apiPath = cleanPath.startsWith('api/') ? cleanPath : `api/${cleanPath}`;
 
-  if (isProduction) {
-    // If we are on production, use the current domain's /api endpoint
-    // This prevents ERR_CERT_COMMON_NAME_INVALID by keeping requests on the same domain
+  // Use relative path in production so it stays on the same domain/SSL
+  if ((import.meta as any).env?.PROD) {
     return `/${apiPath}`;
   }
 
-  // Development fallback (Vite proxy handles /api to port 5000/5001)
+  // Development (Vite Proxy to 5000)
   return `/${apiPath}`;
 };

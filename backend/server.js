@@ -1,4 +1,3 @@
-
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
@@ -6,7 +5,6 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 
-// Critical Check: Ensure MONGO_URI is present
 if (!process.env.MONGO_URI) {
     console.error('FATAL ERROR: MONGO_URI is not defined in .env file.');
     process.exit(1);
@@ -14,32 +12,13 @@ if (!process.env.MONGO_URI) {
 
 const app = express();
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// Logging Middleware for debugging
-app.use((req, res, next) => {
-    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
-    next();
-});
-
-// Database Connection with improved error handling
+// Database Connection
 mongoose.connect(process.env.MONGO_URI)
-    .then(() => console.log('MongoDB Connected Successfully'))
-    .catch(err => {
-        console.error('MongoDB Connection Error:', err.message);
-        // Don't exit here, let the app stay alive to serve 503 errors instead of crashing
-    });
-
-// Health Check Route
-app.get('/api/health', (req, res) => {
-    res.json({ 
-        status: 'UP', 
-        database: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
-        timestamp: new Date()
-    });
-});
+    .then(() => console.log('MongoDB Connected: Ladies Smart Choice (Port 5000)'))
+    .catch(err => console.error('MongoDB Error:', err.message));
 
 // API Routes
 app.use('/api/auth', require('./routes/auth'));
@@ -63,42 +42,19 @@ app.use('/api/integrations', require('./routes/integrations'));
 app.use('/api/shipping', require('./routes/shipping'));
 app.use('/api/app-data', require('./routes/appData'));
 
-// Initialize Cron Jobs (Wrapped in try-catch to prevent startup crash)
-try {
-    require('./cronJobs');
-} catch (cronError) {
-    console.error('Failed to initialize Cron Jobs:', cronError.message);
-}
-
-// --- Frontend Static Files Serving ---
+// Static Folder for React Build
 const distPath = path.resolve(__dirname, '..', 'dist');
 
-if (fs.existsSync(distPath) && fs.existsSync(path.join(distPath, 'index.html'))) {
-    console.log('Serving frontend from:', distPath);
+if (fs.existsSync(distPath)) {
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
         res.sendFile(path.join(distPath, 'index.html'));
     });
 } else {
-    console.log('Standalone API Mode: No local /dist folder found.');
     app.get('/', (req, res) => {
-        res.json({
-            status: "Online",
-            message: "Ayushree Ayurveda API is running.",
-            database: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
-            note: "Frontend build folder (/dist) not found on this server path."
-        });
+        res.send('Backend is running. Please run "npm run build" in the root folder to serve the frontend.');
     });
 }
 
-// Global Error Handler for 500 Errors
-app.use((err, req, res, next) => {
-    console.error('SERVER ERROR:', err.stack);
-    res.status(500).json({ 
-        message: 'Something went wrong on our end.',
-        error: process.env.NODE_ENV === 'development' ? err.message : undefined 
-    });
-});
-
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Ladies Smart Choice Active on Port ${PORT}`));

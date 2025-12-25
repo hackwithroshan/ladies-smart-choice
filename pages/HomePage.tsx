@@ -5,17 +5,16 @@ const { useNavigate } = ReactRouterDom as any;
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import ProductCard from '../components/ProductCard';
-import { Product, Slide, Collection, ShoppableVideo, Testimonial, HomeSection } from '../types';
+import { Product, HomeSection, ShoppableVideo } from '../types';
 import { useSiteData } from '../contexts/SiteDataContext';
 import { COLORS } from '../constants';
-import { ChevronLeftIcon, ChevronRightIcon, PlayIcon } from '../components/Icons';
+import { PlayIcon } from '../components/Icons';
 import ErrorBoundary from '../components/ErrorBoundary';
 import SEO from '../components/SEO';
 import { useToast } from '../contexts/ToastContext';
 import { getApiUrl } from '../utils/apiHelper';
-import SafeCustomCode from '../components/SafeCustomCode'; // Import the new component
+import SafeCustomCode from '../components/SafeCustomCode';
 
-// ... helper components like VideoListItem stay the same ...
 interface VideoListItemProps { video: ShoppableVideo; autoplay: boolean; onClick: () => void; }
 const VideoListItem: React.FC<VideoListItemProps> = ({ video, autoplay, onClick }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -24,22 +23,27 @@ const VideoListItem: React.FC<VideoListItemProps> = ({ video, autoplay, onClick 
         else if (videoRef.current) videoRef.current.pause();
     }, [autoplay]);
     return (
-      <div onClick={onClick} className="relative flex-shrink-0 w-64 sm:w-auto aspect-[9/16] rounded-2xl overflow-hidden group cursor-pointer shadow-lg transition-transform transform hover:scale-105">
+      <div onClick={onClick} className="relative flex-shrink-0 w-44 md:w-full aspect-[9/16] rounded-2xl overflow-hidden group cursor-pointer shadow-lg transition-transform transform hover:scale-[1.02]">
           {autoplay ? <video ref={videoRef} src={video.videoUrl} muted loop playsInline className="w-full h-full object-cover" /> : <img src={video.thumbnailUrl || video.videoUrl.replace('.mp4', '.jpg')} alt={video.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"/>}
           <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors"></div>
-          {!autoplay && <div className="absolute inset-0 flex items-center justify-center"><div className="w-12 h-12 bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/50 group-hover:scale-110 transition-transform"><PlayIcon className="h-5 w-5 text-white ml-1"/></div></div>}
-          <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent text-white"><h4 className="font-bold text-lg truncate">{video.title}</h4><div className="flex justify-between items-center mt-2"><span className="font-medium">{video.price}</span><button className="bg-white text-black text-xs font-bold px-3 py-1.5 rounded-full hover:bg-gray-200 transition-colors">Shop</button></div></div>
+          {!autoplay && <div className="absolute inset-0 flex items-center justify-center"><div className="w-10 h-10 md:w-12 md:h-12 bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/50 group-hover:scale-110 transition-transform"><PlayIcon className="h-4 w-4 md:h-5 md:w-5 text-white ml-1"/></div></div>}
+          <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 via-black/20 to-transparent text-white">
+              <h4 className="font-bold text-sm md:text-base truncate leading-tight">{video.title}</h4>
+              <div className="flex justify-between items-center mt-2">
+                  <span className="font-black text-xs md:text-sm text-brand-accent">{video.price}</span>
+                  <button className="bg-white text-black text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-tighter">Shop</button>
+              </div>
+          </div>
       </div>
     );
 };
 
 const HomePage: React.FC<{ user: any; logout: () => void }> = ({ user, logout }) => {
-  const { products, collections, slides, videos, testimonials, siteSettings, homePageSettings, loading: siteLoading } = useSiteData();
+  const { products, collections, slides, videos, siteSettings, homePageSettings, loading: siteLoading } = useSiteData();
   const [layout, setLayout] = useState<{ sections: HomeSection[] }>({ sections: [] });
   const [layoutLoading, setLayoutLoading] = useState(true);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [selectedVideo, setSelectedVideo] = useState<ShoppableVideo | null>(null);
-  const [email, setEmail] = useState('');
   const navigate = useNavigate();
   const { showToast } = useToast();
 
@@ -55,7 +59,7 @@ const HomePage: React.FC<{ user: any; logout: () => void }> = ({ user, logout })
   }, []);
 
   const nextSlide = () => { if (slides.length > 0) setCurrentSlide(current => (current === slides.length - 1 ? 0 : current + 1)); };
-  useEffect(() => { const interval = setInterval(nextSlide, 5000); return () => clearInterval(interval); }, [slides.length]);
+  useEffect(() => { const interval = setInterval(nextSlide, 6000); return () => clearInterval(interval); }, [slides.length]);
 
   const renderSection = (section: HomeSection) => {
     if (!section.isActive) return null;
@@ -63,7 +67,7 @@ const HomePage: React.FC<{ user: any; logout: () => void }> = ({ user, logout })
     switch (section.type) {
       case 'Hero':
         return (
-          <section key={section.id} className="relative bg-gray-100 h-[450px] md:h-[600px] overflow-hidden group">
+          <section key={section.id} className="relative bg-gray-100 h-[400px] md:h-[650px] overflow-hidden">
             {slides.map((slide, index) => (
               <div key={index} className={`absolute inset-0 transition-opacity duration-1000 ${index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
                 <picture className="absolute inset-0 w-full h-full">
@@ -72,28 +76,38 @@ const HomePage: React.FC<{ user: any; logout: () => void }> = ({ user, logout })
                 </picture>
                 <div className="absolute inset-0 bg-black/30 z-20"></div>
                 <div className="absolute inset-0 flex items-center justify-center z-30 text-center px-4">
-                  <div>
-                    <h1 className="text-4xl md:text-6xl font-bold text-white mb-4 drop-shadow-lg">{slide.title}</h1>
-                    <p className="text-lg md:text-xl text-white/90 mb-8 max-w-xl mx-auto">{slide.subtitle}</p>
-                    <button className="px-10 py-3 rounded-full text-white font-bold shadow-xl transition-all hover:scale-105" style={{backgroundColor: COLORS.accent}}>{slide.buttonText}</button>
+                  <div className="max-w-2xl">
+                    <h1 className="text-3xl md:text-7xl font-brand font-black text-white mb-4 drop-shadow-xl tracking-tighter italic uppercase leading-none">{slide.title}</h1>
+                    <p className="text-sm md:text-xl text-white/90 mb-8 max-w-lg mx-auto font-medium">{slide.subtitle}</p>
+                    <button onClick={() => navigate('/collections/all')} className="px-8 md:px-12 py-3 md:py-4 rounded-full text-white font-black uppercase tracking-widest text-[10px] md:text-xs shadow-2xl transition-all hover:scale-105 active:scale-95" style={{backgroundColor: COLORS.accent}}>{slide.buttonText}</button>
                   </div>
                 </div>
               </div>
             ))}
+            {/* Pagination Dots */}
+            <div className="absolute bottom-6 left-0 right-0 z-40 flex justify-center gap-2">
+                {slides.map((_, i) => (
+                    <button key={i} onClick={() => setCurrentSlide(i)} className={`h-1 rounded-full transition-all ${i === currentSlide ? 'w-8 bg-white' : 'w-2 bg-white/40 hover:bg-white/60'}`} />
+                ))}
+            </div>
           </section>
         );
 
       case 'Collections':
         return (
-          <section key={section.id} className="max-w-7xl mx-auto py-16 px-4">
-              <h2 className="text-3xl font-serif font-bold text-center mb-12">{section.title || 'Shop Categories'}</h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-8">
+          <section key={section.id} className="max-w-7xl mx-auto py-12 md:py-20 px-4">
+              <h2 className="text-2xl md:text-4xl font-brand font-black text-center mb-10 md:mb-16 uppercase italic tracking-tighter">
+                  {section.title || 'Organic Rituals'}
+                  <div className="w-16 h-1 bg-brand-primary mx-auto mt-4 rounded-full"></div>
+              </h2>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-12">
                   {collections.map((col) => (
                       <div key={col.id} onClick={() => navigate(`/collections/${col.id}`)} className="group cursor-pointer text-center">
-                          <div className={`overflow-hidden relative shadow-md transition-all group-hover:shadow-xl ${col.displayStyle === 'Circle' ? 'rounded-full aspect-square w-48 mx-auto' : 'rounded-2xl aspect-square w-full'}`}>
-                              <img src={col.imageUrl} alt={col.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                          <div className={`overflow-hidden relative shadow-lg transition-all duration-700 group-hover:shadow-2xl ${col.displayStyle === 'Circle' ? 'rounded-full aspect-square w-32 md:w-64 mx-auto' : 'rounded-2xl aspect-square w-full'}`}>
+                              <img src={col.imageUrl} alt={col.title} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
+                              <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors"></div>
                           </div>
-                          <h3 className="mt-4 font-bold text-lg">{col.title}</h3>
+                          <h3 className="mt-4 md:mt-6 font-black text-sm md:text-lg uppercase tracking-tight text-gray-800">{col.title}</h3>
                       </div>
                   ))}
               </div>
@@ -102,13 +116,16 @@ const HomePage: React.FC<{ user: any; logout: () => void }> = ({ user, logout })
 
       case 'NewArrivals':
         return (
-          <section key={section.id} className="bg-gray-50 py-16">
+          <section key={section.id} className="bg-gray-50 py-12 md:py-20">
             <div className="max-w-7xl mx-auto px-4">
-              <div className="flex justify-between items-center mb-10">
-                  <h2 className="text-3xl font-serif font-bold">{section.title || 'New Arrivals'}</h2>
-                  <button className="text-rose-600 font-bold border-b-2 border-rose-600">View All</button>
+              <div className="flex justify-between items-end mb-8 md:mb-12">
+                  <div>
+                    <h2 className="text-2xl md:text-4xl font-brand font-black uppercase italic tracking-tighter leading-none">{section.title || 'Recently Crafted'}</h2>
+                    <p className="text-xs md:text-sm text-gray-500 mt-2 font-medium tracking-wide">Explore our newest herbal releases.</p>
+                  </div>
+                  <button onClick={() => navigate('/collections/all')} className="text-[10px] md:text-xs font-black uppercase tracking-[0.2em] text-brand-primary border-b-2 border-brand-primary pb-1 hover:text-brand-accent hover:border-brand-accent transition-colors">View All</button>
               </div>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-8">
                 {products.slice(0, 4).map(p => <ProductCard key={p.id} product={p} />)}
               </div>
             </div>
@@ -117,9 +134,10 @@ const HomePage: React.FC<{ user: any; logout: () => void }> = ({ user, logout })
 
       case 'Videos':
         return videos.length > 0 && (
-          <section key={section.id} className="max-w-7xl mx-auto py-16 px-4">
-              <h2 className="text-3xl font-serif font-bold text-center mb-12">{section.title || 'Shop From Videos'}</h2>
-              <div className="flex overflow-x-auto gap-6 pb-4 scrollbar-hide md:grid md:grid-cols-4">
+          <section key={section.id} className="max-w-7xl mx-auto py-12 md:py-20 px-4 overflow-hidden">
+              <h2 className="text-2xl md:text-4xl font-brand font-black text-center mb-10 md:mb-16 uppercase italic tracking-tighter">Shop From Videos</h2>
+              <div className="flex overflow-x-auto gap-4 md:gap-8 pb-8 -mx-4 px-4 scrollbar-hide md:grid md:grid-cols-4">
+                  {/* Fix: Property 'id' does not exist on type 'ShoppableVideo'. Changed v.id to v._id. */}
                   {videos.map(v => <VideoListItem key={v._id} video={v} autoplay={siteSettings?.videoAutoplay || false} onClick={() => setSelectedVideo(v)} />)}
               </div>
           </section>
@@ -134,13 +152,18 @@ const HomePage: React.FC<{ user: any; logout: () => void }> = ({ user, logout })
 
       case 'Newsletter':
         return (
-          <section key={section.id} className="bg-[#16423C] py-20 text-white text-center">
-              <h2 className="text-3xl md:text-4xl font-serif font-bold mb-4">{section.title || 'Join the Family'}</h2>
-              <p className="opacity-80 mb-8 max-w-lg mx-auto">Get early access to Ayurvedic guides and new herbal launches.</p>
-              <form onSubmit={e => { e.preventDefault(); showToast('Subscribed!'); }} className="flex flex-col sm:flex-row gap-2 justify-center max-w-md mx-auto px-4">
-                  <input type="email" placeholder="Your email address" className="px-6 py-3 rounded-full text-black flex-1 focus:ring-2 focus:ring-green-400 outline-none" />
-                  <button className="bg-white text-[#16423C] px-8 py-3 rounded-full font-bold hover:bg-gray-100 transition-all">Join Now</button>
-              </form>
+          <section key={section.id} className="bg-brand-primary py-16 md:py-24 text-white text-center relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>
+              <div className="absolute bottom-0 left-0 w-64 h-64 bg-brand-accent/10 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl"></div>
+              
+              <div className="relative z-10 px-4">
+                <h2 className="text-3xl md:text-5xl font-brand font-black mb-4 uppercase italic tracking-tighter leading-tight">{section.title || 'The Wellness List'}</h2>
+                <p className="opacity-70 mb-10 max-w-lg mx-auto text-sm md:text-base font-medium">Join 5,000+ others for early access to herbal launches and ancient self-care rituals.</p>
+                <form onSubmit={e => { e.preventDefault(); showToast('Welcome to the family!'); }} className="flex flex-col sm:flex-row gap-3 justify-center max-w-lg mx-auto">
+                    <input type="email" placeholder="Enter your email" className="px-6 py-4 rounded-xl text-black flex-1 focus:ring-4 focus:ring-brand-accent/30 outline-none text-sm font-bold bg-white/95" required />
+                    <button className="bg-brand-accent hover:bg-white hover:text-brand-primary text-white px-10 py-4 rounded-xl font-black uppercase tracking-widest text-[11px] shadow-2xl transition-all active:scale-95">Subscribe</button>
+                </form>
+              </div>
           </section>
         );
 
@@ -148,7 +171,7 @@ const HomePage: React.FC<{ user: any; logout: () => void }> = ({ user, logout })
     }
   };
 
-  if (siteLoading || layoutLoading) return <div className="h-screen flex items-center justify-center">Loading Storefront...</div>;
+  if (siteLoading || layoutLoading) return <div className="h-screen flex items-center justify-center font-brand font-black text-brand-primary animate-pulse uppercase tracking-[0.4em] text-xs">Ayushree...</div>;
 
   return (
     <div className="flex flex-col min-h-screen bg-white">
@@ -158,15 +181,16 @@ const HomePage: React.FC<{ user: any; logout: () => void }> = ({ user, logout })
           {layout.sections.map(renderSection)}
       </main>
       
-      {/* Video Modal same as before */}
+      {/* Premium Video Modal */}
       {selectedVideo && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-fade-in" onClick={() => setSelectedVideo(null)}>
-              <div className="relative w-full max-w-md h-[80vh] bg-black rounded-3xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-md p-4 animate-fade-in" onClick={() => setSelectedVideo(null)}>
+              <div className="relative w-full max-w-md h-[85vh] bg-black rounded-3xl overflow-hidden shadow-2xl ring-1 ring-white/10" onClick={e => e.stopPropagation()}>
+                  <button onClick={() => setSelectedVideo(null)} className="absolute top-4 right-4 z-50 text-white/50 hover:text-white p-2 bg-black/40 rounded-full backdrop-blur-md transition-colors">&times;</button>
                   <video src={selectedVideo.videoUrl} className="w-full h-full object-cover" autoPlay playsInline loop />
-                  <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-black to-transparent text-white">
-                      <h3 className="text-2xl font-bold mb-1">{selectedVideo.title}</h3>
-                      <p className="text-rose-400 font-bold text-xl mb-6">{selectedVideo.price}</p>
-                      <button onClick={() => navigate(`/product/${selectedVideo.productLink}`)} className="w-full bg-white text-black py-4 rounded-xl font-bold">Shop This Style</button>
+                  <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-black via-black/60 to-transparent text-white">
+                      <h3 className="text-2xl font-brand font-black mb-1 uppercase tracking-tight">{selectedVideo.title}</h3>
+                      <p className="text-brand-accent font-black text-xl mb-6">{selectedVideo.price}</p>
+                      <button onClick={() => navigate(`/product/${selectedVideo.productLink}`)} className="w-full bg-white text-black py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-2xl active:scale-95 transition-transform">Get This Look</button>
                   </div>
               </div>
           </div>

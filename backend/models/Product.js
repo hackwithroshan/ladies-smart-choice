@@ -58,11 +58,19 @@ const ProductSchema = new mongoose.Schema({
   reviews: [ReviewSchema],
 }, { timestamps: true });
 
-// Ensure slug is created from name if not provided
+// Ensure slug and sku are generated if not provided
 ProductSchema.pre('validate', function(next) {
     if (this.name && !this.slug) {
         this.slug = this.name.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '');
     }
+    
+    // Auto-generate SKU if missing
+    if (!this.sku) {
+        const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
+        const timestamp = Date.now().toString().slice(-6);
+        this.sku = `AYU-${randomStr}-${timestamp}`;
+    }
+    
     next();
 });
 

@@ -50,6 +50,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
   const [tagInput, setTagInput] = useState('');
   const [seoKeywordInput, setSeoKeywordInput] = useState('');
   
+  // Validation State
+  const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const formTopRef = useRef<HTMLDivElement>(null);
+  
   // Gallery State
   const [isUploading, setIsUploading] = useState(false);
   const [draggedImageIndex, setDraggedImageIndex] = useState<number | null>(null);
@@ -57,8 +61,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
   // We use this ref only for the fallback direct input
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Category Management State
-  const [categories, setCategories] = useState<Category[]>([]);
+  // Category (Collection) Management State
+  const [categories, setCategories] = useState<any[]>([]);
   const [isManageCatsOpen, setIsManageCatsOpen] = useState(false);
   const [newCatName, setNewCatName] = useState('');
 
@@ -96,6 +100,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
+    
+    // Clear error for this field
+    if (errors[name]) {
+        const newErrors = { ...errors };
+        delete newErrors[name];
+        setErrors(newErrors);
+    }
+
     if (name.startsWith('dim_')) {
         const dimKey = name.split('_')[1];
         setFormData(prev => ({
@@ -112,6 +124,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const val = e.target.value;
+      if (errors.name) {
+          const newErrors = { ...errors };
+          delete newErrors.name;
+          setErrors(newErrors);
+      }
       setFormData(prev => ({
           ...prev,
           name: val,
@@ -134,13 +151,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
           formData.append('file', file);
           formData.append('upload_preset', CLOUDINARY.UPLOAD_PRESET);
           try {
-              // 1. Upload to Cloudinary
               const res = await fetch(CLOUDINARY.UPLOAD_URL, { method: 'POST', body: formData });
               const data = await res.json();
 
               if (data.secure_url) {
-                  // 2. Save to Central Media Library (Database)
-                  // This ensures images show up in the "Media" section of admin
                   try {
                       await fetch(getApiUrl('/api/media'), {
                           method: 'POST',
@@ -249,10 +263,27 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
           setSeoKeywordInput('');
       }
   };
-  const removeSeoKeyword = (index: number) => setFormData(prev => ({ ...prev, seoKeywords: prev.seoKeywords?.filter((_, i) => i !== index) }));
+  const removeSeoKeyword = (index: number) => setFormData(prev => ({ ...prev, seoKeywords: prev.seoKeywords.filter((_, i) => i !== index) }));
+
+  const validate = () => {
+      const newErrors: {[key: string]: string} = {};
+      if (!formData.name.trim()) newErrors.name = "Product name is required.";
+      if (!formData.description.trim()) newErrors.description = "Full description is required.";
+      if (!formData.category) newErrors.category = "Please select a category.";
+      if (formData.price <= 0) newErrors.price = "Price must be greater than 0.";
+      if (!formData.imageUrl) newErrors.imageUrl = "Main product image is required.";
+      
+      setErrors(newErrors);
+      return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validate()) {
+        alert("Please correct the errors in the form.");
+        formTopRef.current?.scrollIntoView({ behavior: 'smooth' });
+        return;
+    }
     onSave({ ...formData, id: product?.id });
   };
 
@@ -266,17 +297,24 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
       if(!newCatName.trim()) return;
       const token = localStorage.getItem('token');
       try {
+          // This endpoint now creates a Collection document behind the scenes
           const res = await fetch(getApiUrl('/api/products/categories'), {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
               body: JSON.stringify({ name: newCatName })
           });
-          if (res.ok) { setNewCatName(''); fetchCategories(); } else { alert('Failed to add category.'); }
+          if (res.ok) { 
+              setNewCatName(''); 
+              fetchCategories(); 
+          } else { 
+              const err = await res.json();
+              alert(err.message || 'Failed to add category.'); 
+          }
       } catch(e) { console.error(e); }
   };
 
   const handleDeleteCategory = async (id: string) => {
-      if(!window.confirm("Are you sure?")) return;
+      if(!window.confirm("Deleting this category will also remove the corresponding homepage collection. Are you sure?")) return;
       const token = localStorage.getItem('token');
       try {
           await fetch(getApiUrl(`/api/products/categories/${id}`), {
@@ -287,8 +325,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
       } catch(e) { console.error(e); }
   };
 
+  const errorClass = "border-red-500 ring-1 ring-red-200 focus:ring-red-500 focus:border-red-500";
+  const standardClass = "border-gray-300 focus:ring-blue-500 focus:border-blue-500";
+
   return (
     <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="flex flex-col w-full h-full bg-gray-100 relative">
+      <div ref={formTopRef} className="absolute -top-10"></div>
+      
       {/* Sticky Header */}
       <div className="bg-black border-b border-gray-700 px-6 py-4 flex justify-between items-center shadow-md z-40 sticky top-0 w-full">
          <div className="flex items-center space-x-4">
@@ -305,7 +348,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 md:p-8">
-          {/* Full Width Grid Container */}
           <div className="w-full grid grid-cols-1 lg:grid-cols-4 gap-8 pb-20">
               
               {/* LEFT CONTENT (3 Cols) */}
@@ -315,11 +357,18 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                     <h3 className="text-lg font-bold text-gray-800 mb-4">Product Details</h3>
                     <div className="space-y-5">
-                        <div><label className="block text-sm font-semibold text-gray-700 mb-1">Title</label><input type="text" name="name" value={formData.name} onChange={handleNameChange} required className="block w-full border-gray-300 rounded-lg shadow-sm p-3 border"/></div>
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Title <span className="text-red-500">*</span></label>
+                            <input type="text" name="name" value={formData.name} onChange={handleNameChange} className={`block w-full rounded-lg shadow-sm p-3 border outline-none transition-all ${errors.name ? errorClass : standardClass}`}/>
+                            {errors.name && <p className="text-red-500 text-[10px] mt-1 font-bold">{errors.name}</p>}
+                        </div>
                         
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                              <div><label className="block text-sm font-medium text-gray-700 mb-1">Brand</label><input type="text" name="brand" value={formData.brand} onChange={handleChange} className="block w-full border-gray-300 rounded-lg shadow-sm p-2.5 border"/></div>
-                             <div><label className="block text-sm font-medium text-gray-700 mb-1">SKU</label><input type="text" name="sku" value={formData.sku} onChange={handleChange} className="block w-full border-gray-300 rounded-lg shadow-sm p-2.5 border"/></div>
+                             <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">SKU (Auto-gen if empty)</label>
+                                <input type="text" name="sku" value={formData.sku} onChange={handleChange} className="block w-full border-gray-300 rounded-lg shadow-sm p-2.5 border" placeholder="e.g. AYU-9901"/>
+                             </div>
                              <div><label className="block text-sm font-medium text-gray-700 mb-1">Barcode (ISBN/UPC)</label><input type="text" name="barcode" value={formData.barcode} onChange={handleChange} className="block w-full border-gray-300 rounded-lg shadow-sm p-2.5 border" placeholder="0123456789"/></div>
                         </div>
 
@@ -329,8 +378,16 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Full Description</label>
-                            <RichTextEditor value={formData.description} onChange={(val) => setFormData(prev => ({ ...prev, description: val }))} />
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Full Description <span className="text-red-500">*</span></label>
+                            <div className={errors.description ? "border border-red-500 rounded-lg overflow-hidden" : ""}>
+                                <RichTextEditor value={formData.description} onChange={(val) => { 
+                                    setFormData(prev => ({ ...prev, description: val }));
+                                    if(val.trim() && errors.description) {
+                                        const n = {...errors}; delete n.description; setErrors(n);
+                                    }
+                                }} />
+                            </div>
+                            {errors.description && <p className="text-red-500 text-[10px] mt-1 font-bold">{errors.description}</p>}
                         </div>
                     </div>
                  </div>
@@ -342,7 +399,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
                     {/* Main Image */}
                     <div className="mb-8">
                         <label className="block text-sm font-medium text-gray-700 mb-2">Main Product Image <span className="text-red-500">*</span></label>
-                        <MediaPicker value={formData.imageUrl} onChange={(url) => setFormData(prev => ({...prev, imageUrl: url}))} type="image" />
+                        <div className={errors.imageUrl ? "ring-2 ring-red-500 rounded-lg" : ""}>
+                            <MediaPicker value={formData.imageUrl} onChange={(url) => {
+                                setFormData(prev => ({...prev, imageUrl: url}));
+                                if(url && errors.imageUrl) { const n = {...errors}; delete n.imageUrl; setErrors(n); }
+                            }} type="image" />
+                        </div>
+                        {errors.imageUrl && <p className="text-red-500 text-[10px] mt-1 font-bold">{errors.imageUrl}</p>}
                     </div>
 
                     {/* Gallery Grid Sorter */}
@@ -359,7 +422,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
                                     className="relative group aspect-square bg-gray-100 rounded-lg border border-gray-200 overflow-hidden cursor-move hover:ring-2 hover:ring-blue-500 transition-all"
                                  >
                                      <img src={img} alt={`Gallery ${idx}`} className="w-full h-full object-cover"/>
-                                     {/* Remove Button */}
                                      <button 
                                         type="button" 
                                         onClick={() => removeGalleryImage(idx)} 
@@ -368,12 +430,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
                                      >
                                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                                      </button>
-                                     {/* Index Badge */}
                                      <div className="absolute bottom-1 left-1 bg-black/50 text-white text-[10px] px-1.5 rounded">{idx + 1}</div>
                                  </div>
                              ))}
 
-                             {/* Upload Drop Zone / Media Picker Wrapper */}
                              <MediaPicker
                                 value=""
                                 onChange={(url) => setFormData(prev => ({ ...prev, galleryImages: [...(prev.galleryImages || []), url] }))}
@@ -384,7 +444,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
                                         onDrop={handleFileDrop}
                                         onClick={openModal}
                                     >
-                                        {/* Hidden input for direct file drops is handled by handleFileDrop -> handleGalleryUpload */}
                                         {isUploading ? (
                                             <div className="animate-pulse flex flex-col items-center">
                                                 <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-2"></div>
@@ -413,9 +472,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                     <h3 className="text-lg font-bold text-gray-800 mb-4">Pricing & Inventory</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                         <div><label className="block text-sm font-medium text-gray-700 mb-1">Selling Price <span className="text-red-500">*</span></label><input type="number" name="price" value={formData.price} onChange={handleChange} required className="block w-full border-gray-300 rounded-lg shadow-sm p-2.5 border font-bold text-gray-900"/></div>
+                         <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Selling Price <span className="text-red-500">*</span></label>
+                            <input type="number" name="price" value={formData.price} onChange={handleChange} className={`block w-full rounded-lg shadow-sm p-2.5 border font-bold ${errors.price ? errorClass : 'border-gray-300 text-gray-900'}`}/>
+                            {errors.price && <p className="text-red-500 text-[10px] mt-1 font-bold">{errors.price}</p>}
+                         </div>
                          <div><label className="block text-sm font-medium text-gray-700 mb-1">MRP (Compare at)</label><input type="number" name="mrp" value={formData.mrp} onChange={handleChange} className="block w-full border-gray-300 rounded-lg shadow-sm p-2.5 border"/></div>
-                         <div><label className="block text-sm font-medium text-gray-700 mb-1">Stock Quantity <span className="text-red-500">*</span></label><input type="number" name="stock" value={formData.stock} onChange={handleChange} required className="block w-full border-gray-300 rounded-lg shadow-sm p-2.5 border"/></div>
+                         <div><label className="block text-sm font-medium text-gray-700 mb-1">Stock Quantity <span className="text-red-500">*</span></label><input type="number" name="stock" value={formData.stock} onChange={handleChange} className="block w-full border-gray-300 rounded-lg shadow-sm p-2.5 border"/></div>
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 border-t pt-6">
@@ -484,19 +547,16 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
                           <option>Draft</option>
                           <option>Archived</option>
                       </select>
-                      <div className="mt-3 text-xs text-gray-500">
-                          <p><span className="font-semibold text-green-600">Active:</span> Visible on website.</p>
-                          <p><span className="font-semibold text-gray-600">Draft:</span> Hidden from customers.</p>
-                      </div>
                   </div>
 
                   <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                      <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-4">Category</h3>
+                      <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-4">Category <span className="text-red-500">*</span></h3>
                       <div className="flex justify-between mb-2 items-center"><label className="text-xs text-gray-600">Select Category</label><button type="button" onClick={() => setIsManageCatsOpen(true)} className="text-xs text-blue-600 hover:underline font-medium">Manage Categories</button></div>
-                      <select name="category" value={formData.category} onChange={handleChange} className="block w-full border-gray-300 rounded-lg p-2.5 border focus:ring-blue-500 focus:border-blue-500">
+                      <select name="category" value={formData.category} onChange={handleChange} className={`block w-full rounded-lg p-2.5 border outline-none transition-all ${errors.category ? errorClass : standardClass}`}>
                           <option value="" disabled>Select...</option>
                           {categories.map(cat => <option key={cat.id} value={cat.name}>{cat.name}</option>)}
                       </select>
+                      {errors.category && <p className="text-red-500 text-[10px] mt-1 font-bold">{errors.category}</p>}
                       <div className="mt-4">
                           <label className="block text-xs text-gray-600 mb-1">Sub-Category</label>
                           <input type="text" name="subCategory" value={formData.subCategory} onChange={handleChange} className="block w-full border-gray-300 rounded-lg p-2 border text-sm" placeholder="e.g. T-Shirts"/>
@@ -565,18 +625,37 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
           </div>
       </div>
 
-      {/* Manage Categories Modal */}
+      {/* Manage Categories (Collections) Modal */}
       {isManageCatsOpen && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black bg-opacity-50 p-4">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden animate-fade-in-up">
-                <div className="flex justify-between items-center p-4 border-b bg-gray-50"><h3 className="font-bold text-gray-800">Manage Categories</h3><button onClick={() => setIsManageCatsOpen(false)} className="text-gray-500 hover:text-gray-700">×</button></div>
+                <div className="flex justify-between items-center p-4 border-b bg-gray-50">
+                    <h3 className="font-bold text-gray-800">Manage Category Collections</h3>
+                    <button onClick={() => setIsManageCatsOpen(false)} className="text-gray-500 hover:text-gray-700 text-xl font-bold">&times;</button>
+                </div>
                 <div className="p-4 max-h-60 overflow-y-auto">
-                    <ul className="space-y-2">{categories.map(cat => <li key={cat.id} className="flex justify-between border-b pb-2 items-center"><span className="text-sm text-gray-700">{cat.name}</span><button onClick={() => handleDeleteCategory(cat.id)} className="text-red-500 text-xs hover:text-red-700">Delete</button></li>)}</ul>
+                    <ul className="space-y-2">
+                        {categories.map(cat => (
+                            <li key={cat.id} className="flex justify-between border-b pb-2 items-center">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-8 h-8 rounded-full bg-gray-100 overflow-hidden border">
+                                        {cat.imageUrl && <img src={cat.imageUrl} className="w-full h-full object-cover" />}
+                                    </div>
+                                    <span className="text-sm text-gray-700 font-medium">{cat.name}</span>
+                                </div>
+                                <button onClick={() => handleDeleteCategory(cat.id)} className="text-red-500 text-xs hover:text-red-700 font-bold uppercase">Delete</button>
+                            </li>
+                        ))}
+                        {categories.length === 0 && <p className="text-center py-4 text-gray-400 text-sm">No categories yet.</p>}
+                    </ul>
                 </div>
                 <div className="p-4 border-t flex gap-2 bg-gray-50">
                     <input type="text" value={newCatName} onChange={(e) => setNewCatName(e.target.value)} className="flex-1 border border-gray-300 p-2 rounded text-sm focus:outline-none focus:border-blue-500" placeholder="New Category Name"/>
-                    <button onClick={handleAddCategory} className="bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-blue-700">Add</button>
+                    <button onClick={handleAddCategory} className="bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-blue-700 transition-colors">Add</button>
                 </div>
+                <p className="px-4 pb-4 text-[10px] text-gray-400 italic">
+                    Note: Adding a category here creates a new "Shop By Category" Collection.
+                </p>
             </div>
         </div>
       )}

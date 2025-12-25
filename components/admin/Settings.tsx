@@ -7,18 +7,15 @@ import GeneralSettings from './GeneralSettings';
 import TaxSettings from './TaxSettings';
 import ShippingSettings from './ShippingSettings';
 import BrandingSettings from './BrandingSettings';
+import TrackingSettings from './TrackingSettings';
 import { SiteSettings, SyncLog } from '../../types';
 import { getApiUrl } from '../../utils/apiHelper';
 
 type SettingsTab = 'header' | 'footer' | 'homepage-seo' | 'site' | 'tax' | 'shipping' | 'pixels' | 'branding';
 
-// ... (Other helper components same as before) ...
-
 const Settings: React.FC<{token: string | null}> = ({token}) => {
     const [activeTab, setActiveTab] = useState<SettingsTab>('branding');
     
-    // ... (States for Pixels tab same as before) ...
-
     const TabButton: React.FC<{ id: SettingsTab; label: string }> = ({ id, label }) => (
         <button onClick={() => setActiveTab(id)} className={`px-4 py-2 text-sm font-bold rounded-md transition-all whitespace-nowrap ${activeTab === id ? 'bg-[#16423C] text-white shadow-md' : 'text-gray-600 hover:bg-gray-200'}`}>
             {label}
@@ -34,7 +31,7 @@ const Settings: React.FC<{token: string | null}> = ({token}) => {
             case 'site': return <GeneralSettings token={token} />;
             case 'tax': return <TaxSettings token={token} />;
             case 'shipping': return <ShippingSettings token={token} />;
-            case 'pixels': return <div>Tracking & Pixels Content...</div>; // Abbreviated
+            case 'pixels': return <TrackingSettings token={token} />;
             default: return <BrandingSettings token={token} />;
         }
     };

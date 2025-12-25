@@ -5,12 +5,13 @@ const mongoose = require('mongoose');
 const Order = require('../models/Order');
 const User = require('../models/User');
 const Product = require('../models/Product');
+const StoreDetails = require('../models/StoreDetails');
 const Counter = require('../models/Counter');
 const ActivityLog = require('../models/ActivityLog');
 const { protect, admin } = require('../middleware/authMiddleware');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
-const { createShipment } = require('../services/shippingService');
+const { generateInvoice } = require('../utils/generateInvoice');
 
 async function getNextOrderNumber() {
     const counter = await Counter.findByIdAndUpdate(
@@ -36,11 +37,30 @@ const logAction = async (req, action, target, targetId, details) => {
     } catch (e) { console.error("Logging failed", e); }
 };
 
+// GET all orders
 router.get('/', protect, admin, async (req, res) => {
     try {
         const orders = await Order.find({}).sort({ date: -1 });
         res.json(orders);
     } catch (error) { res.status(500).json({ message: 'Server Error' }); }
+});
+
+// GET order invoice PDF
+router.get('/:id/invoice', protect, admin, async (req, res) => {
+    try {
+        const order = await Order.findById(req.params.id);
+        if (!order) return res.status(404).json({ message: 'Order not found' });
+        
+        const storeDetails = await StoreDetails.findOne() || {};
+        const pdfBuffer = await generateInvoice(order, storeDetails);
+        
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=invoice_${order.orderNumber || order._id}.pdf`);
+        res.send(pdfBuffer);
+    } catch (error) {
+        console.error("Invoice generation failed:", error);
+        res.status(500).json({ message: 'Failed to generate invoice' });
+    }
 });
 
 router.post('/manual', protect, admin, async (req, res) => {
@@ -70,7 +90,7 @@ router.put('/:id', protect, admin, async (req, res) => {
         if (!existingOrder) return res.status(404).json({ message: 'Order not found' });
         
         const newStatus = req.body.status;
-        if (newStatus !== existingOrder.status) {
+        if (newStatus && newStatus !== existingOrder.status) {
             await logAction(req, `status updated to ${newStatus}`, 'Order', existingOrder._id, `Order status changed from ${existingOrder.status} to ${newStatus}`);
         }
 
