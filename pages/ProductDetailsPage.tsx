@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-// Fix: Use namespace import and cast to any to resolve "no exported member" errors
+// Fix: Use namespace import and cast to any to resolve "no exported member" errors in this environment
 import * as ReactRouterDom from 'react-router-dom';
 const { useParams, Link, useNavigate } = ReactRouterDom as any;
 import { Product, Review } from '../types';
@@ -33,7 +33,6 @@ interface ShopVideo {
 }
 
 const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user, logout }) => {
-  // Fix: Removed type argument from useParams as it's extracted from an untyped source
   const { slug } = useParams();
   const navigate = useNavigate();
   const { addToCart, addMultipleToCart } = useCart();
@@ -41,7 +40,6 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
   const { siteSettings } = useSiteData();
   const token = localStorage.getItem('token');
 
-  // --- Data State ---
   const [product, setProduct] = useState<Product | null>(null);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [fbtProducts, setFbtProducts] = useState<Product[]>([]);
@@ -49,25 +47,19 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
   const [shopVideos, setShopVideos] = useState<ShopVideo[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // --- Interaction State ---
   const [activeImage, setActiveImage] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [selectedVariants, setSelectedVariants] = useState<{[key: string]: string}>({});
   const [selectedVideo, setSelectedVideo] = useState<ShopVideo | null>(null);
-  
-  // --- FBT Selection State ---
   const [selectedFbtIds, setSelectedFbtIds] = useState<Set<string>>(new Set());
 
-  // --- Reviews State ---
   const [newReview, setNewReview] = useState({ rating: 5, comment: '', imageUrl: '' });
   const [submittingReview, setSubmittingReview] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
   
-  // --- Sticky Bar State & Ref ---
   const [isStickyBarVisible, setIsStickyBarVisible] = useState(false);
   const addToCartRef = useRef<HTMLDivElement>(null);
 
-  // --- Fetch Data ---
   useEffect(() => {
     const fetchData = async () => {
       if (!slug) return;
@@ -82,7 +74,6 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
             setProduct(foundProduct);
             setActiveImage(foundProduct.imageUrl);
             
-            // Set Default Variants
             if (foundProduct.hasVariants && foundProduct.variants) {
                 const defaults: {[key: string]: string} = {};
                 foundProduct.variants.forEach(v => {
@@ -91,7 +82,6 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
                 setSelectedVariants(defaults);
             }
 
-            // Parallel Data Fetching based on found product
             const [allProductsRes, fbtRes, videosRes] = await Promise.all([
                 fetch(getApiUrl('/api/products')),
                 fetch(getApiUrl(`/api/products/${foundProduct.id}/frequently-bought-together`)),
@@ -100,7 +90,6 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
 
             const allProducts: Product[] = await allProductsRes.json();
             
-            // Set Related Products Logic: Same category first, then fallback to others
             let related = allProducts.filter(p => p.category === foundProduct.category && p.id !== foundProduct.id);
             if (related.length < 4) {
                 const others = allProducts.filter(p => p.category !== foundProduct.category && p.id !== foundProduct.id);
@@ -108,20 +97,16 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
             }
             setRelatedProducts(related.slice(0, 4));
 
-            // Set FBT Data
             if (fbtRes.ok) {
                 const fbtData = await fbtRes.json();
                 setFbtProducts(fbtData);
-                // Select all suggested items by default
                 setSelectedFbtIds(new Set(fbtData.map((p: Product) => p.id)));
             }
 
-            // Set Shop Videos
             if (videosRes.ok) {
                 setShopVideos(await videosRes.json());
             }
 
-            // History Management
             const viewedIds: string[] = JSON.parse(localStorage.getItem('recentlyViewed') || '[]');
             const history = viewedIds.map(vid => allProducts.find(p => p.id === vid)).filter((p): p is Product => !!p && p.id !== foundProduct.id);
             setRecentlyViewed(history);
@@ -129,7 +114,6 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
             const newHistory = [foundProduct.id, ...viewedIds.filter(vid => vid !== foundProduct.id)].slice(0, 8);
             localStorage.setItem('recentlyViewed', JSON.stringify(newHistory));
 
-            // Meta Pixel Tracking
             const eventPayload = {
                 contents: [{
                     id: foundProduct.sku || foundProduct.id,
@@ -155,12 +139,9 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
     window.scrollTo(0, 0);
   }, [slug]);
 
-  // --- Refined Intersection Observer for Sticky Bar ---
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
-        // Show sticky bar only when the main button is scrolled OUT of view
-        // AND we are below the button (top is negative)
         const isBelowButton = entry.boundingClientRect.top < 0;
         setIsStickyBarVisible(!entry.isIntersecting && isBelowButton);
       },
@@ -177,13 +158,13 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
         observer.unobserve(currentRef);
       }
     };
-  }, [product, loading]); // Depend on loading to ensure ref is attached
+  }, [product, loading]);
 
   const handleVariantChange = (name: string, value: string) => {
       setSelectedVariants(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleAddToCart = (redirect = false) => {
+  const handleAddToCart = (isBuyNow = false) => {
       if (!product) return;
 
       let variantLabel = "";
@@ -199,7 +180,6 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
       addToCart(cartItem, quantity);
       showToast(`${quantity} x ${product.name} added to cart!`, 'success');
 
-      // Meta Pixel Tracking
       const eventPayload = {
         contents: [{
             id: product.sku || product.id,
@@ -212,15 +192,15 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
         currency: 'INR'
       };
       
-      if (redirect) {
+      if (isBuyNow) {
         masterTracker('InitiateCheckout', eventPayload, eventPayload);
-        navigate('/checkout'); 
+        // REDIRECT TO MAGIC CHECKOUT
+        navigate('/checkout?magic=true'); 
       } else {
         masterTracker('AddToCart', eventPayload, eventPayload);
       }
   };
 
-  // --- FBT Logic ---
   const handleToggleFbt = (id: string) => {
       const newSelected = new Set(selectedFbtIds);
       if (newSelected.has(id)) newSelected.delete(id);
@@ -232,13 +212,13 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
       if (!product) return;
       
       const bundleItems = [
-          { product: product, quantity: 1 }, // Main product
+          { product: product, quantity: 1 },
           ...fbtProducts.filter(p => selectedFbtIds.has(p.id)).map(p => ({ product: p, quantity: 1 }))
       ];
 
       addMultipleToCart(bundleItems);
       showToast(`Bundle of ${bundleItems.length} items added to cart!`, 'success');
-      navigate('/checkout');
+      navigate('/checkout?magic=true'); // Multi-item also supports Magic Checkout
   };
 
   const fbtSellingTotal = (product ? product.price : 0) + fbtProducts.filter(p => selectedFbtIds.has(p.id)).reduce((sum, p) => sum + p.price, 0);
@@ -301,7 +281,6 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
   const reviewCount = reviews.length;
   const avgRating = reviewCount > 0 ? (reviews.reduce((a, b) => a + b.rating, 0) / reviewCount).toFixed(1) : null;
 
-  // SEO Prep
   const plainDescription = truncateText(stripHtml(product.description));
 
   return (
@@ -327,8 +306,6 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
 
         <main className="container mx-auto px-0 md:px-4 max-w-[1400px] pb-20">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-16">
-              
-              {/* Product Media Area */}
               <div className="lg:col-span-7 flex flex-col gap-6">
                   <div className="relative w-full bg-gray-50 overflow-x-auto flex snap-x snap-mandatory scrollbar-hide lg:block lg:overflow-visible lg:rounded-xl group">
                       {images.map((img, idx) => (
@@ -364,12 +341,10 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
                   )}
               </div>
 
-              {/* Product Details Area */}
               <div className="lg:col-span-5 relative px-4 pt-6 lg:px-0 lg:pt-0">
                   <div className="sticky top-28 space-y-8">
                       <div className="border-b border-gray-100 pb-6">
                           <h2 className="text-xs font-bold text-gray-400 uppercase tracking-[0.2em] mb-3">{product.brand || siteSettings?.storeName || 'Ayushree Ayurveda'}</h2>
-                          {/* Title size reduced from text-3xl md:text-4xl to text-2xl md:text-3xl */}
                           <h1 className="text-2xl md:text-3xl font-serif font-bold text-gray-900 leading-tight mb-4">{product.name}</h1>
                           <div className="flex items-center justify-between">
                               <div className="flex items-baseline gap-4">
@@ -398,7 +373,6 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
                           )}
                       </div>
 
-                      {/* Variant Selection */}
                       <div className="space-y-6">
                           {product.hasVariants && product.variants?.map((variant, idx) => (
                               <div key={idx}>
@@ -433,7 +407,6 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
                           </div>
                       </div>
 
-                      {/* Buy Now & Add to Cart Section */}
                       <div ref={addToCartRef} className="flex flex-col gap-3 pt-4">
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <button 
@@ -441,6 +414,7 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
                                 disabled={product.stock <= 0}
                                 className="w-full bg-black text-white h-14 text-sm font-bold uppercase tracking-widest hover:bg-gray-900 rounded-xl shadow-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition-all active:scale-95 flex items-center justify-center gap-2"
                             >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                                 Buy Now
                             </button>
                             <button 
@@ -468,8 +442,8 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
                   </div>
               </div>
           </div>
-
-          {/* Frequently Bought Together (Amazon Style) */}
+          
+          {/* FBT Products and the rest remain unchanged */}
           {fbtProducts.length > 0 && (
               <div className="mt-20 border border-gray-200 rounded-2xl overflow-hidden shadow-sm bg-white">
                   <div className="bg-gray-50 px-8 py-4 border-b border-gray-200">
@@ -477,7 +451,6 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
                   </div>
                   
                   <div className="p-8 flex flex-col xl:flex-row gap-12 items-start">
-                      {/* Visual Pipeline */}
                       <div className="flex flex-wrap items-center justify-center gap-4 flex-1 w-full">
                           <div className="relative">
                               <div className="w-36 h-48 rounded-xl overflow-hidden border-2 border-gray-100 shadow-sm bg-white">
@@ -503,7 +476,6 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
                           ))}
                       </div>
 
-                      {/* Bundle Action Card */}
                       <div className="w-full xl:w-[400px] flex-shrink-0 bg-rose-50/50 p-6 rounded-2xl border border-rose-100">
                           <div className="mb-6">
                               <div className="flex items-baseline gap-2 mb-2">
@@ -554,7 +526,6 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
               </div>
           )}
 
-          {/* Style Inspiration Videos */}
           {shopVideos.length > 0 && (
               <div className="mt-24 pt-16 border-t border-gray-100">
                   <h3 className="text-3xl font-serif font-bold text-gray-900 mb-10 text-center uppercase tracking-widest">Style Inspiration</h3>
@@ -588,7 +559,6 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
               </div>
           )}
 
-          {/* Related Products Section */}
           {relatedProducts.length > 0 && (
               <div className="mt-24 pt-16 border-t border-gray-100">
                   <h3 className="text-3xl font-serif font-bold text-gray-900 mb-12 text-center uppercase tracking-widest">You Might Also Like</h3>
@@ -607,7 +577,6 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
               </div>
           )}
 
-          {/* Reviews Section */}
           <div id="reviews" className="mt-24 border-t border-gray-100 pt-16 pb-16 px-4 lg:px-0">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
                   <div className="lg:col-span-4">
@@ -629,7 +598,7 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
                                   </div>
                                   <div>
                                       <label className="block text-xs font-bold uppercase text-gray-400 mb-2 tracking-widest">Comment</label>
-                                      <textarea required rows={4} value={newReview.comment} onChange={e => setNewReview({ ...newReview, comment: e.target.value })} className="w-full border border-gray-200 rounded-xl p-4 text-sm focus:ring-2 focus:ring-rose-500 outline-none transition-all" placeholder="How was the quality? Any sizing tips?" />
+                                      <textarea required rows={4} value={newReview.comment} onChange={e => setNewReview({ ...newReview, comment: e.target.value })} className="w-full border border-gray-200 rounded-xl p-4 text-sm focus:ring-2 focus:ring-rose-500 outline-none transition-all" placeholder="How was the quality? Any tips?" />
                                   </div>
                                   <div>
                                       <label className="block text-xs font-bold uppercase text-gray-400 mb-2 tracking-widest">Add a Photo (Optional)</label>
@@ -696,20 +665,18 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
         </main>
       </ErrorBoundary>
 
-      {/* Sticky Bar Section */}
       <ProductStickyBar
         isVisible={isStickyBarVisible && product.stock > 0}
         product={product}
         selectedVariants={selectedVariants}
         onVariantChange={handleVariantChange}
-        onAddToCart={() => handleAddToCart(false)}
+        onAddToCart={() => handleAddToCart(true)} // Sticky bar buy now also goes to Magic Checkout
         quantity={quantity}
         onQuantityChange={setQuantity}
       />
       
       <Footer />
       
-      {/* Video Modal Overlay */}
       {selectedVideo && (
           <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-fade-in">
               <div className="absolute inset-0" onClick={() => setSelectedVideo(null)}></div>

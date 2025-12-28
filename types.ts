@@ -5,7 +5,20 @@ export interface HomeSection {
     type: 'Hero' | 'Collections' | 'NewArrivals' | 'BestSellers' | 'Videos' | 'Testimonials' | 'Newsletter' | 'CustomCode';
     title?: string;
     isActive: boolean;
-    settings?: any;
+    settings?: {
+        // Hero settings
+        desktopHeight?: string;
+        mobileHeight?: string;
+        desktopWidth?: string;
+        mobileWidth?: string;
+        customStyles?: string;
+        // Data sections (Collections, BestSellers, etc.)
+        collectionId?: string; 
+        limit?: number;        
+        desktopColumns?: number; 
+        mobileColumns?: number;  
+        isSlider?: boolean;      
+    };
     code?: string;
 }
 
