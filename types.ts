@@ -13,7 +13,6 @@ export interface HomepageLayout {
     sections: HomeSection[];
 }
 
-// ... (existing interfaces remain same)
 export interface Category {
   id: string;
   name: string;
@@ -112,7 +111,19 @@ export interface FooterLink { text: string; url: string; }
 export interface FooterColumn { title: string; links: FooterLink[]; }
 export interface SocialLink { platform: 'Facebook' | 'Instagram' | 'Twitter' | 'LinkedIn' | 'YouTube'; url: string; }
 export interface FooterSettings { _id?: string; logoUrl?: string; brandDescription: string; copyrightText: string; socialLinks: SocialLink[]; columns: FooterColumn[]; backgroundColor?: string; backgroundImage?: string; overlayColor?: string; overlayOpacity?: number; }
-export interface Slide { _id?: string; imageUrl: string; mobileImageUrl?: string; title: string; subtitle: string; buttonText: string; }
+export interface Slide { 
+  _id?: string; 
+  imageUrl: string; 
+  mobileImageUrl?: string; 
+  title: string; 
+  subtitle: string; 
+  buttonText: string; 
+  imageFit?: 'cover' | 'contain' | 'fill';
+  desktopHeight?: string;
+  mobileHeight?: string;
+  desktopWidth?: string;
+  mobileWidth?: string;
+}
 export interface BlogPost { id: string; title: string; slug: string; content: string; excerpt?: string; imageUrl?: string; author?: string; status: 'Published' | 'Draft'; createdAt: string; }
 export interface ContentPage { id: string; title: string; slug: string; content: string; status: 'Published' | 'Hidden'; updatedAt: string; }
 export interface Campaign { id: string; name: string; type: 'Email' | 'SMS' | 'WhatsApp' | 'Push'; status: 'Draft' | 'Scheduled' | 'Sent'; sentCount: number; openRate: number; clickRate: number; }

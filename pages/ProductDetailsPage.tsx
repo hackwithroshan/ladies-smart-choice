@@ -6,6 +6,7 @@ const { useParams, Link, useNavigate } = ReactRouterDom as any;
 import { Product, Review } from '../types';
 import { useCart } from '../contexts/CartContext';
 import { useToast } from '../contexts/ToastContext';
+import { useSiteData } from '../contexts/SiteDataContext';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import Accordion from '../components/Accordion';
@@ -37,6 +38,7 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
   const navigate = useNavigate();
   const { addToCart, addMultipleToCart } = useCart();
   const { showToast } = useToast();
+  const { siteSettings } = useSiteData();
   const token = localStorage.getItem('token');
 
   // --- Data State ---
@@ -181,7 +183,7 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
       setSelectedVariants(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleAddToCart = () => {
+  const handleAddToCart = (redirect = false) => {
       if (!product) return;
 
       let variantLabel = "";
@@ -209,10 +211,13 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
         value: product.price * quantity,
         currency: 'INR'
       };
-      masterTracker('AddToCart', eventPayload, eventPayload);
       
-      // Auto-redirect to Checkout
-      navigate('/checkout'); 
+      if (redirect) {
+        masterTracker('InitiateCheckout', eventPayload, eventPayload);
+        navigate('/checkout'); 
+      } else {
+        masterTracker('AddToCart', eventPayload, eventPayload);
+      }
   };
 
   // --- FBT Logic ---
@@ -363,8 +368,9 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
               <div className="lg:col-span-5 relative px-4 pt-6 lg:px-0 lg:pt-0">
                   <div className="sticky top-28 space-y-8">
                       <div className="border-b border-gray-100 pb-6">
-                          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-[0.2em] mb-3">{product.brand || 'LADIES SMART CHOICE'}</h2>
-                          <h1 className="text-3xl md:text-4xl font-serif font-bold text-gray-900 leading-tight mb-4">{product.name}</h1>
+                          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-[0.2em] mb-3">{product.brand || siteSettings?.storeName || 'Ayushree Ayurveda'}</h2>
+                          {/* Title size reduced from text-3xl md:text-4xl to text-2xl md:text-3xl */}
+                          <h1 className="text-2xl md:text-3xl font-serif font-bold text-gray-900 leading-tight mb-4">{product.name}</h1>
                           <div className="flex items-center justify-between">
                               <div className="flex items-baseline gap-4">
                                   <span className="text-3xl font-bold text-rose-600">₹{product.price.toLocaleString()}</span>
@@ -384,6 +390,12 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
                                   )}
                               </div>
                           </div>
+
+                          {product.shortDescription && (
+                              <p className="mt-6 text-gray-600 text-sm leading-relaxed border-l-4 border-rose-100 pl-4 italic">
+                                  {product.shortDescription}
+                              </p>
+                          )}
                       </div>
 
                       {/* Variant Selection */}
@@ -421,16 +433,25 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
                           </div>
                       </div>
 
-                      {/* Sticky Bar Trigger Section */}
+                      {/* Buy Now & Add to Cart Section */}
                       <div ref={addToCartRef} className="flex flex-col gap-3 pt-4">
-                          <button 
-                              onClick={handleAddToCart}
-                              disabled={product.stock <= 0}
-                              className="w-full bg-rose-600 text-white h-14 text-sm font-bold uppercase tracking-widest hover:bg-rose-700 rounded-xl shadow-lg shadow-rose-200 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all active:scale-95 flex items-center justify-center gap-2"
-                          >
-                               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
-                               {product.stock > 0 ? `Add to Cart - ₹${(product.price * quantity).toLocaleString()}` : 'Out of Stock'}
-                          </button>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <button 
+                                onClick={() => handleAddToCart(true)}
+                                disabled={product.stock <= 0}
+                                className="w-full bg-black text-white h-14 text-sm font-bold uppercase tracking-widest hover:bg-gray-900 rounded-xl shadow-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition-all active:scale-95 flex items-center justify-center gap-2"
+                            >
+                                Buy Now
+                            </button>
+                            <button 
+                                onClick={() => handleAddToCart(false)}
+                                disabled={product.stock <= 0}
+                                className="w-full bg-rose-600 text-white h-14 text-sm font-bold uppercase tracking-widest hover:bg-rose-700 rounded-xl shadow-lg shadow-rose-200 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all active:scale-95 flex items-center justify-center gap-2"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
+                                {product.stock > 0 ? 'Add to Cart' : 'Out of Stock'}
+                            </button>
+                          </div>
                       </div>
 
                       <div className="pt-6 border-t border-gray-100">
@@ -681,7 +702,7 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
         product={product}
         selectedVariants={selectedVariants}
         onVariantChange={handleVariantChange}
-        onAddToCart={handleAddToCart}
+        onAddToCart={() => handleAddToCart(false)}
         quantity={quantity}
         onQuantityChange={setQuantity}
       />

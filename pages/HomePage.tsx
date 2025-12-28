@@ -5,7 +5,7 @@ const { useNavigate } = ReactRouterDom as any;
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import ProductCard from '../components/ProductCard';
-import { Product, HomeSection, ShoppableVideo } from '../types';
+import { Product, HomeSection, ShoppableVideo, Slide } from '../types';
 import { useSiteData } from '../contexts/SiteDataContext';
 import { COLORS } from '../constants';
 import { PlayIcon } from '../components/Icons';
@@ -59,37 +59,86 @@ const HomePage: React.FC<{ user: any; logout: () => void }> = ({ user, logout })
   }, []);
 
   const nextSlide = () => { if (slides.length > 0) setCurrentSlide(current => (current === slides.length - 1 ? 0 : current + 1)); };
-  useEffect(() => { const interval = setInterval(nextSlide, 6000); return () => clearInterval(interval); }, [slides.length]);
+  useEffect(() => { 
+      if (slides.length > 1) {
+        const interval = setInterval(nextSlide, 6000); 
+        return () => clearInterval(interval); 
+      }
+  }, [slides.length]);
 
   const renderSection = (section: HomeSection) => {
     if (!section.isActive) return null;
 
     switch (section.type) {
       case 'Hero':
+        if (slides.length === 0) return null;
+        
+        // Priority 1: Builder Section Settings
+        // Priority 2: Config from first slide (legacy support)
+        const globalSlideConfig = slides[0];
+        const desktopHeight = section.settings?.desktopHeight || globalSlideConfig.desktopHeight || '650px';
+        const mobileHeight = section.settings?.mobileHeight || globalSlideConfig.mobileHeight || '400px';
+        const desktopWidth = section.settings?.desktopWidth || globalSlideConfig.desktopWidth || '100%';
+        const mobileWidth = section.settings?.mobileWidth || globalSlideConfig.mobileWidth || '100%';
+        const customStyles = section.settings?.customStyles || '';
+
         return (
-          <section key={section.id} className="relative bg-gray-100 h-[400px] md:h-[650px] overflow-hidden">
-            {slides.map((slide, index) => (
-              <div key={index} className={`absolute inset-0 transition-opacity duration-1000 ${index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
-                <picture className="absolute inset-0 w-full h-full">
-                    <source media="(max-width: 768px)" srcSet={slide.mobileImageUrl || slide.imageUrl} />
-                    <img src={slide.imageUrl} alt={slide.title} className="w-full h-full object-cover" />
-                </picture>
-                <div className="absolute inset-0 bg-black/30 z-20"></div>
-                <div className="absolute inset-0 flex items-center justify-center z-30 text-center px-4">
-                  <div className="max-w-2xl">
-                    <h1 className="text-3xl md:text-7xl font-brand font-black text-white mb-4 drop-shadow-xl tracking-tighter italic uppercase leading-none">{slide.title}</h1>
-                    <p className="text-sm md:text-xl text-white/90 mb-8 max-w-lg mx-auto font-medium">{slide.subtitle}</p>
-                    <button onClick={() => navigate('/collections/all')} className="px-8 md:px-12 py-3 md:py-4 rounded-full text-white font-black uppercase tracking-widest text-[10px] md:text-xs shadow-2xl transition-all hover:scale-105 active:scale-95" style={{backgroundColor: COLORS.accent}}>{slide.buttonText}</button>
-                  </div>
-                </div>
-              </div>
-            ))}
-            {/* Pagination Dots */}
-            <div className="absolute bottom-6 left-0 right-0 z-40 flex justify-center gap-2">
-                {slides.map((_, i) => (
-                    <button key={i} onClick={() => setCurrentSlide(i)} className={`h-1 rounded-full transition-all ${i === currentSlide ? 'w-8 bg-white' : 'w-2 bg-white/40 hover:bg-white/60'}`} />
-                ))}
+          <section 
+            key={section.id} 
+            className="relative bg-gray-100 overflow-hidden flex justify-center items-center"
+            style={{ 
+                '--desktop-h': desktopHeight, 
+                '--mobile-h': mobileHeight,
+                '--desktop-w': desktopWidth,
+                '--mobile-w': mobileWidth,
+                ...(customStyles ? customStyles.split(';').reduce((acc: any, curr) => {
+                    const [prop, val] = curr.split(':');
+                    if (prop && val) acc[prop.trim()] = val.trim();
+                    return acc;
+                }, {}) : {})
+            } as any}
+          >
+            <div className="h-[var(--mobile-h)] md:h-[var(--desktop-h)] w-[var(--mobile-w)] md:w-[var(--desktop-w)] relative overflow-hidden">
+                {slides.map((slide, index) => {
+                  const fitClass = slide.imageFit === 'contain' ? 'object-contain' : slide.imageFit === 'fill' ? 'object-fill' : 'object-cover';
+                  const hasButton = slide.buttonText && slide.buttonText.trim() !== "";
+
+                  return (
+                    <div key={index} className={`absolute inset-0 transition-opacity duration-1000 ${index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
+                        <picture className="absolute inset-0 w-full h-full">
+                            <source media="(max-width: 768px)" srcSet={slide.mobileImageUrl || slide.imageUrl} />
+                            <img src={slide.imageUrl} alt={slide.title} className={`w-full h-full ${fitClass}`} />
+                        </picture>
+                        <div className="absolute inset-0 bg-black/30 z-20"></div>
+                        <div className="absolute inset-0 flex items-center justify-center z-30 text-center px-4">
+                        <div className="max-w-2xl">
+                            {slide.title && <h1 className="text-3xl md:text-7xl font-brand font-black text-white mb-4 drop-shadow-xl tracking-tighter italic uppercase leading-none">{slide.title}</h1>}
+                            {slide.subtitle && <p className="text-sm md:text-xl text-white/90 mb-8 max-w-lg mx-auto font-medium">{slide.subtitle}</p>}
+                            
+                            {hasButton && (
+                                <button 
+                                    onClick={() => navigate('/collections/all')} 
+                                    className="px-8 md:px-12 py-3 md:py-4 rounded-full text-white font-black uppercase tracking-widest text-[10px] md:text-xs shadow-2xl transition-all hover:scale-105 active:scale-95" 
+                                    style={{backgroundColor: COLORS.accent}}
+                                >
+                                    {slide.buttonText}
+                                </button>
+                            )}
+                        </div>
+                        </div>
+                    </div>
+                  )
+                })}
             </div>
+            
+            {/* Pagination Dots */}
+            {slides.length > 1 && (
+                <div className="absolute bottom-6 left-0 right-0 z-40 flex justify-center gap-2">
+                    {slides.map((_, i) => (
+                        <button key={i} onClick={() => setCurrentSlide(i)} className={`h-1 rounded-full transition-all ${i === currentSlide ? 'w-8 bg-white' : 'w-2 bg-white/40 hover:bg-white/60'}`} />
+                    ))}
+                </div>
+            )}
           </section>
         );
 
@@ -137,7 +186,6 @@ const HomePage: React.FC<{ user: any; logout: () => void }> = ({ user, logout })
           <section key={section.id} className="max-w-7xl mx-auto py-12 md:py-20 px-4 overflow-hidden">
               <h2 className="text-2xl md:text-4xl font-brand font-black text-center mb-10 md:mb-16 uppercase italic tracking-tighter">Shop From Videos</h2>
               <div className="flex overflow-x-auto gap-4 md:gap-8 pb-8 -mx-4 px-4 scrollbar-hide md:grid md:grid-cols-4">
-                  {/* Fix: Property 'id' does not exist on type 'ShoppableVideo'. Changed v.id to v._id. */}
                   {videos.map(v => <VideoListItem key={v._id} video={v} autoplay={siteSettings?.videoAutoplay || false} onClick={() => setSelectedVideo(v)} />)}
               </div>
           </section>
@@ -171,7 +219,11 @@ const HomePage: React.FC<{ user: any; logout: () => void }> = ({ user, logout })
     }
   };
 
-  if (siteLoading || layoutLoading) return <div className="h-screen flex items-center justify-center font-brand font-black text-brand-primary animate-pulse uppercase tracking-[0.4em] text-xs">Ayushree...</div>;
+  if (siteLoading || layoutLoading) return (
+    <div className="h-screen flex items-center justify-center bg-white">
+        <div className="w-8 h-8 border-4 border-[#16423C] border-t-transparent rounded-full animate-spin"></div>
+    </div>
+  );
 
   return (
     <div className="flex flex-col min-h-screen bg-white">
@@ -187,7 +239,7 @@ const HomePage: React.FC<{ user: any; logout: () => void }> = ({ user, logout })
               <div className="relative w-full max-w-md h-[85vh] bg-black rounded-3xl overflow-hidden shadow-2xl ring-1 ring-white/10" onClick={e => e.stopPropagation()}>
                   <button onClick={() => setSelectedVideo(null)} className="absolute top-4 right-4 z-50 text-white/50 hover:text-white p-2 bg-black/40 rounded-full backdrop-blur-md transition-colors">&times;</button>
                   <video src={selectedVideo.videoUrl} className="w-full h-full object-cover" autoPlay playsInline loop />
-                  <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-black via-black/60 to-transparent text-white">
+                  <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-black via-black/40 to-transparent text-white">
                       <h3 className="text-2xl font-brand font-black mb-1 uppercase tracking-tight">{selectedVideo.title}</h3>
                       <p className="text-brand-accent font-black text-xl mb-6">{selectedVideo.price}</p>
                       <button onClick={() => navigate(`/product/${selectedVideo.productLink}`)} className="w-full bg-white text-black py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-2xl active:scale-95 transition-transform">Get This Look</button>
