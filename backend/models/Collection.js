@@ -13,7 +13,8 @@ const CollectionSchema = new mongoose.Schema({
 
 CollectionSchema.pre('validate', function(next) {
     if (this.title && !this.slug) {
-        this.slug = this.title.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '');
+        // Robust slugifier: handles special characters and collapses multiple hyphens into one
+        this.slug = this.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
     }
     next();
 });

@@ -1,11 +1,19 @@
 
+
+
 import React, { useState, useEffect } from 'react';
 import { useCart } from '../contexts/CartContext';
 import { getApiUrl } from '../utils/apiHelper';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 
-const CheckoutPage: React.FC = () => {
+// Fix: Add props interface to handle user authentication state and logout functionality
+interface CheckoutPageProps {
+    user: any;
+    logout: () => void;
+}
+
+const CheckoutPage: React.FC<CheckoutPageProps> = ({ user, logout }) => {
     const { cart, cartTotal, clearCart } = useCart();
     const [loading, setLoading] = useState(false);
     const [scriptLoaded, setScriptLoaded] = useState(false);
@@ -104,7 +112,8 @@ const CheckoutPage: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            <Header user={null} logout={() => {}} />
+            {/* Fix: Pass user and logout from props to the Header component */}
+            <Header user={user} logout={logout} />
             <main className="container mx-auto px-4 py-20 text-center">
                 <div className="max-w-2xl mx-auto bg-white p-10 rounded-3xl shadow-xl border border-gray-100">
                     <div className="mb-8">

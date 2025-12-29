@@ -129,17 +129,19 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
           delete newErrors.name;
           setErrors(newErrors);
       }
+      
+      // SEO Friendly Slugify
+      const generateSlug = (str: string) => str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
       setFormData(prev => ({
           ...prev,
           name: val,
-          slug: !product && (!prev.slug || prev.slug === prev.name.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '')) 
-                ? val.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '') 
+          slug: !product && (!prev.slug || prev.slug === generateSlug(prev.name)) 
+                ? generateSlug(val) 
                 : prev.slug,
           seoTitle: !prev.seoTitle ? val : prev.seoTitle
       }));
   };
-
-  // --- Gallery Management ---
 
   const handleGalleryUpload = async (files: FileList | null) => {
       if (!files || files.length === 0) return;
@@ -191,7 +193,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
       setFormData(prev => ({ ...prev, galleryImages: prev.galleryImages?.filter((_, i) => i !== index) }));
   };
 
-  // Drag and Sort Handlers
   const handleSortStart = (index: number) => setDraggedImageIndex(index);
   
   const handleSortDrop = (targetIndex: number) => {
@@ -213,7 +214,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
       }
   };
 
-  // --- Variants Logic ---
   const addVariant = () => {
       const newVariant: ProductVariant = { name: 'Size', options: [{ value: 'Standard', price: formData.price, stock: 10, image: '' }] };
       setFormData(prev => ({ ...prev, variants: [...(prev.variants || []), newVariant] }));
@@ -242,7 +242,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
      setFormData({ ...formData, variants: updated });
   };
 
-  // --- Tags & SEO ---
   const handleTagKeyDown = (e: React.KeyboardEvent) => {
       if (e.key === 'Enter' || e.key === ',') {
           e.preventDefault();
@@ -297,7 +296,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
       if(!newCatName.trim()) return;
       const token = localStorage.getItem('token');
       try {
-          // This endpoint now creates a Collection document behind the scenes
           const res = await fetch(getApiUrl('/api/products/categories'), {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -350,10 +348,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
       <div className="flex-1 overflow-y-auto p-6 md:p-8">
           <div className="w-full grid grid-cols-1 lg:grid-cols-4 gap-8 pb-20">
               
-              {/* LEFT CONTENT (3 Cols) */}
               <div className="lg:col-span-3 space-y-8">
                  
-                 {/* Basic Info */}
                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                     <h3 className="text-lg font-bold text-gray-800 mb-4">Product Details</h3>
                     <div className="space-y-5">
@@ -392,11 +388,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
                     </div>
                  </div>
 
-                 {/* Media Section */}
                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                     <h3 className="text-lg font-bold text-gray-800 mb-4">Media</h3>
                     
-                    {/* Main Image */}
                     <div className="mb-8">
                         <label className="block text-sm font-medium text-gray-700 mb-2">Main Product Image <span className="text-red-500">*</span></label>
                         <div className={errors.imageUrl ? "ring-2 ring-red-500 rounded-lg" : ""}>
@@ -408,7 +402,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
                         {errors.imageUrl && <p className="text-red-500 text-[10px] mt-1 font-bold">{errors.imageUrl}</p>}
                     </div>
 
-                    {/* Gallery Grid Sorter */}
                     <div className="mb-6">
                          <label className="block text-sm font-medium text-gray-700 mb-2">Gallery Images (Drag to sort)</label>
                          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
@@ -468,7 +461,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
                     </div>
                  </div>
 
-                 {/* Pricing & Inventory */}
                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                     <h3 className="text-lg font-bold text-gray-800 mb-4">Pricing & Inventory</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -493,7 +485,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
                     </div>
                  </div>
 
-                 {/* Shipping Specifications */}
                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                     <h3 className="text-lg font-bold text-gray-800 mb-4">Shipping Specifications</h3>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
@@ -504,7 +495,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
                     </div>
                  </div>
 
-                 {/* Variants */}
                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="text-lg font-bold text-gray-800">Variants</h3>
@@ -538,7 +528,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
                  </div>
               </div>
 
-              {/* RIGHT SIDEBAR (1 Col) */}
               <div className="space-y-8">
                   <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                       <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-4">Status</h3>
@@ -563,7 +552,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
                       </div>
                   </div>
                   
-                  {/* Tags */}
                   <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                       <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-4">Tags</h3>
                       <input 
@@ -584,7 +572,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
                       </div>
                   </div>
 
-                  {/* SEO */}
                   <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                       <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-4">Search Engine Optimization</h3>
                       <div className="space-y-4">
@@ -625,7 +612,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
           </div>
       </div>
 
-      {/* Manage Categories (Collections) Modal */}
       {isManageCatsOpen && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black bg-opacity-50 p-4">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden animate-fade-in-up">

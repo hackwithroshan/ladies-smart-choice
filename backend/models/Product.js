@@ -61,7 +61,8 @@ const ProductSchema = new mongoose.Schema({
 // Ensure slug and sku are generated if not provided
 ProductSchema.pre('validate', function(next) {
     if (this.name && !this.slug) {
-        this.slug = this.name.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '');
+        // Robust slugifier: convert to lower, replace all non-alphanumeric sequences with a single hyphen, trim hyphens
+        this.slug = this.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
     }
     
     // Auto-generate SKU if missing

@@ -6,21 +6,28 @@ export interface HomeSection {
     title?: string;
     isActive: boolean;
     settings?: {
-        // Typography & Alignment
         subtitle?: string;
         alignment?: 'left' | 'center' | 'right';
-        titleSize?: number; // in px
-        subtitleSize?: number; // in px
-        backgroundColor?: string; // Hex color for section background
-        
-        // Hero settings
+        titleSize?: number;
+        subtitleSize?: number;
+        titleWeight?: number;
+        subtitleWeight?: number;
+        titleItalic?: boolean;
+        subtitleItalic?: boolean;
+        backgroundColor?: string;
+        paddingTop?: number;
+        paddingBottom?: number;
+        paddingLeft?: number;
+        paddingRight?: number;
+        marginTop?: number;
+        marginBottom?: number;
+        marginLeft?: number;
+        marginRight?: number;
         desktopHeight?: string;
         mobileHeight?: string;
         desktopWidth?: string;
         mobileWidth?: string;
         customStyles?: string;
-        
-        // Data sections (Collections, BestSellers, etc.)
         collectionId?: string; 
         limit?: number;        
         desktopColumns?: number; 
@@ -79,7 +86,6 @@ export interface Product {
   hasVariants?: boolean;
   variants?: ProductVariant[];
   reviews?: Review[];
-  // Fix: Added createdAt and updatedAt to the Product interface to support sorting logic in HomePage.tsx
   createdAt?: string;
   updatedAt?: string;
 }
@@ -134,7 +140,25 @@ export interface HeaderSettings { _id?: string; logoText: string; logoUrl?: stri
 export interface FooterLink { text: string; url: string; }
 export interface FooterColumn { title: string; links: FooterLink[]; }
 export interface SocialLink { platform: 'Facebook' | 'Instagram' | 'Twitter' | 'LinkedIn' | 'YouTube'; url: string; }
-export interface FooterSettings { _id?: string; logoUrl?: string; brandDescription: string; copyrightText: string; socialLinks: SocialLink[]; columns: FooterColumn[]; backgroundColor?: string; backgroundImage?: string; overlayColor?: string; overlayOpacity?: number; }
+export interface FooterSettings { 
+    _id?: string; 
+    logoUrl?: string; 
+    brandDescription: string; 
+    copyrightText: string; 
+    socialLinks: SocialLink[]; 
+    columns: FooterColumn[]; 
+    backgroundColor?: string; 
+    backgroundImage?: string; 
+    overlayColor?: string; 
+    overlayOpacity?: number;
+    textColor?: string;
+    headingColor?: string;
+    linkColor?: string;
+    showNewsletter?: boolean;
+    newsletterTitle?: string;
+    newsletterSubtitle?: string;
+    newsletterPlacement?: 'Top' | 'InColumn';
+}
 export interface Slide { 
   _id?: string; 
   imageUrl: string; 

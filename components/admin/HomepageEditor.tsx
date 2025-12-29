@@ -61,12 +61,24 @@ const HomepageEditor: React.FC<{ token: string | null }> = ({ token }) => {
                 alignment: 'center',
                 titleSize: 32,
                 subtitleSize: 14,
+                titleWeight: 700,
+                subtitleWeight: 400,
+                titleItalic: false,
+                subtitleItalic: false,
                 limit: 4,
                 desktopColumns: 4,
                 mobileColumns: 2,
                 isSlider: false,
                 collectionId: 'all',
-                backgroundColor: type === 'NewArrivals' || type === 'BestSellers' ? '#FBF9F1' : 'transparent',
+                paddingTop: 48,
+                paddingBottom: 48,
+                paddingLeft: 0,
+                paddingRight: 0,
+                marginTop: 0,
+                marginBottom: 0,
+                marginLeft: 0,
+                marginRight: 0,
+                backgroundColor: type === 'NewArrivals' || type === 'BestSellers' ? '#FBF9F1' : '#FFFFFF',
                 ...(type === 'Hero' ? {
                     desktopHeight: '650px',
                     mobileHeight: '400px',
@@ -116,6 +128,8 @@ const HomepageEditor: React.FC<{ token: string | null }> = ({ token }) => {
 
     if (loading) return <div className="p-20 text-center">Initialising Builder...</div>;
 
+    const FONT_WEIGHTS = [100, 200, 300, 400, 500, 600, 700, 800, 900];
+
     return (
         <div className="space-y-8 animate-fade-in pb-20">
             <div className="flex justify-between items-center bg-white p-5 rounded-2xl shadow-sm border border-gray-100 sticky top-0 z-[60]">
@@ -158,12 +172,12 @@ const HomepageEditor: React.FC<{ token: string | null }> = ({ token }) => {
                         <div className="bg-gray-50 px-6 py-4 border-b flex justify-between items-center">
                             <div className="flex items-center gap-4">
                                 <div className="flex flex-col gap-1">
-                                    <button onClick={() => moveSection(index, 'up')} className="text-gray-400 hover:text-blue-600 disabled:opacity-20" disabled={index === 0}><svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z"/></svg></button>
-                                    <button onClick={() => moveSection(index, 'down')} className="text-gray-400 hover:text-blue-600 disabled:opacity-20" disabled={index === layout.sections.length - 1}><svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg></button>
+                                    <button onClick={() => moveSection(index, 'up')} className="text-gray-400 hover:text-[#16423C] disabled:opacity-20" disabled={index === 0}><svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z"/></svg></button>
+                                    <button onClick={() => moveSection(index, 'down')} className="text-gray-400 hover:text-[#16423C] disabled:opacity-20" disabled={index === layout.sections.length - 1}><svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg></button>
                                 </div>
                                 <div>
                                     <div className="flex items-center gap-2 mb-1">
-                                        <span className="bg-rose-100 text-rose-700 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider">{section.type}</span>
+                                        <span className="bg-[#6A9C89]/20 text-[#16423C] px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider">{section.type}</span>
                                         <button onClick={() => setActiveEditId(activeEditId === section.id ? null : section.id)} className="text-[10px] font-black uppercase text-blue-600 underline hover:text-blue-800">
                                             {activeEditId === section.id ? 'Close Settings' : 'Edit Section'}
                                         </button>
@@ -199,24 +213,23 @@ const HomepageEditor: React.FC<{ token: string | null }> = ({ token }) => {
                         {activeEditId === section.id && (
                             <div className="p-8 bg-white border-t border-gray-100 animate-fade-in">
                                 <div className="flex gap-4 mb-8 border-b pb-2">
-                                    <button onClick={() => setActiveTab('content')} className={`text-xs font-black uppercase tracking-widest pb-2 border-b-2 transition-all ${activeTab === 'content' ? 'border-rose-600 text-rose-600' : 'border-transparent text-gray-400'}`}>Content & Data</button>
-                                    <button onClick={() => setActiveTab('style')} className={`text-xs font-black uppercase tracking-widest pb-2 border-b-2 transition-all ${activeTab === 'style' ? 'border-rose-600 text-rose-600' : 'border-transparent text-gray-400'}`}>Typography & Style</button>
+                                    <button onClick={() => setActiveTab('content')} className={`text-xs font-black uppercase tracking-widest pb-2 border-b-2 transition-all ${activeTab === 'content' ? 'border-[#16423C] text-[#16423C]' : 'border-transparent text-gray-400'}`}>Content & Data</button>
+                                    <button onClick={() => setActiveTab('style')} className={`text-xs font-black uppercase tracking-widest pb-2 border-b-2 transition-all ${activeTab === 'style' ? 'border-[#16423C] text-[#16423C]' : 'border-transparent text-gray-400'}`}>Spacing & Typography</button>
                                 </div>
 
                                 {activeTab === 'content' ? (
                                     <div className="space-y-8">
                                         {section.type === 'Hero' && (
                                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                                                <div><label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Desktop Height</label><input type="text" value={section.settings?.desktopHeight || '650px'} onChange={(e) => updateSectionSettings(section.id, 'desktopHeight', e.target.value)} className="w-full border rounded-xl p-3 text-sm focus:ring-rose-500" placeholder="e.g. 650px"/></div>
-                                                <div><label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Mobile Height</label><input type="text" value={section.settings?.mobileHeight || '400px'} onChange={(e) => updateSectionSettings(section.id, 'mobileHeight', e.target.value)} className="w-full border rounded-xl p-3 text-sm focus:ring-rose-500" placeholder="e.g. 400px"/></div>
-                                                <div><label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Desktop Width</label><input type="text" value={section.settings?.desktopWidth || '100%'} onChange={(e) => updateSectionSettings(section.id, 'desktopWidth', e.target.value)} className="w-full border rounded-xl p-3 text-sm focus:ring-rose-500" placeholder="e.g. 100%"/></div>
+                                                <div><label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Desktop Height</label><input type="text" value={section.settings?.desktopHeight || '650px'} onChange={(e) => updateSectionSettings(section.id, 'desktopHeight', e.target.value)} className="w-full border rounded-xl p-3 text-sm focus:ring-[#16423C]" placeholder="e.g. 650px"/></div>
+                                                <div><label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Mobile Height</label><input type="text" value={section.settings?.mobileHeight || '400px'} onChange={(e) => updateSectionSettings(section.id, 'mobileHeight', e.target.value)} className="w-full border rounded-xl p-3 text-sm focus:ring-[#16423C]" placeholder="e.g. 400px"/></div>
+                                                <div><label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Desktop Width</label><input type="text" value={section.settings?.desktopWidth || '100%'} onChange={(e) => updateSectionSettings(section.id, 'desktopWidth', e.target.value)} className="w-full border rounded-xl p-3 text-sm focus:ring-[#16423C]" placeholder="e.g. 100%"/></div>
                                                 <div className="lg:col-span-1"><label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Custom CSS</label><input type="text" value={section.settings?.customStyles || ''} onChange={(e) => updateSectionSettings(section.id, 'customStyles', e.target.value)} className="w-full border rounded-xl p-3 text-sm font-mono" placeholder="margin-top: 20px;"/></div>
                                             </div>
                                         )}
 
                                         {['Collections', 'NewArrivals', 'BestSellers'].includes(section.type) && (
                                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                                                {/* Now allowed for all three types: Collections, NewArrivals, BestSellers */}
                                                 <div className="lg:col-span-2">
                                                     <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Source Selection</label>
                                                     <select 
@@ -243,7 +256,7 @@ const HomepageEditor: React.FC<{ token: string | null }> = ({ token }) => {
                                                 <div>
                                                     <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Display Mode</label>
                                                     <div className="flex gap-2 bg-gray-100 p-1 rounded-xl">
-                                                        <button onClick={() => updateSectionSettings(section.id, 'isSlider', false)} className={`flex-1 py-2 text-[10px] font-black uppercase rounded-lg transition-all ${!section.settings?.isSlider ? 'bg-white shadow text-rose-600' : 'text-gray-400'}`}>Grid</button>
+                                                        <button onClick={() => updateSectionSettings(section.id, 'isSlider', false)} className={`flex-1 py-2 text-[10px] font-black uppercase rounded-lg transition-all ${!section.settings?.isSlider ? 'bg-white shadow text-[#16423C]' : 'text-gray-400'}`}>Grid</button>
                                                         <button onClick={() => updateSectionSettings(section.id, 'isSlider', true)} className={`flex-1 py-2 text-[10px] font-black uppercase rounded-lg transition-all ${section.settings?.isSlider ? 'bg-white shadow text-blue-600' : 'text-gray-400'}`}>Slider</button>
                                                     </div>
                                                 </div>
@@ -260,70 +273,107 @@ const HomepageEditor: React.FC<{ token: string | null }> = ({ token }) => {
                                         )}
                                     </div>
                                 ) : (
-                                    <div className="space-y-8 max-w-4xl">
+                                    <div className="space-y-12 max-w-5xl">
+                                        {/* Spacing Section */}
                                         <div>
-                                            <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Section Subtitle</label>
-                                            <textarea 
-                                                value={section.settings?.subtitle || ''} 
-                                                onChange={(e) => updateSectionSettings(section.id, 'subtitle', e.target.value)} 
-                                                className="w-full border rounded-xl p-3 text-sm italic"
-                                                rows={2}
-                                                placeholder="Enter a description for this section..."
-                                            />
-                                        </div>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                                            <div>
-                                                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Text Alignment</label>
-                                                <div className="flex gap-2 bg-gray-100 p-1 rounded-xl">
-                                                    {['left', 'center', 'right'].map(align => (
-                                                        <button 
-                                                            key={align}
-                                                            onClick={() => updateSectionSettings(section.id, 'alignment', align)} 
-                                                            className={`flex-1 py-2 text-[10px] font-black uppercase rounded-lg transition-all ${section.settings?.alignment === align ? 'bg-white shadow text-brand-primary' : 'text-gray-400'}`}
-                                                        >
-                                                            {align}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Title Font Size (px)</label>
-                                                <input 
-                                                    type="number" 
-                                                    value={section.settings?.titleSize || 32} 
-                                                    onChange={(e) => updateSectionSettings(section.id, 'titleSize', parseInt(e.target.value))}
-                                                    className="w-full border rounded-xl p-3 text-sm font-bold"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Subtitle Font Size (px)</label>
-                                                <input 
-                                                    type="number" 
-                                                    value={section.settings?.subtitleSize || 14} 
-                                                    onChange={(e) => updateSectionSettings(section.id, 'subtitleSize', parseInt(e.target.value))}
-                                                    className="w-full border rounded-xl p-3 text-sm font-bold"
-                                                />
-                                            </div>
-                                            {['NewArrivals', 'BestSellers'].includes(section.type) && (
-                                                <div className="col-span-full">
-                                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Background Color</label>
-                                                    <div className="flex items-center gap-4 bg-gray-50 p-3 rounded-xl border border-gray-200">
-                                                        <input 
-                                                            type="color" 
-                                                            value={section.settings?.backgroundColor || '#FBF9F1'} 
-                                                            onChange={(e) => updateSectionSettings(section.id, 'backgroundColor', e.target.value)}
-                                                            className="h-10 w-12 rounded-lg cursor-pointer border border-gray-300"
-                                                        />
-                                                        <input 
-                                                            type="text" 
-                                                            value={section.settings?.backgroundColor || '#FBF9F1'} 
-                                                            onChange={(e) => updateSectionSettings(section.id, 'backgroundColor', e.target.value)}
-                                                            className="flex-1 border rounded-lg p-2 text-sm font-mono uppercase"
-                                                        />
+                                            <h4 className="text-sm font-black text-gray-900 uppercase tracking-widest mb-6 flex items-center gap-2">
+                                                <div className="w-8 h-px bg-gray-200"></div> Spacing (Pixels)
+                                            </h4>
+                                            
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                                                {/* Padding Controls */}
+                                                <div>
+                                                    <p className="text-[10px] font-black uppercase text-gray-400 mb-4 tracking-widest">Internal Padding</p>
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <div><label className="block text-[9px] font-bold text-gray-500 uppercase mb-1">Top</label><input type="number" value={section.settings?.paddingTop ?? 48} onChange={(e) => updateSectionSettings(section.id, 'paddingTop', parseInt(e.target.value))} className="w-full border rounded-lg p-2 text-sm" /></div>
+                                                        <div><label className="block text-[9px] font-bold text-gray-500 uppercase mb-1">Bottom</label><input type="number" value={section.settings?.paddingBottom ?? 48} onChange={(e) => updateSectionSettings(section.id, 'paddingBottom', parseInt(e.target.value))} className="w-full border rounded-lg p-2 text-sm" /></div>
+                                                        <div><label className="block text-[9px] font-bold text-gray-500 uppercase mb-1">Left</label><input type="number" value={section.settings?.paddingLeft ?? 0} onChange={(e) => updateSectionSettings(section.id, 'paddingLeft', parseInt(e.target.value))} className="w-full border rounded-lg p-2 text-sm" /></div>
+                                                        <div><label className="block text-[9px] font-bold text-gray-500 uppercase mb-1">Right</label><input type="number" value={section.settings?.paddingRight ?? 0} onChange={(e) => updateSectionSettings(section.id, 'paddingRight', parseInt(e.target.value))} className="w-full border rounded-lg p-2 text-sm" /></div>
                                                     </div>
                                                 </div>
-                                            )}
+
+                                                {/* Margin Controls */}
+                                                <div>
+                                                    <p className="text-[10px] font-black uppercase text-gray-400 mb-4 tracking-widest">External Margin</p>
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <div><label className="block text-[9px] font-bold text-gray-500 uppercase mb-1">Top</label><input type="number" value={section.settings?.marginTop ?? 0} onChange={(e) => updateSectionSettings(section.id, 'marginTop', parseInt(e.target.value))} className="w-full border rounded-lg p-2 text-sm" /></div>
+                                                        <div><label className="block text-[9px] font-bold text-gray-500 uppercase mb-1">Bottom</label><input type="number" value={section.settings?.marginBottom ?? 0} onChange={(e) => updateSectionSettings(section.id, 'marginBottom', parseInt(e.target.value))} className="w-full border rounded-lg p-2 text-sm" /></div>
+                                                        <div><label className="block text-[9px] font-bold text-gray-500 uppercase mb-1">Left</label><input type="number" value={section.settings?.marginLeft ?? 0} onChange={(e) => updateSectionSettings(section.id, 'marginLeft', parseInt(e.target.value))} className="w-full border rounded-lg p-2 text-sm" /></div>
+                                                        <div><label className="block text-[9px] font-bold text-gray-500 uppercase mb-1">Right</label><input type="number" value={section.settings?.marginRight ?? 0} onChange={(e) => updateSectionSettings(section.id, 'marginRight', parseInt(e.target.value))} className="w-full border rounded-lg p-2 text-sm" /></div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="col-span-full">
+                                                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Background Color</label>
+                                                    <div className="flex items-center gap-4 bg-gray-50 p-3 rounded-xl border border-gray-200 max-w-sm">
+                                                        <input type="color" value={section.settings?.backgroundColor || '#FFFFFF'} onChange={(e) => updateSectionSettings(section.id, 'backgroundColor', e.target.value)} className="h-10 w-12 rounded-lg cursor-pointer border border-gray-300" />
+                                                        <input type="text" value={section.settings?.backgroundColor || '#FFFFFF'} onChange={(e) => updateSectionSettings(section.id, 'backgroundColor', e.target.value)} className="flex-1 border rounded-lg p-2 text-sm font-mono uppercase" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Typography Section */}
+                                        <div>
+                                            <h4 className="text-sm font-black text-gray-900 uppercase tracking-widest mb-6 flex items-center gap-2">
+                                                <div className="w-8 h-px bg-gray-200"></div> Typography Styling
+                                            </h4>
+                                            
+                                            <div className="space-y-8">
+                                                {/* Title Typography */}
+                                                <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100">
+                                                    <p className="text-[10px] font-black uppercase text-gray-400 mb-4 tracking-widest">Main Title Settings</p>
+                                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
+                                                        <div>
+                                                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2">Font Size (px)</label>
+                                                            <input type="number" value={section.settings?.titleSize || 32} onChange={(e) => updateSectionSettings(section.id, 'titleSize', parseInt(e.target.value))} className="w-full border rounded-xl p-3 text-sm font-bold" />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2">Font Weight</label>
+                                                            <select value={section.settings?.titleWeight || 700} onChange={(e) => updateSectionSettings(section.id, 'titleWeight', parseInt(e.target.value))} className="w-full border rounded-xl p-3 text-sm font-bold">
+                                                                {FONT_WEIGHTS.map(w => <option key={w} value={w}>{w}</option>)}
+                                                            </select>
+                                                        </div>
+                                                        <div className="flex items-center justify-center h-12">
+                                                            <label className="flex items-center gap-2 cursor-pointer select-none">
+                                                                <input type="checkbox" checked={!!section.settings?.titleItalic} onChange={(e) => updateSectionSettings(section.id, 'titleItalic', e.target.checked)} className="w-5 h-5 text-[#16423C] rounded-lg" />
+                                                                <span className="text-xs font-bold text-gray-700 italic">Italic</span>
+                                                            </label>
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2">Alignment</label>
+                                                            <div className="flex gap-1 bg-white border p-1 rounded-xl">
+                                                                {['left', 'center', 'right'].map(align => (
+                                                                    <button key={align} onClick={() => updateSectionSettings(section.id, 'alignment', align)} className={`flex-1 py-1.5 text-[9px] font-black uppercase rounded-lg transition-all ${section.settings?.alignment === align ? 'bg-[#16423C] text-white shadow-md' : 'text-gray-400'}`}>{align}</button>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Subtitle Typography */}
+                                                <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100">
+                                                    <p className="text-[10px] font-black uppercase text-gray-400 mb-4 tracking-widest">Subtitle Settings</p>
+                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                                                        <div>
+                                                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2">Font Size (px)</label>
+                                                            <input type="number" value={section.settings?.subtitleSize || 14} onChange={(e) => updateSectionSettings(section.id, 'subtitleSize', parseInt(e.target.value))} className="w-full border rounded-xl p-3 text-sm font-bold" />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2">Font Weight</label>
+                                                            <select value={section.settings?.subtitleWeight || 400} onChange={(e) => updateSectionSettings(section.id, 'subtitleWeight', parseInt(e.target.value))} className="w-full border rounded-xl p-3 text-sm font-bold">
+                                                                {FONT_WEIGHTS.map(w => <option key={w} value={w}>{w}</option>)}
+                                                            </select>
+                                                        </div>
+                                                        <div className="flex items-center justify-center h-12">
+                                                            <label className="flex items-center gap-2 cursor-pointer select-none">
+                                                                <input type="checkbox" checked={!!section.settings?.subtitleItalic} onChange={(e) => updateSectionSettings(section.id, 'subtitleItalic', e.target.checked)} className="w-5 h-5 text-[#16423C] rounded-lg" />
+                                                                <span className="text-xs font-bold text-gray-700 italic">Italic</span>
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 )}

@@ -167,7 +167,8 @@ const CollectionSettings: React.FC<{ token: string | null }> = ({ token }) => {
                         
                         <div className="mt-3 text-center">
                             <h4 className="font-bold text-gray-800 text-sm">{col.title}</h4>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-[10px] text-blue-600 font-mono">/{col.slug}</p>
+                            <p className="text-xs text-gray-500 mt-1">
                                 {col.displayStyle === 'ImageOnly' ? 'Image Only' : `${col.products?.length || 0} items`}
                             </p>
                             {!col.isActive && <span className="text-[10px] bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded mt-1 inline-block">Hidden</span>}

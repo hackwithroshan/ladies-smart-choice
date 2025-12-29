@@ -59,10 +59,12 @@ const PageEditor: React.FC<{ token: string | null }> = ({ token }) => {
     };
 
     const handleTitleChange = (val: string) => {
+        const generateSlug = (str: string) => str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+        
         setEditingPage(prev => ({
             ...prev,
             title: val,
-            slug: !prev.id ? val.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '') : prev.slug
+            slug: !prev.id ? generateSlug(val) : prev.slug
         }));
     };
 
@@ -114,7 +116,6 @@ const PageEditor: React.FC<{ token: string | null }> = ({ token }) => {
                 </table>
             </div>
 
-            {/* Editor Overlay */}
             {isEditorOpen && (
                 <div className="fixed inset-0 z-50 flex justify-end bg-black bg-opacity-50 backdrop-blur-sm">
                     <div className="w-full max-w-4xl bg-white h-full shadow-2xl flex flex-col animate-fade-in-right">

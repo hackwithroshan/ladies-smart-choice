@@ -102,6 +102,18 @@ const HomePage: React.FC<{ user: any; logout: () => void }> = ({ user, logout })
   const renderSection = (section: HomeSection) => {
     if (!section.isActive) return null;
 
+    const sectionStyles: React.CSSProperties = {
+        paddingTop: `${section.settings?.paddingTop ?? 48}px`,
+        paddingBottom: `${section.settings?.paddingBottom ?? 48}px`,
+        paddingLeft: `${section.settings?.paddingLeft ?? 0}px`,
+        paddingRight: `${section.settings?.paddingRight ?? 0}px`,
+        marginTop: `${section.settings?.marginTop ?? 0}px`,
+        marginBottom: `${section.settings?.marginBottom ?? 0}px`,
+        marginLeft: `${section.settings?.marginLeft ?? 0}px`,
+        marginRight: `${section.settings?.marginRight ?? 0}px`,
+        backgroundColor: section.settings?.backgroundColor || 'transparent'
+    };
+
     const getGridClasses = (s: HomeSection) => {
         const isSlider = s.settings?.isSlider;
         const desktopCols = s.settings?.desktopColumns || 4;
@@ -119,15 +131,21 @@ const HomePage: React.FC<{ user: any; logout: () => void }> = ({ user, logout })
         return (
             <div className={`flex flex-col ${alignClass} mb-12 md:mb-20`}>
                 <h2 
-                    className="font-brand font-black uppercase italic tracking-tighter text-gray-900 leading-none"
-                    style={{ fontSize: `${s.settings?.titleSize || 32}px` }}
+                    className={`font-brand uppercase tracking-tighter text-gray-900 leading-none ${s.settings?.titleItalic ? 'italic' : 'not-italic'}`}
+                    style={{ 
+                        fontSize: `${s.settings?.titleSize || 32}px`,
+                        fontWeight: s.settings?.titleWeight || 700
+                    }}
                 >
                     {s.title}
                 </h2>
                 {s.settings?.subtitle && (
                     <p 
-                        className="text-gray-400 mt-4 font-medium tracking-widest uppercase max-w-2xl"
-                        style={{ fontSize: `${s.settings?.subtitleSize || 14}px` }}
+                        className={`text-gray-400 mt-4 tracking-widest uppercase max-w-2xl ${s.settings?.subtitleItalic ? 'italic' : 'not-italic'}`}
+                        style={{ 
+                            fontSize: `${s.settings?.subtitleSize || 14}px`,
+                            fontWeight: s.settings?.subtitleWeight || 400
+                        }}
                     >
                         {s.settings.subtitle}
                     </p>
@@ -141,7 +159,7 @@ const HomePage: React.FC<{ user: any; logout: () => void }> = ({ user, logout })
       case 'Hero':
         if (slides.length === 0) return null;
         return (
-          <section key={section.id} className="relative bg-gray-100 overflow-hidden flex justify-center items-center" style={{ '--desktop-h': section.settings?.desktopHeight || '650px', '--mobile-h': section.settings?.mobileHeight || '400px' } as any}>
+          <section key={section.id} className="relative bg-gray-100 overflow-hidden flex justify-center items-center" style={{ ...sectionStyles, '--desktop-h': section.settings?.desktopHeight || '650px', '--mobile-h': section.settings?.mobileHeight || '400px' } as any}>
             <div className="h-[var(--mobile-h)] md:h-[var(--desktop-h)] w-full relative overflow-hidden">
                 {slides.map((slide, index) => (
                     <div key={index} className={`absolute inset-0 transition-opacity duration-1000 ${index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
@@ -152,7 +170,7 @@ const HomePage: React.FC<{ user: any; logout: () => void }> = ({ user, logout })
                         <div className="absolute inset-0 bg-black/30 z-20"></div>
                         <div className="absolute inset-0 flex items-center justify-center z-30 text-center px-4">
                             <div className="max-w-2xl">
-                                <h1 className="text-3xl md:text-7xl font-brand font-black text-white mb-4 drop-shadow-xl tracking-tighter italic uppercase leading-none">{slide.title}</h1>
+                                <h1 className="text-3xl md:text-7xl font-brand font-black text-white mb-4 drop-shadow-xl tracking-tighter uppercase leading-none">{slide.title}</h1>
                                 <p className="text-sm md:text-xl text-white/90 mb-8 max-w-lg mx-auto font-medium">{slide.subtitle}</p>
                                 {slide.buttonText?.trim() && (
                                     <button onClick={() => navigate('/collections/all')} className="px-8 md:px-12 py-3 md:py-4 rounded-full text-white font-black uppercase tracking-widest text-[10px] md:text-xs shadow-2xl transition-all" style={{backgroundColor: siteSettings?.primaryColor || COLORS.accent}}>{slide.buttonText}</button>
@@ -168,35 +186,37 @@ const HomePage: React.FC<{ user: any; logout: () => void }> = ({ user, logout })
       case 'Collections':
         const activeColl = section.settings?.collectionId && section.settings.collectionId !== 'all' ? collections.find(c => c.id === section.settings?.collectionId) : null;
         return (
-          <section key={section.id} className="max-w-7xl mx-auto py-12 md:py-24 px-4 overflow-hidden group/section relative">
-              <HeaderSection s={section} />
-              <div className="relative">
-                  {section.settings?.isSlider && (
-                      <>
-                          <button onClick={() => handleSliderScroll('left')} className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-white shadow-xl text-brand-primary hover:scale-110 transition-all border border-gray-100 opacity-0 group-hover/section:opacity-100 -ml-4 md:ml-0" style={{ color: siteSettings?.primaryColor }}>
-                              <svg className="w-6 h-6 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7"/></svg>
-                          </button>
-                          <button onClick={() => handleSliderScroll('right')} className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-white shadow-xl text-brand-primary hover:scale-110 transition-all border border-gray-100 opacity-0 group-hover/section:opacity-100 -mr-4 md:mr-0" style={{ color: siteSettings?.primaryColor }}>
-                              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7"/></svg>
-                          </button>
-                      </>
-                  )}
-                  <div ref={section.settings?.isSlider ? collectionSliderRef : null} onMouseDown={section.settings?.isSlider ? onMouseDown : undefined} className={getGridClasses(section)}>
-                      {activeColl ? (
-                          (activeColl.products as Product[]).slice(0, section.settings?.limit || 4).map(p => <div key={p.id} className={getItemClasses(section)}><ProductCard product={p} /></div>)
-                      ) : (
-                          collections.slice(0, section.settings?.limit || 8).map((col) => (
-                              <div key={col.id} onClick={() => navigate(`/collections/${col.id}`)} className={`group cursor-pointer text-center ${getItemClasses(section)}`}>
-                                  <div className={`overflow-hidden relative shadow-lg transition-all duration-700 group-hover:shadow-2xl group-hover:-translate-y-2 ${col.displayStyle === 'Circle' ? 'rounded-full aspect-square w-full mx-auto' : 'rounded-3xl aspect-square w-full'}`}>
-                                      <img src={col.imageUrl} alt={col.title} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
-                                  </div>
-                                  <div className="mt-5 md:mt-8">
-                                      <h3 className="font-brand font-black text-sm md:text-xl uppercase tracking-tighter text-gray-900 group-hover:text-brand-accent transition-colors italic">{col.title}</h3>
-                                  </div>
-                              </div>
-                          ))
-                      )}
-                  </div>
+          <section key={section.id} style={sectionStyles} className="overflow-hidden group/section relative">
+              <div className="max-w-7xl mx-auto px-4">
+                <HeaderSection s={section} />
+                <div className="relative">
+                    {section.settings?.isSlider && (
+                        <>
+                            <button onClick={() => handleSliderScroll('left')} className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-white shadow-xl text-brand-primary hover:scale-110 transition-all border border-gray-100 opacity-0 group-hover/section:opacity-100 -ml-4 md:ml-0" style={{ color: siteSettings?.primaryColor }}>
+                                <svg className="w-6 h-6 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7"/></svg>
+                            </button>
+                            <button onClick={() => handleSliderScroll('right')} className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-white shadow-xl text-brand-primary hover:scale-110 transition-all border border-gray-100 opacity-0 group-hover/section:opacity-100 -mr-4 md:mr-0" style={{ color: siteSettings?.primaryColor }}>
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7"/></svg>
+                            </button>
+                        </>
+                    )}
+                    <div ref={section.settings?.isSlider ? collectionSliderRef : null} onMouseDown={section.settings?.isSlider ? onMouseDown : undefined} className={getGridClasses(section)}>
+                        {activeColl ? (
+                            (activeColl.products as Product[]).slice(0, section.settings?.limit || 4).map(p => <div key={p.id} className={getItemClasses(section)}><ProductCard product={p} /></div>)
+                        ) : (
+                            collections.slice(0, section.settings?.limit || 8).map((col) => (
+                                <div key={col.id} onClick={() => navigate(`/collections/${col.slug || col.id}`)} className={`group cursor-pointer text-center ${getItemClasses(section)}`}>
+                                    <div className={`overflow-hidden relative shadow-lg transition-all duration-700 group-hover:shadow-2xl group-hover:-translate-y-2 ${col.displayStyle === 'Circle' ? 'rounded-full aspect-square w-full mx-auto' : 'rounded-3xl aspect-square w-full'}`}>
+                                        <img src={col.imageUrl} alt={col.title} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
+                                    </div>
+                                    <div className="mt-5 md:mt-8">
+                                        <h3 className="font-brand font-black text-sm md:text-xl uppercase tracking-tighter text-gray-900 group-hover:text-brand-accent transition-colors">{col.title}</h3>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
               </div>
           </section>
         );
@@ -206,7 +226,6 @@ const HomePage: React.FC<{ user: any; logout: () => void }> = ({ user, logout })
         const displayLimit = section.settings?.limit || 4;
         const sourceCollId = section.settings?.collectionId;
         
-        // Dynamic product source selection
         let sourceProducts = products;
         if (sourceCollId && sourceCollId !== 'all') {
             const foundColl = collections.find(c => c.id === sourceCollId);
@@ -218,7 +237,7 @@ const HomePage: React.FC<{ user: any; logout: () => void }> = ({ user, logout })
             : sourceProducts.slice().sort((a,b) => (b.reviews?.length || 0) - (a.reviews?.length || 0)).slice(0, displayLimit);
             
         return (
-          <section key={section.id} className="py-12 md:py-24 border-y border-gray-100" style={{ backgroundColor: section.settings?.backgroundColor || '#FBF9F1' }}>
+          <section key={section.id} style={sectionStyles} className="border-y border-gray-100">
             <div className="max-w-7xl mx-auto px-4">
               <HeaderSection s={section} />
               <div className={getGridClasses(section)}>
@@ -230,17 +249,19 @@ const HomePage: React.FC<{ user: any; logout: () => void }> = ({ user, logout })
 
       case 'Videos':
         return videos.length > 0 && (
-          <section key={section.id} className="max-w-7xl mx-auto py-12 md:py-20 px-4 overflow-hidden">
-              <HeaderSection s={section} />
-              <div className="flex overflow-x-auto gap-4 md:gap-8 pb-8 -mx-4 px-4 scrollbar-hide md:grid md:grid-cols-4">
-                  {videos.map(v => <VideoListItem key={v._id} video={v} autoplay={siteSettings?.videoAutoplay || false} onClick={() => setSelectedVideo(v)} />)}
+          <section key={section.id} style={sectionStyles} className="overflow-hidden">
+              <div className="max-w-7xl mx-auto px-4">
+                <HeaderSection s={section} />
+                <div className="flex overflow-x-auto gap-4 md:gap-8 pb-8 -mx-4 px-4 scrollbar-hide md:grid md:grid-cols-4">
+                    {videos.map(v => <VideoListItem key={v._id} video={v} autoplay={siteSettings?.videoAutoplay || false} onClick={() => setSelectedVideo(v)} />)}
+                </div>
               </div>
           </section>
         );
 
       case 'CustomCode':
         return (
-          <section key={section.id} className="w-full">
+          <section key={section.id} style={sectionStyles} className="w-full">
             <SafeCustomCode code={section.code || ''} sectionId={section.id} />
           </section>
         );

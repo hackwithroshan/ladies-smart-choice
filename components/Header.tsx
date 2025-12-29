@@ -162,7 +162,7 @@ const Header: React.FC<HeaderProps> = ({ user, logout }) => {
                                 {searchTerm.length < 2 ? (
                                     <div className="grid grid-cols-2 gap-2 p-3">
                                         {collections.slice(0, 4).map(col => (
-                                            <Link key={col.id} to={`/collections/${col.id}`} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-xl transition-colors">
+                                            <Link key={col.id} to={`/collections/${col.slug || col.id}`} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-xl transition-colors">
                                                 <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100"><img src={col.imageUrl} className="w-full h-full object-cover" /></div>
                                                 <span className="text-xs font-bold text-gray-700">{col.title}</span>
                                             </Link>
@@ -220,7 +220,7 @@ const Header: React.FC<HeaderProps> = ({ user, logout }) => {
                             <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-6">Collections</h4>
                             <div className="space-y-4">
                                 {collections.slice(0, 5).map(col => (
-                                    <Link key={col.id} to={`/collections/${col.id}`} className="flex items-center justify-between group">
+                                    <Link key={col.id} to={`/collections/${col.slug || col.id}`} className="flex items-center justify-between group">
                                         <div className="flex items-center gap-4"><div className="w-10 h-10 rounded-full overflow-hidden border shadow-sm"><img src={col.imageUrl} className="w-full h-full object-cover" /></div><span className="text-sm font-bold text-gray-800">{col.title}</span></div>
                                         <NavArrowIcon className="text-gray-300 w-3 h-3" />
                                     </Link>

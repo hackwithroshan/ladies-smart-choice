@@ -1,6 +1,8 @@
 
 
 
+
+
 import React, { useState, useEffect, Suspense, lazy, useRef } from 'react';
 // Fix: Use namespace import and cast to any to resolve "no exported member" errors in this environment
 import * as ReactRouterDom from 'react-router-dom';
@@ -19,20 +21,22 @@ import WhatsAppWidget from './components/WhatsAppWidget';
 import MaintenancePage from './pages/MaintenancePage';
 
 // --- Lazy Load Pages ---
-const HomePage = lazy(() => import('./pages/HomePage'));
-const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'));
-const LoginPage = lazy(() => import('./pages/LoginPage'));
-const RegisterPage = lazy(() => import('./pages/RegisterPage'));
-const UserDashboardPage = lazy(() => import('./pages/UserDashboardPage'));
-const ProductDetailsPage = lazy(() => import('./pages/ProductDetailsPage'));
-const CartPage = lazy(() => import('./pages/CartPage'));
-const CheckoutPage = lazy(() => import('./pages/CheckoutPage'));
-// Fix: Explicitly type DynamicPage to ensure it accepts the expected props when used in Route element, resolving property access errors on IntrinsicAttributes
-const DynamicPage: React.ComponentType<{ user: any; logout: () => void }> = lazy(() => import('./pages/DynamicPage'));
-const CollectionPage = lazy(() => import('./pages/CollectionPage'));
-const ContactPage = lazy(() => import('./pages/ContactPage'));
-const OrderTrackingPage = lazy(() => import('./pages/OrderTrackingPage'));
-const WishlistPage = lazy(() => import('./pages/WishlistPage'));
+// Fix: Explicitly type lazy loaded components to resolve IntrinsicAttributes errors when passing user and logout props.
+type PageWithUserProps = { user: any; logout: () => void };
+
+const HomePage: React.ComponentType<PageWithUserProps> = lazy(() => import('./pages/HomePage'));
+const AdminDashboardPage: React.ComponentType<PageWithUserProps> = lazy(() => import('./pages/AdminDashboardPage'));
+const LoginPage: React.ComponentType<{ onAuthSuccess: (data: { token: string; user: any }) => void }> = lazy(() => import('./pages/LoginPage'));
+const RegisterPage: React.ComponentType<{ onAuthSuccess: (data: { token: string; user: any }) => void }> = lazy(() => import('./pages/RegisterPage'));
+const UserDashboardPage: React.ComponentType<PageWithUserProps> = lazy(() => import('./pages/UserDashboardPage'));
+const ProductDetailsPage: React.ComponentType<PageWithUserProps> = lazy(() => import('./pages/ProductDetailsPage'));
+const CartPage: React.ComponentType<PageWithUserProps> = lazy(() => import('./pages/CartPage'));
+const CheckoutPage: React.ComponentType<PageWithUserProps> = lazy(() => import('./pages/CheckoutPage'));
+const DynamicPage: React.ComponentType<PageWithUserProps> = lazy(() => import('./pages/DynamicPage'));
+const CollectionPage: React.ComponentType<PageWithUserProps> = lazy(() => import('./pages/CollectionPage'));
+const ContactPage: React.ComponentType<PageWithUserProps> = lazy(() => import('./pages/ContactPage'));
+const OrderTrackingPage: React.ComponentType<PageWithUserProps> = lazy(() => import('./pages/OrderTrackingPage'));
+const WishlistPage: React.ComponentType<PageWithUserProps> = lazy(() => import('./pages/WishlistPage'));
 
 const LoadingSpinner: React.FC = () => (
     <div className="flex justify-center items-center h-screen w-screen bg-gray-50">

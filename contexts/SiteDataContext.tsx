@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { 
     HeaderSettings, 
     FooterSettings, 
@@ -13,7 +13,6 @@ import {
     HomePageSettings
 } from '../types';
 import { getApiUrl } from '../utils/apiHelper';
-import { COLORS } from '../constants';
 
 interface SiteDataContextType {
     headerSettings: HeaderSettings;
@@ -27,6 +26,7 @@ interface SiteDataContextType {
     siteSettings: SiteSettings | null;
     homePageSettings: HomePageSettings | null;
     loading: boolean;
+    refreshSiteData: () => Promise<void>;
 }
 
 const initialHeaderSettings: HeaderSettings = {
@@ -43,6 +43,12 @@ const initialFooterSettings: FooterSettings = {
     copyrightText: '',
     socialLinks: [],
     columns: [],
+    backgroundColor: '#16423C',
+    textColor: '#D1D5DB',
+    headingColor: '#6A9C89',
+    linkColor: '#9CA3AF',
+    showNewsletter: true,
+    newsletterPlacement: 'Top'
 };
 
 const SiteDataContext = createContext<SiteDataContextType>({
@@ -57,6 +63,7 @@ const SiteDataContext = createContext<SiteDataContextType>({
     siteSettings: null,
     homePageSettings: null,
     loading: true,
+    refreshSiteData: async () => {},
 });
 
 export const SiteDataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -72,39 +79,38 @@ export const SiteDataProvider: React.FC<{ children: ReactNode }> = ({ children }
     const [homePageSettings, setHomePageSettings] = useState<HomePageSettings | null>(null);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const fetchSiteData = async () => {
-            try {
-                const response = await fetch(getApiUrl('/app-data'));
-                if (!response.ok) throw new Error('Network response was not ok');
-                const data = await response.json();
+    const fetchSiteData = useCallback(async () => {
+        try {
+            const response = await fetch(getApiUrl('/app-data'));
+            if (!response.ok) throw new Error('Network response was not ok');
+            const data = await response.json();
 
-                setHeaderSettings(data.headerSettings || initialHeaderSettings);
-                setFooterSettings(data.footerSettings || initialFooterSettings);
-                setCategories(data.categories || []);
-                setProducts(data.products || []);
-                setSlides(data.slides || []);
-                setCollections(data.collections || []);
-                setVideos(data.videos || []);
-                setTestimonials(data.testimonials || []);
-                setSiteSettings(data.siteSettings || null);
-                setHomePageSettings(data.homePageSettings || null);
+            setHeaderSettings(data.headerSettings || initialHeaderSettings);
+            setFooterSettings(data.footerSettings || initialFooterSettings);
+            setCategories(data.categories || []);
+            setProducts(data.products || []);
+            setSlides(data.slides || []);
+            setCollections(data.collections || []);
+            setVideos(data.videos || []);
+            setTestimonials(data.testimonials || []);
+            setSiteSettings(data.siteSettings || null);
+            setHomePageSettings(data.homePageSettings || null);
 
-                // --- Apply Dynamic Colors to CSS Variables ---
-                if (data.siteSettings) {
-                    const root = document.documentElement;
-                    root.style.setProperty('--brand-primary', data.siteSettings.primaryColor || '#16423C');
-                    root.style.setProperty('--brand-accent', data.siteSettings.accentColor || '#6A9C89');
-                }
-
-            } catch (error) {
-                console.error("Failed to fetch site data:", error);
-            } finally {
-                setLoading(false);
+            if (data.siteSettings) {
+                const root = document.documentElement;
+                root.style.setProperty('--brand-primary', data.siteSettings.primaryColor || '#16423C');
+                root.style.setProperty('--brand-accent', data.siteSettings.accentColor || '#6A9C89');
             }
-        };
-        fetchSiteData();
+        } catch (error) {
+            console.error("Failed to fetch site data:", error);
+        } finally {
+            setLoading(false);
+        }
     }, []);
+
+    useEffect(() => {
+        fetchSiteData();
+    }, [fetchSiteData]);
 
     useEffect(() => {
         if (siteSettings?.fontFamily) {
@@ -137,7 +143,20 @@ export const SiteDataProvider: React.FC<{ children: ReactNode }> = ({ children }
     }, [siteSettings?.fontFamily]);
 
     return (
-        <SiteDataContext.Provider value={{ headerSettings, footerSettings, categories, products, slides, collections, videos, testimonials, siteSettings, homePageSettings, loading }}>
+        <SiteDataContext.Provider value={{ 
+            headerSettings, 
+            footerSettings, 
+            categories, 
+            products, 
+            slides, 
+            collections, 
+            videos, 
+            testimonials, 
+            siteSettings, 
+            homePageSettings, 
+            loading,
+            refreshSiteData: fetchSiteData 
+        }}>
             {children}
         </SiteDataContext.Provider>
     );
