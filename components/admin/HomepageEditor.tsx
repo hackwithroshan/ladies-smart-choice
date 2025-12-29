@@ -11,6 +11,7 @@ const HomepageEditor: React.FC<{ token: string | null }> = ({ token }) => {
     const [saving, setSaving] = useState(false);
     const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
     const [activeEditId, setActiveEditId] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState<'content' | 'style'>('content');
     const addMenuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -54,18 +55,25 @@ const HomepageEditor: React.FC<{ token: string | null }> = ({ token }) => {
             id: `sec-${Date.now()}`,
             type,
             isActive: true,
-            title: `My ${type} Section`,
-            settings: type === 'Hero' ? {
-                desktopHeight: '650px',
-                mobileHeight: '400px',
-                desktopWidth: '100%',
-                mobileWidth: '100%',
-                customStyles: ''
-            } : {
+            title: `New ${type} Section`,
+            settings: {
+                subtitle: 'Add a captivating subtitle here',
+                alignment: 'center',
+                titleSize: 32,
+                subtitleSize: 14,
                 limit: 4,
                 desktopColumns: 4,
                 mobileColumns: 2,
-                isSlider: false
+                isSlider: false,
+                collectionId: 'all',
+                backgroundColor: type === 'NewArrivals' || type === 'BestSellers' ? '#FBF9F1' : 'transparent',
+                ...(type === 'Hero' ? {
+                    desktopHeight: '650px',
+                    mobileHeight: '400px',
+                    desktopWidth: '100%',
+                    mobileWidth: '100%',
+                    customStyles: ''
+                } : {})
             },
             code: type === 'CustomCode' ? '<div class="py-20 text-center bg-gray-100">\n  <h2 class="text-4xl font-bold">Custom Section</h2>\n</div>' : ''
         };
@@ -147,7 +155,6 @@ const HomepageEditor: React.FC<{ token: string | null }> = ({ token }) => {
             <div className="space-y-6">
                 {layout.sections.map((section, index) => (
                     <div key={section.id} className={`bg-white border-2 rounded-2xl shadow-sm overflow-hidden transition-all ${section.isActive ? 'border-gray-200 shadow-md' : 'border-dashed border-gray-300 opacity-60'}`}>
-                        {/* Row Header */}
                         <div className="bg-gray-50 px-6 py-4 border-b flex justify-between items-center">
                             <div className="flex items-center gap-4">
                                 <div className="flex flex-col gap-1">
@@ -165,8 +172,8 @@ const HomepageEditor: React.FC<{ token: string | null }> = ({ token }) => {
                                         type="text" 
                                         value={section.title || ''} 
                                         onChange={(e) => updateSection(section.id, { title: e.target.value })} 
-                                        className="font-black text-gray-800 bg-transparent border-none focus:ring-0 p-0 text-lg placeholder-gray-300"
-                                        placeholder="Enter Section Title..."
+                                        className="font-black text-gray-800 bg-transparent border-none focus:ring-0 p-0 text-lg placeholder-gray-300 w-full md:w-96"
+                                        placeholder="Enter Section Title"
                                     />
                                 </div>
                             </div>
@@ -189,105 +196,141 @@ const HomepageEditor: React.FC<{ token: string | null }> = ({ token }) => {
                             </div>
                         </div>
 
-                        {/* Expandable Settings Content */}
                         {activeEditId === section.id && (
                             <div className="p-8 bg-white border-t border-gray-100 animate-fade-in">
-                                {section.type === 'Hero' && (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                                        <div><label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Desktop Height</label><input type="text" value={section.settings?.desktopHeight || '650px'} onChange={(e) => updateSectionSettings(section.id, 'desktopHeight', e.target.value)} className="w-full border rounded-xl p-3 text-sm focus:ring-rose-500" placeholder="e.g. 650px"/></div>
-                                        <div><label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Mobile Height</label><input type="text" value={section.settings?.mobileHeight || '400px'} onChange={(e) => updateSectionSettings(section.id, 'mobileHeight', e.target.value)} className="w-full border rounded-xl p-3 text-sm focus:ring-rose-500" placeholder="e.g. 400px"/></div>
-                                        <div><label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Desktop Width</label><input type="text" value={section.settings?.desktopWidth || '100%'} onChange={(e) => updateSectionSettings(section.id, 'desktopWidth', e.target.value)} className="w-full border rounded-xl p-3 text-sm focus:ring-rose-500" placeholder="e.g. 100%"/></div>
-                                        <div className="lg:col-span-1"><label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Custom CSS</label><input type="text" value={section.settings?.customStyles || ''} onChange={(e) => updateSectionSettings(section.id, 'customStyles', e.target.value)} className="w-full border rounded-xl p-3 text-sm font-mono" placeholder="margin-top: 20px;"/></div>
-                                    </div>
-                                )}
+                                <div className="flex gap-4 mb-8 border-b pb-2">
+                                    <button onClick={() => setActiveTab('content')} className={`text-xs font-black uppercase tracking-widest pb-2 border-b-2 transition-all ${activeTab === 'content' ? 'border-rose-600 text-rose-600' : 'border-transparent text-gray-400'}`}>Content & Data</button>
+                                    <button onClick={() => setActiveTab('style')} className={`text-xs font-black uppercase tracking-widest pb-2 border-b-2 transition-all ${activeTab === 'style' ? 'border-rose-600 text-rose-600' : 'border-transparent text-gray-400'}`}>Typography & Style</button>
+                                </div>
 
-                                {['Collections', 'NewArrivals', 'BestSellers'].includes(section.type) && (
+                                {activeTab === 'content' ? (
                                     <div className="space-y-8">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                                            {section.type === 'Collections' && (
+                                        {section.type === 'Hero' && (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                                                <div><label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Desktop Height</label><input type="text" value={section.settings?.desktopHeight || '650px'} onChange={(e) => updateSectionSettings(section.id, 'desktopHeight', e.target.value)} className="w-full border rounded-xl p-3 text-sm focus:ring-rose-500" placeholder="e.g. 650px"/></div>
+                                                <div><label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Mobile Height</label><input type="text" value={section.settings?.mobileHeight || '400px'} onChange={(e) => updateSectionSettings(section.id, 'mobileHeight', e.target.value)} className="w-full border rounded-xl p-3 text-sm focus:ring-rose-500" placeholder="e.g. 400px"/></div>
+                                                <div><label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Desktop Width</label><input type="text" value={section.settings?.desktopWidth || '100%'} onChange={(e) => updateSectionSettings(section.id, 'desktopWidth', e.target.value)} className="w-full border rounded-xl p-3 text-sm focus:ring-rose-500" placeholder="e.g. 100%"/></div>
+                                                <div className="lg:col-span-1"><label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Custom CSS</label><input type="text" value={section.settings?.customStyles || ''} onChange={(e) => updateSectionSettings(section.id, 'customStyles', e.target.value)} className="w-full border rounded-xl p-3 text-sm font-mono" placeholder="margin-top: 20px;"/></div>
+                                            </div>
+                                        )}
+
+                                        {['Collections', 'NewArrivals', 'BestSellers'].includes(section.type) && (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                                                {/* Now allowed for all three types: Collections, NewArrivals, BestSellers */}
                                                 <div className="lg:col-span-2">
-                                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Select Target Collection</label>
+                                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Source Selection</label>
                                                     <select 
                                                         value={section.settings?.collectionId || 'all'} 
                                                         onChange={(e) => updateSectionSettings(section.id, 'collectionId', e.target.value)}
                                                         className="w-full border rounded-xl p-3 text-sm bg-gray-50 font-bold"
                                                     >
-                                                        <option value="all">Show All Categories</option>
+                                                        <option value="all">{section.type === 'Collections' ? 'Show All Active Collections' : 'All Products (Global)'}</option>
                                                         {collections.map(c => <option key={c.id} value={c.id}>Products from: {c.title}</option>)}
                                                     </select>
                                                 </div>
-                                            )}
-                                            
+                                                
+                                                <div>
+                                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Product Limit</label>
+                                                    <input 
+                                                        type="number" 
+                                                        min={1} 
+                                                        value={section.settings?.limit || 4} 
+                                                        onChange={(e) => updateSectionSettings(section.id, 'limit', parseInt(e.target.value))}
+                                                        className="w-full border rounded-xl p-3 text-sm font-bold"
+                                                    />
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Display Mode</label>
+                                                    <div className="flex gap-2 bg-gray-100 p-1 rounded-xl">
+                                                        <button onClick={() => updateSectionSettings(section.id, 'isSlider', false)} className={`flex-1 py-2 text-[10px] font-black uppercase rounded-lg transition-all ${!section.settings?.isSlider ? 'bg-white shadow text-rose-600' : 'text-gray-400'}`}>Grid</button>
+                                                        <button onClick={() => updateSectionSettings(section.id, 'isSlider', true)} className={`flex-1 py-2 text-[10px] font-black uppercase rounded-lg transition-all ${section.settings?.isSlider ? 'bg-white shadow text-blue-600' : 'text-gray-400'}`}>Slider</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {section.type === 'CustomCode' && (
+                                            <textarea 
+                                                value={section.code} 
+                                                onChange={(e) => updateSection(section.id, { code: e.target.value })}
+                                                className="w-full h-64 font-mono text-xs p-4 bg-gray-900 text-green-400 rounded-2xl"
+                                                placeholder="Custom HTML here..."
+                                            />
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="space-y-8 max-w-4xl">
+                                        <div>
+                                            <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Section Subtitle</label>
+                                            <textarea 
+                                                value={section.settings?.subtitle || ''} 
+                                                onChange={(e) => updateSectionSettings(section.id, 'subtitle', e.target.value)} 
+                                                className="w-full border rounded-xl p-3 text-sm italic"
+                                                rows={2}
+                                                placeholder="Enter a description for this section..."
+                                            />
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                                             <div>
-                                                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Product Limit</label>
+                                                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Text Alignment</label>
+                                                <div className="flex gap-2 bg-gray-100 p-1 rounded-xl">
+                                                    {['left', 'center', 'right'].map(align => (
+                                                        <button 
+                                                            key={align}
+                                                            onClick={() => updateSectionSettings(section.id, 'alignment', align)} 
+                                                            className={`flex-1 py-2 text-[10px] font-black uppercase rounded-lg transition-all ${section.settings?.alignment === align ? 'bg-white shadow text-brand-primary' : 'text-gray-400'}`}
+                                                        >
+                                                            {align}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Title Font Size (px)</label>
                                                 <input 
                                                     type="number" 
-                                                    min={1} 
-                                                    max={24}
-                                                    value={section.settings?.limit || 4} 
-                                                    onChange={(e) => updateSectionSettings(section.id, 'limit', parseInt(e.target.value))}
+                                                    value={section.settings?.titleSize || 32} 
+                                                    onChange={(e) => updateSectionSettings(section.id, 'titleSize', parseInt(e.target.value))}
                                                     className="w-full border rounded-xl p-3 text-sm font-bold"
                                                 />
                                             </div>
-
                                             <div>
-                                                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Layout View</label>
-                                                <div className="flex gap-2 bg-gray-100 p-1 rounded-xl">
-                                                    <button onClick={() => updateSectionSettings(section.id, 'isSlider', false)} className={`flex-1 py-2 text-[10px] font-black uppercase rounded-lg transition-all ${!section.settings?.isSlider ? 'bg-white shadow text-rose-600' : 'text-gray-400'}`}>Grid</button>
-                                                    <button onClick={() => updateSectionSettings(section.id, 'isSlider', true)} className={`flex-1 py-2 text-[10px] font-black uppercase rounded-lg transition-all ${section.settings?.isSlider ? 'bg-white shadow text-blue-600' : 'text-gray-400'}`}>Slider</button>
-                                                </div>
+                                                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Subtitle Font Size (px)</label>
+                                                <input 
+                                                    type="number" 
+                                                    value={section.settings?.subtitleSize || 14} 
+                                                    onChange={(e) => updateSectionSettings(section.id, 'subtitleSize', parseInt(e.target.value))}
+                                                    className="w-full border rounded-xl p-3 text-sm font-bold"
+                                                />
                                             </div>
-
-                                            {!section.settings?.isSlider && (
-                                                <div>
-                                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Items Per Row (Desktop)</label>
-                                                    <select 
-                                                        value={section.settings?.desktopColumns || 4} 
-                                                        onChange={(e) => updateSectionSettings(section.id, 'desktopColumns', parseInt(e.target.value))}
-                                                        className="w-full border rounded-xl p-3 text-sm font-bold"
-                                                    >
-                                                        {[2, 3, 4, 5, 6].map(num => <option key={num} value={num}>{num} Columns</option>)}
-                                                    </select>
+                                            {['NewArrivals', 'BestSellers'].includes(section.type) && (
+                                                <div className="col-span-full">
+                                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Background Color</label>
+                                                    <div className="flex items-center gap-4 bg-gray-50 p-3 rounded-xl border border-gray-200">
+                                                        <input 
+                                                            type="color" 
+                                                            value={section.settings?.backgroundColor || '#FBF9F1'} 
+                                                            onChange={(e) => updateSectionSettings(section.id, 'backgroundColor', e.target.value)}
+                                                            className="h-10 w-12 rounded-lg cursor-pointer border border-gray-300"
+                                                        />
+                                                        <input 
+                                                            type="text" 
+                                                            value={section.settings?.backgroundColor || '#FBF9F1'} 
+                                                            onChange={(e) => updateSectionSettings(section.id, 'backgroundColor', e.target.value)}
+                                                            className="flex-1 border rounded-lg p-2 text-sm font-mono uppercase"
+                                                        />
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>
-                                        
-                                        <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl flex items-center gap-4">
-                                             <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-blue-600 shadow-sm shrink-0">
-                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeWidth={2}/></svg>
-                                             </div>
-                                             <p className="text-xs text-blue-800 font-medium leading-relaxed">
-                                                 These settings control how the {section.type} appear on your homepage. <strong>Slider</strong> mode enables horizontal swiping, perfect for mobile users.
-                                             </p>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {section.type === 'CustomCode' && (
-                                    <div className="space-y-4">
-                                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest">HTML / Tailwind Source</label>
-                                        <textarea 
-                                            value={section.code} 
-                                            onChange={(e) => updateSection(section.id, { code: e.target.value })}
-                                            className="w-full h-64 font-mono text-xs p-4 bg-gray-900 text-green-400 rounded-2xl shadow-inner outline-none focus:ring-2 focus:ring-green-500/30"
-                                            placeholder="<div class='bg-red-500 p-10'>Custom HTML</div>"
-                                        />
                                     </div>
                                 )}
                             </div>
                         )}
                     </div>
                 ))}
-                
-                {layout.sections.length === 0 && (
-                    <div className="text-center py-32 bg-white rounded-3xl border-4 border-dashed border-gray-100">
-                        <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <svg className="w-10 h-10 text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"/></svg>
-                        </div>
-                        <p className="text-gray-400 font-bold text-lg">Your canvas is blank.</p>
-                        <p className="text-gray-300 text-sm mt-1">Click "+ Add Section" to build your storefront.</p>
-                    </div>
-                )}
             </div>
         </div>
     );

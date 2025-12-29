@@ -178,7 +178,7 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
       };
 
       addToCart(cartItem, quantity);
-      showToast(`${quantity} x ${product.name} added to cart!`, 'success');
+      showToast(`Initiating Secure Checkout...`, 'success');
 
       const eventPayload = {
         contents: [{
@@ -192,13 +192,9 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
         currency: 'INR'
       };
       
-      if (isBuyNow) {
-        masterTracker('InitiateCheckout', eventPayload, eventPayload);
-        // REDIRECT TO MAGIC CHECKOUT
-        navigate('/checkout?magic=true'); 
-      } else {
-        masterTracker('AddToCart', eventPayload, eventPayload);
-      }
+      // All Cart actions now direct to Magic Checkout
+      masterTracker('InitiateCheckout', eventPayload, eventPayload);
+      navigate('/checkout?magic=true'); 
   };
 
   const handleToggleFbt = (id: string) => {
@@ -218,7 +214,7 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
 
       addMultipleToCart(bundleItems);
       showToast(`Bundle of ${bundleItems.length} items added to cart!`, 'success');
-      navigate('/checkout?magic=true'); // Multi-item also supports Magic Checkout
+      navigate('/checkout?magic=true'); 
   };
 
   const fbtSellingTotal = (product ? product.price : 0) + fbtProducts.filter(p => selectedFbtIds.has(p.id)).reduce((sum, p) => sum + p.price, 0);
@@ -414,7 +410,6 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
                                 disabled={product.stock <= 0}
                                 className="w-full bg-black text-white h-14 text-sm font-bold uppercase tracking-widest hover:bg-gray-900 rounded-xl shadow-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition-all active:scale-95 flex items-center justify-center gap-2"
                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                                 Buy Now
                             </button>
                             <button 
@@ -422,7 +417,6 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
                                 disabled={product.stock <= 0}
                                 className="w-full bg-rose-600 text-white h-14 text-sm font-bold uppercase tracking-widest hover:bg-rose-700 rounded-xl shadow-lg shadow-rose-200 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all active:scale-95 flex items-center justify-center gap-2"
                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
                                 {product.stock > 0 ? 'Add to Cart' : 'Out of Stock'}
                             </button>
                           </div>
@@ -443,7 +437,6 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
               </div>
           </div>
           
-          {/* FBT Products and the rest remain unchanged */}
           {fbtProducts.length > 0 && (
               <div className="mt-20 border border-gray-200 rounded-2xl overflow-hidden shadow-sm bg-white">
                   <div className="bg-gray-50 px-8 py-4 border-b border-gray-200">
@@ -670,7 +663,8 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
         product={product}
         selectedVariants={selectedVariants}
         onVariantChange={handleVariantChange}
-        onAddToCart={() => handleAddToCart(true)} // Sticky bar buy now also goes to Magic Checkout
+        onAddToCart={() => handleAddToCart(false)} 
+        onBuyNow={() => handleAddToCart(true)} 
         quantity={quantity}
         onQuantityChange={setQuantity}
       />
@@ -690,7 +684,6 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
                       <p className="text-rose-400 font-bold text-xl mb-8">{selectedVideo.price}</p>
                       <button onClick={() => handleVideoShop(selectedVideo.productLink)} className="w-full bg-white text-black font-bold py-4 rounded-2xl hover:bg-gray-100 transition-all transform active:scale-95 flex items-center justify-center gap-3 shadow-2xl">
                           <span className="uppercase text-sm tracking-widest">Shop This Style</span>
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
                       </button>
                   </div>
               </div>

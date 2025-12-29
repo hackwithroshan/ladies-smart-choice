@@ -9,6 +9,7 @@ interface ProductStickyBarProps {
   selectedVariants: { [key: string]: string };
   onVariantChange: (name: string, value: string) => void;
   onAddToCart: () => void;
+  onBuyNow: () => void;
   quantity: number;
   onQuantityChange: (qty: number) => void;
 }
@@ -19,6 +20,7 @@ const ProductStickyBar: React.FC<ProductStickyBarProps> = ({
     selectedVariants, 
     onVariantChange, 
     onAddToCart, 
+    onBuyNow,
     quantity,
     onQuantityChange
 }) => {
@@ -30,7 +32,6 @@ const ProductStickyBar: React.FC<ProductStickyBarProps> = ({
         isVisible ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'
       }`}
     >
-      {/* Dynamic Variants Row (Top of bar) */}
       {product.hasVariants && product.variants && product.variants.length > 0 && (
           <div className="bg-gray-50/50 border-b border-gray-100 py-2.5 px-4 overflow-x-auto">
               <div className="container mx-auto flex items-center gap-5 justify-center md:justify-start scrollbar-hide">
@@ -58,11 +59,9 @@ const ProductStickyBar: React.FC<ProductStickyBarProps> = ({
           </div>
       )}
 
-      {/* Main Bar Actions */}
       <div className="container mx-auto px-4 py-3 md:py-4">
         <div className="flex items-center justify-between gap-4 max-w-[1200px] mx-auto">
           
-          {/* Info - Hidden on mobile if space is tight, or condensed */}
           <div className="flex items-center gap-3 min-w-0 overflow-hidden">
             <div className="h-10 w-10 md:h-12 md:w-12 shrink-0 rounded-lg overflow-hidden border border-gray-100 shadow-inner bg-white">
                 <img 
@@ -77,9 +76,8 @@ const ProductStickyBar: React.FC<ProductStickyBarProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
-              {/* Quantity Selector - Pill style */}
-              <div className="hidden sm:flex items-center bg-gray-100 rounded-full p-1 border border-gray-200 shadow-inner">
+          <div className="flex items-center gap-2 md:gap-3 shrink-0">
+              <div className="hidden lg:flex items-center bg-gray-100 rounded-full p-1 border border-gray-200 shadow-inner">
                   <button 
                       onClick={() => onQuantityChange(Math.max(1, quantity - 1))}
                       className="w-8 h-8 flex items-center justify-center rounded-full bg-white text-gray-600 hover:text-black shadow-sm transition-transform active:scale-90"
@@ -93,17 +91,22 @@ const ProductStickyBar: React.FC<ProductStickyBarProps> = ({
                   >+</button>
               </div>
 
-              {/* Action Button */}
-              <button
-                onClick={onAddToCart}
-                disabled={product.stock <= 0}
-                className="flex items-center justify-center bg-rose-600 text-white px-6 md:px-10 py-3 rounded-full text-xs font-black uppercase tracking-widest shadow-xl shadow-rose-200 hover:bg-rose-700 transition-all active:scale-95 disabled:bg-gray-300 disabled:shadow-none whitespace-nowrap"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 hidden md:block" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                </svg>
-                {product.stock > 0 ? 'Add to Cart' : 'Sold Out'}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                    onClick={onBuyNow}
+                    disabled={product.stock <= 0}
+                    className="hidden sm:flex items-center justify-center bg-black text-white px-6 md:px-8 py-3 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest shadow-xl hover:bg-gray-800 transition-all active:scale-95 disabled:bg-gray-300 disabled:shadow-none whitespace-nowrap"
+                >
+                    Buy Now
+                </button>
+                <button
+                    onClick={onAddToCart}
+                    disabled={product.stock <= 0}
+                    className="flex items-center justify-center bg-rose-600 text-white px-6 md:px-8 py-3 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest shadow-xl shadow-rose-200 hover:bg-rose-700 transition-all active:scale-95 disabled:bg-gray-300 disabled:shadow-none whitespace-nowrap"
+                >
+                    {product.stock > 0 ? (window.innerWidth < 640 ? 'Buy Now' : 'Add to Cart') : 'Sold Out'}
+                </button>
+              </div>
           </div>
 
         </div>

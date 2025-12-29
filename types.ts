@@ -6,12 +6,20 @@ export interface HomeSection {
     title?: string;
     isActive: boolean;
     settings?: {
+        // Typography & Alignment
+        subtitle?: string;
+        alignment?: 'left' | 'center' | 'right';
+        titleSize?: number; // in px
+        subtitleSize?: number; // in px
+        backgroundColor?: string; // Hex color for section background
+        
         // Hero settings
         desktopHeight?: string;
         mobileHeight?: string;
         desktopWidth?: string;
         mobileWidth?: string;
         customStyles?: string;
+        
         // Data sections (Collections, BestSellers, etc.)
         collectionId?: string; 
         limit?: number;        
@@ -71,6 +79,9 @@ export interface Product {
   hasVariants?: boolean;
   variants?: ProductVariant[];
   reviews?: Review[];
+  // Fix: Added createdAt and updatedAt to the Product interface to support sorting logic in HomePage.tsx
+  createdAt?: string;
+  updatedAt?: string;
 }
 export interface ProductVariant {
   id?: string;

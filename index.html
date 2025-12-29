@@ -19,6 +19,14 @@
       h1, h2, h3, h4, .font-serif {
         font-family: 'Playfair Display', serif;
       }
+      /* Hide scrollbar but keep functionality */
+      .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+      }
+      .scrollbar-hide {
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;  /* Firefox */
+      }
       /* Custom Scrollbar for Admin */
       .admin-scroll::-webkit-scrollbar {
         width: 6px;

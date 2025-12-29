@@ -31,10 +31,10 @@ const CartPage: React.FC<CartPageProps> = ({ user, logout }) => {
         num_items: cartCount,
     };
 
-    // Use master tracker for dual browser/server events with deduplication
     masterTracker('InitiateCheckout', eventPayload, eventPayload);
 
-    navigate('/checkout');
+    // Redirect to Magic Checkout from Cart too
+    navigate('/checkout?magic=true');
   };
 
   return (

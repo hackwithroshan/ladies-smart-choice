@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-// Fix: Use namespace import and cast to any to resolve "no exported member" errors
+// Fix: Use namespace import and cast to any to resolve "no exported member" errors in this environment
 import * as ReactRouterDom from 'react-router-dom';
 const { useParams, Link } = ReactRouterDom as any;
 import Header from '../components/Header';
@@ -13,6 +13,7 @@ interface DynamicPageProps {
   logout: () => void;
 }
 
+// Fix: Restored React.FC typing to ensure props are correctly recognized by TypeScript, especially when lazy loaded
 const DynamicPage: React.FC<DynamicPageProps> = ({ user, logout }) => {
   // Fix: Removed type argument from useParams as it's extracted from an untyped source
   const { slug } = useParams();

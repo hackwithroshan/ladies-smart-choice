@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useEffect, Suspense, lazy, useRef } from 'react';
 // Fix: Use namespace import and cast to any to resolve "no exported member" errors in this environment
 import * as ReactRouterDom from 'react-router-dom';
@@ -25,7 +27,8 @@ const UserDashboardPage = lazy(() => import('./pages/UserDashboardPage'));
 const ProductDetailsPage = lazy(() => import('./pages/ProductDetailsPage'));
 const CartPage = lazy(() => import('./pages/CartPage'));
 const CheckoutPage = lazy(() => import('./pages/CheckoutPage'));
-const DynamicPage = lazy(() => import('./pages/DynamicPage'));
+// Fix: Explicitly type DynamicPage to ensure it accepts the expected props when used in Route element, resolving property access errors on IntrinsicAttributes
+const DynamicPage: React.ComponentType<{ user: any; logout: () => void }> = lazy(() => import('./pages/DynamicPage'));
 const CollectionPage = lazy(() => import('./pages/CollectionPage'));
 const ContactPage = lazy(() => import('./pages/ContactPage'));
 const OrderTrackingPage = lazy(() => import('./pages/OrderTrackingPage'));

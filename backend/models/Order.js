@@ -9,49 +9,37 @@ const OrderItemSchema = new mongoose.Schema({
     imageUrl: { type: String }
 });
 
-const TrackingEventSchema = new mongoose.Schema({
-    date: { type: Date, default: Date.now },
-    status: String,
-    location: String,
-    message: String
-});
-
 const OrderSchema = new mongoose.Schema({
-    orderNumber: { type: Number, unique: true }, // Sequential Serial ID (e.g., 1001)
+    orderNumber: { type: Number, unique: true },
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     customerName: { type: String, required: true },
     customerEmail: { type: String, required: true },
-    customerPhone: String,
+    customerPhone: { type: String, required: true },
+    
+    // Structured for Shiprocket/Delhivery compatibility
     shippingAddress: {
-        address: String,
-        city: String,
-        postalCode: String,
-        country: String,
+        line1: { type: String, required: true },
+        line2: { type: String },
+        city: { type: String, required: true },
+        state: { type: String, required: true },
+        pincode: { type: String, required: true },
+        country: { type: String, default: 'India' },
     },
-    trackingInfo: {
-        carrier: String,
-        trackingNumber: String,
-        shippingLabelUrl: String,
-        estimatedDelivery: Date
-    },
-    trackingHistory: [TrackingEventSchema],
-    date: { type: Date, default: Date.now },
+    
+    items: [OrderItemSchema],
     total: { type: Number, required: true },
     status: { 
         type: String, 
-        enum: ['Pending', 'Processing', 'Packed', 'Shipped', 'Delivered', 'Returned', 'Cancelled'], 
+        enum: ['Pending', 'Paid', 'Processing', 'Shipped', 'Delivered', 'Cancelled'], 
         default: 'Pending' 
     },
-    items: [OrderItemSchema],
-    paymentInfo: {
-        razorpay_payment_id: String,
-        razorpay_order_id: String,
-        razorpay_signature: String,
-    },
-    lastTrackingSync: Date
+    
+    // Razorpay Specifics
+    razorpayOrderId: { type: String, required: true },
+    razorpayPaymentId: { type: String },
+    paymentMethod: { type: String },
+    
+    date: { type: Date, default: Date.now }
 });
 
-OrderSchema.set('toJSON', { virtuals: true });
-
-const Order = mongoose.model('Order', OrderSchema);
-module.exports = Order;
+module.exports = mongoose.model('Order', OrderSchema);

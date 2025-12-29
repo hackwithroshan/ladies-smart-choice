@@ -1,18 +1,25 @@
 
 const express = require('express');
 const router = express.Router();
-const mongoose = require('mongoose');
-const Order = require('../models/Order');
-const User = require('../models/User');
-const Product = require('../models/Product');
-const StoreDetails = require('../models/StoreDetails');
-const Counter = require('../models/Counter');
-const ActivityLog = require('../models/ActivityLog');
-const { protect, admin } = require('../middleware/authMiddleware');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
-const { generateInvoice } = require('../utils/generateInvoice');
+const Order = require('../models/Order');
+const Counter = require('../models/Counter');
 
+// Validate Environment Variables
+const key_id = process.env.RAZORPAY_KEY_ID;
+const key_secret = process.env.RAZORPAY_KEY_SECRET;
+
+if (!key_id || !key_secret) {
+    console.error("FATAL ERROR: Razorpay Key ID or Secret is missing in .env file.");
+}
+
+const razorpay = new Razorpay({
+    key_id: key_id || 'MISSING_KEY_ID',
+    key_secret: key_secret || 'MISSING_KEY_SECRET'
+});
+
+// Helper for sequential order numbers
 async function getNextOrderNumber() {
     const counter = await Counter.findByIdAndUpdate(
         { _id: 'orderNumber' },
@@ -22,133 +29,117 @@ async function getNextOrderNumber() {
     return counter.seq;
 }
 
-const logAction = async (req, action, target, targetId, details) => {
+/**
+ * @route   POST /api/orders/create-magic-order
+ * @desc    Initialize a Razorpay Order with Magic Checkout parameters
+ */
+router.post('/create-magic-order', async (req, res) => {
     try {
-        await ActivityLog.create({
-            user: req.user?._id,
-            userName: req.user?.name || 'System',
-            action,
-            target,
-            targetId,
-            details,
-            ip: req.ip,
-            userAgent: req.headers['user-agent']
+        const { items, totalAmount } = req.body;
+
+        if (!key_id || !key_secret) {
+            return res.status(500).json({ 
+                message: "Payment gateway credentials not configured. Please check backend .env file.",
+                debug: { key_id_present: !!key_id, key_secret_present: !!key_secret }
+            });
+        }
+
+        // Magic Checkout MANDATES line_items for address/tax calculation
+        const line_items = items.map(item => ({
+            name: item.name,
+            amount: Math.round(item.price * 100), // In paise
+            currency: "INR",
+            quantity: item.quantity
+        }));
+
+        const options = {
+            currency: "INR",
+            receipt: `rcpt_${Date.now()}`,
+            // Magic Checkout Required Fields
+            line_items: line_items,
+            line_items_total: Math.round(totalAmount * 100)
+        };
+
+        const rzpOrder = await razorpay.orders.create(options);
+        
+        res.json({
+            id: rzpOrder.id,
+            amount: rzpOrder.amount, // Calculated total in paise
+            key: key_id
         });
-    } catch (e) { console.error("Logging failed", e); }
-};
-
-// GET all orders
-router.get('/', protect, admin, async (req, res) => {
-    try {
-        const orders = await Order.find({}).sort({ date: -1 });
-        res.json(orders);
-    } catch (error) { res.status(500).json({ message: 'Server Error' }); }
-});
-
-// GET order invoice PDF
-router.get('/:id/invoice', protect, admin, async (req, res) => {
-    try {
-        const order = await Order.findById(req.params.id);
-        if (!order) return res.status(404).json({ message: 'Order not found' });
-        
-        const storeDetails = await StoreDetails.findOne() || {};
-        const pdfBuffer = await generateInvoice(order, storeDetails);
-        
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename=invoice_${order.orderNumber || order._id}.pdf`);
-        res.send(pdfBuffer);
     } catch (error) {
-        console.error("Invoice generation failed:", error);
-        res.status(500).json({ message: 'Failed to generate invoice' });
+        console.error("RZP Order API Error:", error);
+        
+        // Detailed error reporting for 401
+        if (error.statusCode === 401) {
+            return res.status(401).json({ 
+                message: "Razorpay Authentication Failed. Verify Key ID and Secret in your backend .env file.",
+                error: error.error 
+            });
+        }
+
+        res.status(error.statusCode || 500).json({ 
+            message: "Failed to initialize payment gateway.",
+            error: error.error 
+        });
     }
 });
 
-router.post('/manual', protect, admin, async (req, res) => {
+/**
+ * @route   POST /api/orders/verify-magic-payment
+ * @desc    Verify signature and save full customer/shipping data from Magic Checkout
+ */
+router.post('/verify-magic-payment', async (req, res) => {
     try {
-        const { customerInfo, items, financials, paymentStatus } = req.body;
-        const orderNumber = await getNextOrderNumber();
-        const newOrder = new Order({
-            orderNumber,
-            userId: customerInfo.id || null,
-            customerName: customerInfo.name,
-            customerEmail: customerInfo.email,
-            customerPhone: customerInfo.phone,
-            shippingAddress: { address: customerInfo.address, city: customerInfo.city, postalCode: customerInfo.postalCode, country: customerInfo.country || 'India' },
-            items: items.map(i => ({ productId: i.id, name: i.name, quantity: i.quantity, price: i.price, imageUrl: i.imageUrl })),
-            total: financials.total,
-            status: paymentStatus === 'Paid' ? 'Processing' : 'Pending',
-        });
-        const savedOrder = await newOrder.save();
-        await logAction(req, 'created manual', 'Order', savedOrder._id, `Admin created manual order for ${customerInfo.name}`);
-        res.status(201).json(savedOrder);
-    } catch (error) { res.status(500).json({ message: error.message }); }
-});
+        const { 
+            razorpay_order_id, 
+            razorpay_payment_id, 
+            razorpay_signature,
+            customer_details, 
+            shipping_address,
+            local_items
+        } = req.body;
 
-router.put('/:id', protect, admin, async (req, res) => {
-    try {
-        const existingOrder = await Order.findById(req.params.id);
-        if (!existingOrder) return res.status(404).json({ message: 'Order not found' });
-        
-        const newStatus = req.body.status;
-        if (newStatus && newStatus !== existingOrder.status) {
-            await logAction(req, `status updated to ${newStatus}`, 'Order', existingOrder._id, `Order status changed from ${existingOrder.status} to ${newStatus}`);
+        // 1. Signature Verification
+        const body = razorpay_order_id + "|" + razorpay_payment_id;
+        const expectedSignature = crypto
+            .createHmac("sha256", key_secret)
+            .update(body.toString())
+            .digest("hex");
+
+        if (expectedSignature !== razorpay_signature) {
+            return res.status(400).json({ message: "Invalid payment signature." });
         }
 
-        const order = await Order.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        res.json(order);
-    } catch (error) { res.status(500).json({ message: 'Server Error' }); }
-});
-
-router.post('/razorpay-order', async (req, res) => {
-    const razorpay = new Razorpay({ key_id: process.env.RAZORPAY_KEY_ID, key_secret: process.env.RAZORPAY_KEY_SECRET });
-    const { amount, currency } = req.body;
-    try {
-        const order = await razorpay.orders.create({ amount: Math.round(amount * 100), currency, receipt: `rcpt_${Date.now()}` });
-        res.json({ order_id: order.id, amount: order.amount, currency: order.currency, key_id: process.env.RAZORPAY_KEY_ID });
-    } catch (error) { res.status(500).send(error); }
-});
-
-router.post('/', async (req, res) => {
-    const { paymentInfo, items, ...orderData } = req.body;
-    const shasum = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET);
-    shasum.update(`${paymentInfo.razorpay_order_id}|${paymentInfo.razorpay_payment_id}`);
-    if (shasum.digest('hex') !== paymentInfo.razorpay_signature) return res.status(400).json({ message: 'Payment invalid' });
-
-    try {
-        const user = await User.findOne({ email: orderData.customerEmail }) || await new User({ name: orderData.customerName, email: orderData.customerEmail, password: orderData.customerPhone, role: 'User' }).save();
+        // 2. Create Local Order
         const orderNumber = await getNextOrderNumber();
         const newOrder = new Order({
-            ...orderData,
             orderNumber,
-            userId: user._id,
-            items: items.map((item) => ({ productId: item.id, name: item.name, quantity: item.quantity, price: item.price, imageUrl: item.imageUrl })),
-            paymentInfo,
-            status: 'Processing',
-            trackingHistory: [{ status: 'Ordered', location: 'Online', message: 'Order placed successfully.', date: new Date() }]
+            customerName: customer_details.name,
+            customerEmail: customer_details.email,
+            customerPhone: customer_details.contact,
+            shippingAddress: {
+                line1: shipping_address.line1,
+                line2: shipping_address.line2,
+                city: shipping_address.city,
+                state: shipping_address.state,
+                pincode: shipping_address.pincode,
+                country: shipping_address.country || 'India'
+            },
+            total: req.body.totalAmount || 0, // Fallback total
+            status: 'Paid',
+            razorpayOrderId: razorpay_order_id,
+            razorpayPaymentId: razorpay_payment_id,
+            items: local_items 
         });
-        const savedOrder = await newOrder.save();
-        await ActivityLog.create({ action: 'purchase', target: 'Order', targetId: savedOrder._id, details: `New order #${orderNumber} placed by ${orderData.customerName}` });
-        for (const item of items) await Product.findByIdAndUpdate(item.id, { $inc: { stock: -item.quantity } });
-        res.status(201).json({ order: savedOrder });
-    } catch (error) { res.status(500).json({ message: 'Order creation failed' }); }
-});
 
-router.get('/my-orders', protect, async (req, res) => {
-    try {
-        const orders = await Order.find({ userId: req.user._id }).sort({ date: -1 });
-        res.json(orders);
-    } catch (error) { res.status(500).json({ message: 'Server Error' }); }
-});
+        await newOrder.save();
 
-router.post('/track', async (req, res) => {
-    let { orderId, email } = req.body;
-    try {
-        let order = !isNaN(Number(orderId)) ? await Order.findOne({ orderNumber: Number(orderId) }) : await Order.findById(orderId);
-        if (!order) order = await Order.findOne({ 'trackingInfo.trackingNumber': orderId });
-        if (!order) return res.status(404).json({ message: 'Order not found.' });
-        if (order.customerEmail.toLowerCase() !== email.toLowerCase()) return res.status(401).json({ message: 'Email mismatch.' });
-        res.json(order);
-    } catch (error) { res.status(500).json({ message: 'Server Error' }); }
+        res.json({ success: true, orderId: newOrder._id });
+    } catch (error) {
+        console.error("Verification Error:", error);
+        res.status(500).json({ message: "Payment verified but failed to save order." });
+    }
 });
 
 module.exports = router;
