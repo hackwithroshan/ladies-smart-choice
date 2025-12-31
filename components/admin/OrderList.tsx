@@ -185,15 +185,20 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
   const handleUpdateStatus = async (newStatus: string) => {
       if (!selectedOrder) return;
       setUpdatingStatus(true);
+      const orderId = selectedOrder.id || (selectedOrder as any)._id;
       try {
-          const res = await fetch(getApiUrl(`/api/orders/${selectedOrder.id}`), {
+          const res = await fetch(getApiUrl(`/api/orders/${orderId}`), {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
               body: JSON.stringify({ status: newStatus })
           });
           if (res.ok) {
               const updated = await res.json();
-              setOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
+              setOrders(prev => prev.map(o => {
+                  const oId = o.id || (o as any)._id;
+                  const updatedId = updated.id || (updated as any)._id;
+                  return oId === updatedId ? updated : o;
+              }));
               setSelectedOrder(updated);
           }
       } catch (e) { console.error(e); }
@@ -203,15 +208,20 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
   const handleUpdateLogistics = async () => {
     if (!selectedOrder) return;
     setUpdatingStatus(true);
+    const orderId = selectedOrder.id || (selectedOrder as any)._id;
     try {
-        const res = await fetch(getApiUrl(`/api/orders/${selectedOrder.id}`), {
+        const res = await fetch(getApiUrl(`/api/orders/${orderId}`), {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ trackingInfo })
         });
         if (res.ok) {
             const updated = await res.json();
-            setOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
+            setOrders(prev => prev.map(o => {
+                const oId = o.id || (o as any)._id;
+                const updatedId = updated.id || (updated as any)._id;
+                return oId === updatedId ? updated : o;
+            }));
             setSelectedOrder(updated);
             alert("Logistics updated!");
         }
@@ -222,8 +232,9 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
   const handleDownloadInvoice = async () => {
     if (!selectedOrder) return;
     setInvoiceLoading(true);
+    const orderId = selectedOrder.id || (selectedOrder as any)._id;
     try {
-        const res = await fetch(getApiUrl(`/api/orders/${selectedOrder.id}/invoice`), {
+        const res = await fetch(getApiUrl(`/api/orders/${orderId}/invoice`), {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {
@@ -231,7 +242,8 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `Invoice_${selectedOrder.orderNumber || selectedOrder.id.substring(0,6)}.pdf`;
+            const fileNameId = selectedOrder.orderNumber || orderId.toString().substring(0,6);
+            a.download = `Invoice_${fileNameId}.pdf`;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
@@ -276,7 +288,7 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
 
             <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden min-w-0">
                 <div className="flex border-b border-gray-200 px-4 overflow-x-auto scrollbar-hide shrink-0 admin-scroll">
-                    {['All', 'Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'].map(status => (
+                    {['All', 'Pending', 'Paid', 'Processing', 'Shipped', 'Delivered', 'Cancelled'].map(status => (
                         <button 
                             key={status} 
                             onClick={() => setFilterStatus(status)}
@@ -315,27 +327,30 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-50">
-                            {processedOrders.length > 0 ? processedOrders.map((order) => (
-                            <tr key={order.id} className="hover:bg-gray-50 transition-colors cursor-pointer group" onClick={() => handleOrderClick(order)}>
-                                <td className="px-6 py-4" onClick={e => e.stopPropagation()}><input type="checkbox" className="rounded border-gray-300 text-[#16423C]" /></td>
-                                <td className="px-2 py-4 whitespace-nowrap text-sm font-black text-gray-900">
-                                    #{order.orderNumber || order.id.substring(0,6).toUpperCase()}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">{new Date(order.date).toLocaleDateString()}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold truncate max-w-[150px] min-w-0">{order.customerName}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-black text-gray-900">₹{order.total.toLocaleString()}</td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <span className={`px-2.5 py-1 inline-flex text-[9px] font-black uppercase rounded-lg border ${
-                                        order.status === 'Delivered' ? 'bg-green-50 text-green-700 border-green-100' : 
-                                        order.status === 'Cancelled' ? 'bg-red-50 text-red-700 border-red-100' :
-                                        order.status === 'Shipped' ? 'bg-blue-50 text-blue-700 border-blue-100' :
-                                        'bg-yellow-50 text-yellow-700 border-yellow-100'
-                                    }`}>
-                                        {order.status}
-                                    </span>
-                                </td>
-                            </tr>
-                            )) : (
+                            {processedOrders.length > 0 ? processedOrders.map((order) => {
+                                const orderId = order.id || (order as any)._id;
+                                return (
+                                <tr key={orderId} className="hover:bg-gray-50 transition-colors cursor-pointer group" onClick={() => handleOrderClick(order)}>
+                                    <td className="px-6 py-4" onClick={e => e.stopPropagation()}><input type="checkbox" className="rounded border-gray-300 text-[#16423C]" /></td>
+                                    <td className="px-2 py-4 whitespace-nowrap text-sm font-black text-gray-900">
+                                        #{order.orderNumber || orderId?.toString().substring(0,6).toUpperCase()}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">{new Date(order.date).toLocaleDateString()}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold truncate max-w-[150px] min-w-0">{order.customerName}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-black text-gray-900">₹{order.total.toLocaleString()}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <span className={`px-2.5 py-1 inline-flex text-[9px] font-black uppercase rounded-lg border ${
+                                            order.status === 'Delivered' ? 'bg-green-50 text-green-700 border-green-100' : 
+                                            order.status === 'Cancelled' ? 'bg-red-50 text-red-700 border-red-100' :
+                                            order.status === 'Shipped' ? 'bg-blue-50 text-blue-700 border-blue-100' :
+                                            'bg-yellow-50 text-yellow-700 border-yellow-100'
+                                        }`}>
+                                            {order.status}
+                                        </span>
+                                    </td>
+                                </tr>
+                                )
+                            }) : (
                                 <tr><td colSpan={6} className="px-6 py-20 text-center text-gray-400 italic text-sm">No orders found.</td></tr>
                             )}
                         </tbody>
@@ -347,6 +362,8 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
   }
 
   // --- RENDER DETAIL VIEW SECTION ---
+  const orderIdForDisplay = selectedOrder?.orderNumber || (selectedOrder?.id || (selectedOrder as any)?._id)?.toString().substring(0,8);
+  
   return (
     <div className="space-y-6 animate-fade-in-up pb-20">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -355,7 +372,7 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}><path d="M15 19l-7-7 7-7" /></svg>
                 </button>
                 <div className="min-w-0">
-                    <h2 className="text-2xl font-black text-gray-900 truncate uppercase tracking-tighter">Order #{selectedOrder?.orderNumber || selectedOrder?.id.substring(0,8)}</h2>
+                    <h2 className="text-2xl font-black text-gray-900 truncate uppercase tracking-tighter">Order #{orderIdForDisplay}</h2>
                     <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{new Date(selectedOrder?.date || '').toLocaleString()}</span>
                         <span className="px-2 py-0.5 text-[9px] font-black rounded-lg bg-yellow-50 text-yellow-700 border border-yellow-100 uppercase">{selectedOrder?.status}</span>
@@ -374,17 +391,17 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
             <div className="xl:col-span-2 space-y-6">
                 <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
                     <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white">
-                        <h3 className="text-xs font-black uppercase tracking-[0.2em] text-gray-900">Line Items ({selectedOrder?.items.length})</h3>
+                        <h3 className="text-xs font-black uppercase tracking-[0.2em] text-gray-900">Line Items ({selectedOrder?.items?.length || 0})</h3>
                     </div>
                     <div className="divide-y divide-gray-100">
-                        {selectedOrder?.items.map((item, idx) => (
+                        {selectedOrder?.items?.map((item, idx) => (
                             <div key={idx} className="p-6 flex gap-6 items-center transition-colors hover:bg-gray-50/50">
                                 <div className="w-20 h-20 bg-gray-50 rounded-xl border border-gray-100 shrink-0 overflow-hidden shadow-inner">
                                     <img src={item.imageUrl} className="w-full h-full object-cover" />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <p className="text-base font-black text-blue-600 hover:underline truncate cursor-pointer italic">{item.name}</p>
-                                    <p className="text-[10px] text-gray-400 font-bold uppercase mt-1 tracking-widest">SKU: {item.productId?.toString().substring(0,8) || 'N/A'}</p>
+                                    <p className="text-[10px] text-gray-400 font-bold uppercase mt-1 tracking-widest">SKU: {item.productId?.toString()?.substring(0,8) || 'N/A'}</p>
                                 </div>
                                 <div className="text-right shrink-0">
                                     <p className="text-xs font-bold text-gray-500">₹{item.price.toLocaleString()} × {item.quantity}</p>
@@ -405,11 +422,11 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
                         <span className="bg-green-50 text-green-700 text-[9px] font-black uppercase px-3 py-1 rounded-full border border-green-100">Paid</span>
                     </div>
                     <div className="space-y-4">
-                        <div className="flex justify-between text-sm font-bold text-gray-500"><span>Subtotal</span><span className="text-gray-900 italic">₹{selectedOrder?.total.toLocaleString()}</span></div>
+                        <div className="flex justify-between text-sm font-bold text-gray-500"><span>Subtotal</span><span className="text-gray-900 italic">₹{selectedOrder?.total?.toLocaleString()}</span></div>
                         <div className="flex justify-between text-sm font-bold text-gray-500"><span>Shipping</span><span className="text-green-600 uppercase">Free</span></div>
                         <div className="flex justify-between text-2xl font-black text-gray-900 border-t border-dashed border-gray-200 pt-5">
                             <span>TOTAL</span>
-                            <span className="italic">₹{selectedOrder?.total.toLocaleString()}</span>
+                            <span className="italic">₹{selectedOrder?.total?.toLocaleString()}</span>
                         </div>
                     </div>
                 </div>
@@ -419,7 +436,7 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
                 <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 space-y-6">
                     <h3 className="text-xs font-black uppercase tracking-[0.2em] text-gray-900 border-b border-gray-50 pb-4">Customer Identity</h3>
                     <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 rounded-2xl bg-gray-100 border border-gray-200 flex items-center justify-center font-black text-gray-400 text-2xl shrink-0 shadow-sm">{selectedOrder?.customerName.charAt(0)}</div>
+                        <div className="w-14 h-14 rounded-2xl bg-gray-100 border border-gray-200 flex items-center justify-center font-black text-gray-400 text-2xl shrink-0 shadow-sm">{selectedOrder?.customerName?.charAt(0)}</div>
                         <div className="min-w-0 flex-1">
                             <p className="text-lg font-black text-blue-600 hover:underline truncate italic cursor-pointer">{selectedOrder?.customerName}</p>
                             <p className="text-[10px] text-gray-500 font-bold uppercase tracking-tighter mt-0.5">Verified User</p>
@@ -430,8 +447,8 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
                         <div className="text-xs text-gray-800 leading-relaxed font-bold italic bg-gray-50/50 p-4 rounded-xl border border-gray-100">
                             {selectedOrder?.shippingAddress ? (
                                 <div className="space-y-1">
-                                    <p>{selectedOrder.shippingAddress.address}</p>
-                                    <p>{selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.postalCode}</p>
+                                    <p>{(selectedOrder.shippingAddress as any).address || (selectedOrder.shippingAddress as any).line1}</p>
+                                    <p>{selectedOrder.shippingAddress.city}, {(selectedOrder.shippingAddress as any).postalCode || (selectedOrder.shippingAddress as any).pincode}</p>
                                     <p className="mt-2 font-black text-gray-900 not-italic uppercase tracking-widest bg-white border border-gray-200 inline-block px-2 py-0.5 rounded">{selectedOrder.shippingAddress.country}</p>
                                 </div>
                             ) : <p className="italic text-gray-400">Electronic Provisioning</p>}

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { SiteSettings } from '../../types';
 import { COLORS } from '../../constants';
@@ -56,12 +55,49 @@ const GeneralSettings: React.FC<{ token: string | null }> = ({ token }) => {
     return (
         <div>
             <div className="flex justify-between items-center mb-6">
-                <h2 className="text-3xl font-bold text-gray-800">General & Media</h2>
+                <h2 className="text-3xl font-bold text-gray-800">General & Checkout</h2>
                 <button onClick={handleSave} disabled={saving} className="px-6 py-2 text-sm font-medium text-white rounded-md shadow-sm transition-all transform hover:scale-105" style={{ backgroundColor: COLORS.accent }}>{saving ? 'Saving...' : 'Save Changes'}</button>
             </div>
-            {feedback && <div className={`p-3 rounded mb-4 text-sm ${feedback.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{feedback.message}</div>}
+            {feedback && <div className={`p-3 rounded mb-4 text-sm ${feedback.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-800'}`}>{feedback.message}</div>}
             
             <div className="bg-white p-6 rounded-lg shadow-md space-y-6 max-w-2xl border border-gray-100">
+                
+                {/* Checkout Experience Section */}
+                <div className="bg-rose-50 p-5 rounded-xl border border-rose-200 space-y-4">
+                    <h3 className="font-bold text-rose-900 flex items-center gap-2">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        Checkout Experience
+                    </h3>
+                    
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-sm font-bold text-rose-800">Razorpay Magic Checkout</p>
+                            <p className="text-xs text-rose-700">Enable 1-click checkout with automatic address collection.</p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setSettings(prev => ({ ...prev, isMagicCheckoutEnabled: !prev.isMagicCheckoutEnabled }))}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.isMagicCheckoutEnabled ? 'bg-rose-600' : 'bg-gray-300'}`}
+                        >
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settings.isMagicCheckoutEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-rose-100">
+                        <div>
+                            <p className="text-sm font-bold text-rose-800">Cash on Delivery (COD)</p>
+                            <p className="text-xs text-rose-700">Allow customers to pay at the time of delivery.</p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setSettings(prev => ({ ...prev, isCodEnabled: !prev.isCodEnabled }))}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.isCodEnabled ? 'bg-rose-600' : 'bg-gray-300'}`}
+                        >
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settings.isCodEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                    </div>
+                </div>
+
                 {/* Maintenance Mode */}
                 <div className="bg-amber-50 p-5 rounded-xl border border-amber-200">
                     <div className="flex items-center justify-between">
@@ -70,12 +106,12 @@ const GeneralSettings: React.FC<{ token: string | null }> = ({ token }) => {
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                                 Maintenance Mode
                             </h3>
-                            <p className="text-xs text-amber-700 mt-1">Hide website from public customers while you work. Admins can still see everything.</p>
+                            <p className="text-xs text-amber-700 mt-1">Hide website from public customers while you work.</p>
                         </div>
                         <button
                             type="button"
                             onClick={() => setSettings(prev => ({ ...prev, isMaintenanceMode: !prev.isMaintenanceMode }))}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${settings.isMaintenanceMode ? 'bg-amber-600' : 'bg-gray-300'}`}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.isMaintenanceMode ? 'bg-amber-600' : 'bg-gray-300'}`}
                         >
                             <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settings.isMaintenanceMode ? 'translate-x-6' : 'translate-x-1'}`} />
                         </button>
@@ -86,7 +122,7 @@ const GeneralSettings: React.FC<{ token: string | null }> = ({ token }) => {
                 <div className="bg-blue-50 p-5 rounded-xl border border-blue-200 flex flex-col sm:flex-row justify-between items-center gap-4">
                     <div>
                         <h3 className="font-bold text-blue-900">Store Business Details</h3>
-                        <p className="text-xs text-blue-700 mt-1">Manage your store name, address, contact info, and invoicing details.</p>
+                        <p className="text-xs text-blue-700 mt-1">Manage your store name, address, and invoicing details.</p>
                     </div>
                     <button onClick={() => setIsStoreModalOpen(true)} className="px-4 py-2 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 shadow-sm transition-colors whitespace-nowrap">
                         Edit Details
@@ -110,28 +146,6 @@ const GeneralSettings: React.FC<{ token: string | null }> = ({ token }) => {
                             <input type="text" name="whatsappMessage" value={settings.whatsappMessage || ''} onChange={handleChange} className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-rose-500" placeholder="Hi, I have a query..."/>
                         </div>
                     </div>
-                </div>
-
-                <div className="border-t border-gray-100 pt-6">
-                    <h3 className="text-lg font-bold text-gray-900 mb-4">Typography</h3>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Primary Google Font</label>
-                        <input type="text" name="fontFamily" value={settings.fontFamily || 'Montserrat'} onChange={handleChange} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-rose-500 text-sm" placeholder="e.g. Poppins, Roboto"/>
-                    </div>
-                </div>
-
-                <div className="border-t border-gray-100 pt-6 flex items-center justify-between">
-                    <div>
-                        <h3 className="text-lg font-bold text-gray-900">Shop Videos</h3>
-                        <p className="text-xs text-gray-500">Should videos play automatically when they appear?</p>
-                    </div>
-                    <button
-                        type="button"
-                        onClick={() => setSettings(prev => ({ ...prev, videoAutoplay: !prev.videoAutoplay }))}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${settings.videoAutoplay ? 'bg-rose-600' : 'bg-gray-300'}`}
-                    >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settings.videoAutoplay ? 'translate-x-6' : 'translate-x-1'}`} />
-                    </button>
                 </div>
             </div>
 

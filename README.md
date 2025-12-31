@@ -1,4 +1,3 @@
-
 # 🚀 Ladies Smart Choice - Full Stack E-commerce
 
 Authentic Ayurvedic wellness store with Admin and User dashboards.
@@ -11,9 +10,11 @@ Magic Checkout standard checkout se alag hota hai. Ise sahi se chalane ke liye y
 
 ### 1. Razorpay Dashboard Settings
 1.  **Login** karein [Razorpay Dashboard](https://dashboard.razorpay.com/).
-2.  **Account & Settings** > **API Keys** me jayein aur `Key ID` aur `Key Secret` generate karein.
-3.  **Magic Checkout** activation: Razorpay team se "Magic Checkout" enable karne ki request karni padti hai. 
-4.  **Webhooks**: Order success verify karne ke liye `order.paid` webhook set karein (Production me).
+2.  **Magic Checkout** activation: Razorpay team se "Magic Checkout" enable karne ki request karni padti hai. 
+3.  **Shipping & COD Setup**: 
+    *   Magic Checkout settings me jayein.
+    *   **Shipping Info URL** field me ye URL dalein: `https://your-domain.com/api/orders/shipping-info`
+    *   Isse Razorpay har address ke liye delivery charges aapke server se puchhega.
 
 ### 2. Environment Variables (.env)
 Backend folder ke andar `.env` file banayein aur ye values daalein:
@@ -26,11 +27,6 @@ RAZORPAY_KEY_SECRET=your_razorpay_secret_key
 FRONTEND_URL=http://localhost:3000
 ```
 **Note:** `.env` file ko save karne ke baad backend server ko **restart** zaroor karein.
-
-### 3. Common Fixes
-- **"No key passed" error**: Iska matlab backend se `RAZORPAY_KEY_ID` nahi aa raha ya `.env` file server load nahi kar paya.
-- **400 Bad Request (extra_field_sent)**: Agar error bole ki `amount` bhej rahe ho aur zarurat nahi hai, to backend me `line_items` bhejte waqt top-level `amount` ko remove karein (ye fix ab code me implemented hai).
-- **index.css 404**: Ye warning `index.html` se line hatane par chali jayegi (fixed in latest update).
 
 ---
 

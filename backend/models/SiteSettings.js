@@ -1,4 +1,3 @@
-
 const mongoose = require('mongoose');
 
 const SiteSettingsSchema = new mongoose.Schema({
@@ -17,6 +16,10 @@ const SiteSettingsSchema = new mongoose.Schema({
     taxRate: { type: Number, default: 0 },
     shippingCharge: { type: Number, default: 0 },
     videoAutoplay: { type: Boolean, default: true },
+    
+    // Magic Checkout & COD Toggles
+    isMagicCheckoutEnabled: { type: Boolean, default: true },
+    isCodEnabled: { type: Boolean, default: true },
     
     // Maintenance Mode
     isMaintenanceMode: { type: Boolean, default: false },

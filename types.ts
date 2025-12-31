@@ -213,7 +213,34 @@ export interface BlogPost { id: string; title: string; slug: string; content: st
 export interface ContentPage { id: string; title: string; slug: string; content: string; status: 'Published' | 'Hidden'; updatedAt: string; }
 export interface Campaign { id: string; name: string; type: 'Email' | 'SMS' | 'WhatsApp' | 'Push'; status: 'Draft' | 'Scheduled' | 'Sent'; sentCount: number; openRate: number; clickRate: number; }
 export interface Discount { id: string; code: string; type: 'Percentage' | 'Flat' | 'Free Shipping'; value: number; usageCount: number; maxUsage: number; expiry: string; }
-export interface SiteSettings { currency: string; taxRate: number; shippingCharge: number; videoAutoplay?: boolean; isMaintenanceMode?: boolean; whatsappNumber?: string; whatsappMessage?: string; fontFamily?: string; metaPixelId?: string; metaAccessToken?: string; metaCatalogId?: string; trackPageView?: boolean; trackViewContent?: boolean; trackAddToCart?: boolean; trackInitiateCheckout?: boolean; trackPurchase?: boolean; storeName?: string; logoUrl?: string; faviconUrl?: string; primaryColor?: string; accentColor?: string; }
+
+// --- SITE SETTINGS ---
+export interface SiteSettings { 
+    currency: string; 
+    taxRate: number; 
+    shippingCharge: number; 
+    videoAutoplay?: boolean; 
+    isMaintenanceMode?: boolean; 
+    isMagicCheckoutEnabled?: boolean;
+    isCodEnabled?: boolean;
+    whatsappNumber?: string; 
+    whatsappMessage?: string; 
+    fontFamily?: string; 
+    metaPixelId?: string; 
+    metaAccessToken?: string; 
+    metaCatalogId?: string; 
+    trackPageView?: boolean; 
+    trackViewContent?: boolean; 
+    trackAddToCart?: boolean; 
+    trackInitiateCheckout?: boolean; 
+    trackPurchase?: boolean; 
+    storeName?: string; 
+    logoUrl?: string; 
+    faviconUrl?: string; 
+    primaryColor?: string; 
+    accentColor?: string; 
+}
+
 export interface HomePageSettings { seoTitle: string; seoDescription: string; seoKeywords?: string[]; }
 export interface MediaItem { id: string; url: string; public_id: string; format: string; type: 'image' | 'video'; createdAt: string; }
 export interface SyncLog { _id: string; service: string; timestamp: string; status: 'success' | 'failed' | 'in_progress'; processedCount: number; error?: string; }
