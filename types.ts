@@ -1,4 +1,3 @@
-
 export interface HomeSection {
     _id?: string;
     id: string;
@@ -32,7 +31,43 @@ export interface HomeSection {
         limit?: number;        
         desktopColumns?: number; 
         mobileColumns?: number;  
-        isSlider?: boolean;      
+        isSlider?: boolean;
+        
+        // --- PRODUCT CARD / ITEM DESIGN CONTROLS ---
+        itemStyle?: 'Standard' | 'ImageOnly'; 
+        itemWidth?: string;       
+        itemHeight?: string;      
+        itemGap?: number;         
+        itemBorderRadius?: number; 
+        itemShadow?: boolean;     
+        itemBorder?: boolean;     
+        itemBorderColor?: string; 
+        itemBgColor?: string;     
+        itemPadding?: number;     
+        
+        // Typography & UI Toggles
+        itemTitleSize?: number;
+        itemPriceSize?: number;
+        itemTitleColor?: string;
+        itemPriceColor?: string;
+        showVariants?: boolean;
+        itemVariantStyle?: 'Chips' | 'TextList'; // TextList matches the screenshot style
+        showWishlist?: boolean;
+        wishlistPosition?: 'top-right' | 'bottom-right-overlay'; // Matching screenshot
+        showBuyButton?: boolean;
+        showBadge?: boolean;
+        badgeText?: string;
+        imageFit?: 'cover' | 'contain' | 'fill';
+        
+        // Title & Overlay Controls
+        showItemTitle?: boolean;
+        itemTitlePlacement?: 'overlay' | 'below';
+        itemTitleWeight?: number;
+        showItemOverlay?: boolean;
+        itemOverlayColor?: string;
+        itemOverlayOpacity?: number;
+        itemOverlayGradient?: boolean;
+        itemTitleAlignment?: 'start' | 'center' | 'end';
     };
     code?: string;
 }
@@ -137,9 +172,11 @@ export interface SubLink { text: string; url: string; }
 export interface MegaMenuColumn { id?: string; title: string; links: SubLink[]; }
 export interface HeaderLink { _id?: string; text: string; url: string; isSpecial?: boolean; isMegaMenu?: boolean; subLinks?: SubLink[]; megaColumns?: MegaMenuColumn[]; }
 export interface HeaderSettings { _id?: string; logoText: string; logoUrl?: string; brandColor?: string; phoneNumber: string; announcementMessages?: string[]; announcementMessage?: string; announcementBgColor?: string; announcementTextColor?: string; topBarLinks: HeaderLink[]; mainNavLinks: HeaderLink[]; }
+
+export interface SocialLink { platform: string; url: string; }
 export interface FooterLink { text: string; url: string; }
 export interface FooterColumn { title: string; links: FooterLink[]; }
-export interface SocialLink { platform: 'Facebook' | 'Instagram' | 'Twitter' | 'LinkedIn' | 'YouTube'; url: string; }
+
 export interface FooterSettings { 
     _id?: string; 
     logoUrl?: string; 

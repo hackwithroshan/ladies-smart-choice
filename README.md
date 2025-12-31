@@ -1,40 +1,43 @@
 
 # 🚀 Ladies Smart Choice - Full Stack E-commerce
 
-This project is built with React (Frontend) and Node.js/Express (Backend) using MongoDB.
+Authentic Ayurvedic wellness store with Admin and User dashboards.
 
 ---
 
-## 1. Local Development Setup
-1. `npm install` (Installs frontend and backend deps)
-2. Create `backend/.env` with your `MONGO_URI` and `JWT_SECRET`.
-3. `npm run build`
-4. `npm start`
+## 🛠️ Razorpay Magic Checkout Setup (CRITICAL)
+
+Magic Checkout standard checkout se alag hota hai. Ise sahi se chalane ke liye ye steps follow karein:
+
+### 1. Razorpay Dashboard Settings
+1.  **Login** karein [Razorpay Dashboard](https://dashboard.razorpay.com/).
+2.  **Account & Settings** > **API Keys** me jayein aur `Key ID` aur `Key Secret` generate karein.
+3.  **Magic Checkout** activation: Razorpay team se "Magic Checkout" enable karne ki request karni padti hai. 
+4.  **Webhooks**: Order success verify karne ke liye `order.paid` webhook set karein (Production me).
+
+### 2. Environment Variables (.env)
+Backend folder ke andar `.env` file banayein aur ye values daalein:
+```env
+PORT=5000
+MONGO_URI=your_mongodb_connection_string
+JWT_SECRET=any_random_string_for_security
+RAZORPAY_KEY_ID=rzp_test_XXXXXXXXXXXXXX
+RAZORPAY_KEY_SECRET=your_razorpay_secret_key
+FRONTEND_URL=http://localhost:3000
+```
+**Note:** `.env` file ko save karne ke baad backend server ko **restart** zaroor karein.
+
+### 3. Common Fixes
+- **"No key passed" error**: Iska matlab backend se `RAZORPAY_KEY_ID` nahi aa raha ya `.env` file server load nahi kar paya.
+- **400 Bad Request (extra_field_sent)**: Agar error bole ki `amount` bhej rahe ho aur zarurat nahi hai, to backend me `line_items` bhejte waqt top-level `amount` ko remove karein (ye fix ab code me implemented hai).
+- **index.css 404**: Ye warning `index.html` se line hatane par chali jayegi (fixed in latest update).
 
 ---
 
-## 2. Deployment: Railway (Fixing Build Issues)
+## 📦 Installation & Deployment
 
-If you see an error like "dist folder not found":
-
-1. **Build Command:** Go to Railway Project Settings > Build & Deploy.
-2. Set **Build Command** to: `npm run build`
-3. Set **Start Command** to: `npm start`
-4. Railway will now run the Vite build and then start the Express server which serves the `dist` folder.
-
----
-
-## 3. Deployment: Hostinger VPS
-1. **Clone Repo:** `git clone <url> && cd ladies-smart-choice`
-2. **Install:** `npm install`
-3. **Build:** `npm run build` (This creates the `/dist` folder)
-4. **Environment:** Create `backend/.env` file.
-5. **Run with PM2:** `pm2 start backend/server.js --name "ladies-choice"`
-6. **Nginx:** Point your `root` to `/var/www/ladies-smart-choice/dist`.
-
----
-
-## Why this works on both?
-1. **Relative Paths:** Backend uses `path.resolve(__dirname, '..', 'dist')` which is robust.
-2. **Post-Install:** `npm install` at root now automatically installs backend dependencies.
-3. **Dynamic Port:** Works with Railway's dynamic ports and VPS fixed ports.
+### Local Setup
+1.  `npm install` (Root me)
+2.  `cd backend && npm install`
+3.  `.env` file setup karein.
+4.  `npm run dev` (Frontend) aur `node backend/server.js` (Backend) start karein.

@@ -1,6 +1,5 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-// Fix: Use namespace import and cast to any to resolve "no exported member" errors in this environment
 import * as ReactRouterDom from 'react-router-dom';
 const { useParams, Link, useNavigate } = ReactRouterDom as any;
 import { Product, Review } from '../types';
@@ -178,8 +177,7 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
       };
 
       addToCart(cartItem, quantity);
-      showToast(`Initiating Secure Checkout...`, 'success');
-
+      
       const eventPayload = {
         contents: [{
             id: product.sku || product.id,
@@ -192,9 +190,14 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
         currency: 'INR'
       };
       
-      // All Cart actions now direct to Magic Checkout
       masterTracker('InitiateCheckout', eventPayload, eventPayload);
-      navigate('/checkout?magic=true'); 
+      
+      if (isBuyNow) {
+          // Direct navigation will trigger auto-checkout on the page
+          navigate('/checkout');
+      } else {
+          showToast(`${product.name} added to cart!`, 'success');
+      }
   };
 
   const handleToggleFbt = (id: string) => {
@@ -213,8 +216,7 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
       ];
 
       addMultipleToCart(bundleItems);
-      showToast(`Bundle of ${bundleItems.length} items added to cart!`, 'success');
-      navigate('/checkout?magic=true'); 
+      navigate('/checkout'); 
   };
 
   const fbtSellingTotal = (product ? product.price : 0) + fbtProducts.filter(p => selectedFbtIds.has(p.id)).reduce((sum, p) => sum + p.price, 0);
