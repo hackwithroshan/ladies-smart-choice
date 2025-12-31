@@ -1,10 +1,5 @@
 
-
-
-
-
 import React, { useState, useEffect, Suspense, lazy, useRef } from 'react';
-// Fix: Use namespace import and cast to any to resolve "no exported member" errors in this environment
 import * as ReactRouterDom from 'react-router-dom';
 const { BrowserRouter: Router, Routes, Route, Navigate, useLocation, useNavigate } = ReactRouterDom as any;
 import { HelmetProvider } from 'react-helmet-async';
@@ -20,8 +15,6 @@ import SmartPopup from './components/SmartPopup';
 import WhatsAppWidget from './components/WhatsAppWidget';
 import MaintenancePage from './pages/MaintenancePage';
 
-// --- Lazy Load Pages ---
-// Fix: Explicitly type lazy loaded components to resolve IntrinsicAttributes errors when passing user and logout props.
 type PageWithUserProps = { user: any; logout: () => void };
 
 const HomePage: React.ComponentType<PageWithUserProps> = lazy(() => import('./pages/HomePage'));
@@ -97,7 +90,6 @@ const AppContent: React.FC = () => {
     navigate('/'); 
   };
 
-  // --- Maintenance Mode Logic ---
   const isMaintenance = siteSettings?.isMaintenanceMode && !user?.isAdmin;
 
   return (
@@ -122,6 +114,7 @@ const AppContent: React.FC = () => {
               <Route path="/pages/:slug" element={<DynamicPage user={user} logout={handleLogout} />} />
               <Route path="/cart" element={<CartPage user={user} logout={handleLogout} />} />
               <Route path="/wishlist" element={<WishlistPage user={user} logout={handleLogout} />} />
+              {/* FIXED: Checkout is now public to support Guest Checkout */}
               <Route path="/checkout" element={<CheckoutPage user={user} logout={handleLogout} />} />
               <Route path="/contact" element={<ContactPage user={user} logout={handleLogout} />} />
               <Route path="/track-order" element={<OrderTrackingPage user={user} logout={handleLogout} />} />

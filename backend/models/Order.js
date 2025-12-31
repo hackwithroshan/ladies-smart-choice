@@ -2,7 +2,8 @@
 const mongoose = require('mongoose');
 
 const OrderSchema = new mongoose.Schema({
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    // userId is now optional for Guest Checkout
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },
     items: [{
         productId: { type: String },
         name: { type: String },
