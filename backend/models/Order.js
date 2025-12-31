@@ -16,6 +16,12 @@ const OrderSchema = new mongoose.Schema({
         default: 'Pending' 
     },
     paymentId: { type: String },
+    shippingAddress: {
+        address: String,
+        city: String,
+        postalCode: String,
+        country: { type: String, default: 'India' }
+    },
     date: { type: Date, default: Date.now }
 }, { timestamps: true });
 
