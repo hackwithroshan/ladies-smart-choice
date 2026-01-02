@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Order, Product } from '../../types';
 import { COLORS } from '../../constants';
@@ -155,7 +156,10 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
     try {
       setLoading(true);
       const ordersRes = await fetch(getApiUrl('/api/orders'), { headers: { 'Authorization': `Bearer ${token}` } });
-      if (ordersRes.ok) setOrders(await ordersRes.json());
+      if (ordersRes.ok) {
+          const data = await ordersRes.json();
+          setOrders(data);
+      }
     } catch (error) { console.error(error); } 
     finally { setLoading(false); }
   };
@@ -260,8 +264,8 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
         const matchesStatus = filterStatus === 'All' || order.status === filterStatus;
         const matchesSearch = searchTerm === '' || 
                             order.orderNumber?.toString().includes(searchTerm) ||
-                            order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            order.customerEmail.toLowerCase().includes(searchTerm.toLowerCase());
+                            order.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            order.customerEmail?.toLowerCase().includes(searchTerm.toLowerCase());
         return matchesDate && matchesStatus && matchesSearch;
     });
 

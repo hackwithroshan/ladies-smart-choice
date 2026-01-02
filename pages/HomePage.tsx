@@ -24,14 +24,19 @@ const VideoListItem: React.FC<VideoListItemProps> = ({ video, autoplay, onClick 
 
     return (
       <div onClick={onClick} className="relative flex-shrink-0 w-44 md:w-full aspect-[9/16] rounded-2xl overflow-hidden group cursor-pointer shadow-lg transition-transform transform hover:scale-[1.02]">
-          {autoplay ? <video ref={videoElRef} src={video.videoUrl} muted loop playsInline className="w-full h-full object-cover" /> : <img src={video.thumbnailUrl || video.videoUrl.replace('.mp4', '.jpg')} alt={video.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"/>}
-          <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors"></div>
-          {!autoplay && <div className="absolute inset-0 flex items-center justify-center"><div className="w-10 h-10 md:w-12 md:h-12 bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/50 group-hover:scale-110 transition-transform"><PlayIcon className="h-4 w-4 md:h-5 md:w-5 text-white ml-1"/></div></div>}
-          <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 via-black/20 to-transparent text-white">
+          {autoplay ? <video ref={videoElRef} src={video.videoUrl} muted loop playsInline className="w-full h-full object-cover pointer-events-none" /> : <img src={video.thumbnailUrl || video.videoUrl.replace('.mp4', '.jpg')} alt={video.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 pointer-events-none"/>}
+          <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors pointer-events-none"></div>
+          {!autoplay && <div className="absolute inset-0 flex items-center justify-center pointer-events-none"><div className="w-10 h-10 md:w-12 md:h-12 bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/50 group-hover:scale-110 transition-transform"><PlayIcon className="h-4 w-4 md:h-5 md:w-5 text-white ml-1"/></div></div>}
+          <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 via-black/20 to-transparent text-white pointer-events-none">
               <h4 className="font-bold text-sm md:text-base truncate leading-tight">{video.title}</h4>
               <div className="flex justify-between items-center mt-2">
                   <span className="font-black text-xs md:text-sm text-brand-accent">{video.price}</span>
-                  <button className="bg-white text-black text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-tighter">Shop</button>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); onClick(); }}
+                    className="bg-white text-black text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-tighter pointer-events-auto hover:bg-brand-accent hover:text-white transition-colors"
+                  >
+                    Shop
+                  </button>
               </div>
           </div>
       </div>
@@ -98,6 +103,17 @@ const HomePage: React.FC<{ user: any; logout: () => void }> = ({ user, logout })
       const x = e.pageX - activeSliderRef.current.offsetLeft;
       const walk = (x - startX) * 2; 
       activeSliderRef.current.scrollLeft = scrollLeft - walk;
+  };
+
+  const handleVideoShop = (link?: string) => {
+      if (!link) return;
+      if (link.startsWith('http')) {
+          window.open(link, '_blank');
+      } else {
+          const target = link.startsWith('/') ? link : `/product/${link}`;
+          navigate(target);
+      }
+      setSelectedVideo(null);
   };
 
   const renderSection = (section: HomeSection) => {
@@ -246,6 +262,7 @@ const HomePage: React.FC<{ user: any; logout: () => void }> = ({ user, logout })
               <div className="w-full mx-auto px-4" style={{ maxWidth: desktopW }}>
                 <HeaderSection s={section} />
                 <div className="flex overflow-x-auto gap-8 pb-8 -mx-4 px-4 scrollbar-hide md:grid md:grid-cols-4">
+                    {/* FIXED: Removed access to non-existent .id property on ShoppableVideo type, using ._id instead */}
                     {videos.map(v => <VideoListItem key={v._id} video={v} autoplay={siteSettings?.videoAutoplay || false} onClick={() => setSelectedVideo(v)} />)}
                 </div>
               </div>
@@ -281,6 +298,25 @@ const HomePage: React.FC<{ user: any; logout: () => void }> = ({ user, logout })
       <Header user={user} logout={logout} />
       <main className="flex-grow">{layout.sections.map(renderSection)}</main>
       <Footer />
+
+      {selectedVideo && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-fade-in">
+              <div className="absolute inset-0" onClick={() => setSelectedVideo(null)}></div>
+              <div className="relative w-full max-w-md h-[85vh] bg-black rounded-3xl overflow-hidden shadow-2xl border border-white/10">
+                  <button onClick={() => setSelectedVideo(null)} className="absolute top-6 right-6 z-20 text-white bg-black/50 hover:bg-black/80 rounded-full p-2.5 transition-all backdrop-blur-xl">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
+                  <video src={selectedVideo.videoUrl} className="w-full h-full object-cover" autoPlay playsInline loop onClick={(e) => (e.target as HTMLVideoElement).paused ? (e.target as HTMLVideoElement).play() : (e.target as HTMLVideoElement).pause()} />
+                  <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-black via-black/40 to-transparent">
+                      <h3 className="text-white font-bold text-2xl mb-1 shadow-sm">{selectedVideo.title}</h3>
+                      <p className="text-rose-400 font-bold text-xl mb-8">{selectedVideo.price}</p>
+                      <button onClick={() => handleVideoShop(selectedVideo.productLink)} className="w-full bg-white text-black font-bold py-4 rounded-2xl hover:bg-gray-100 transition-all transform active:scale-95 flex items-center justify-center gap-3 shadow-2xl">
+                          <span className="uppercase text-sm tracking-widest">Shop This Style</span>
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
     </div>
   );
 };
