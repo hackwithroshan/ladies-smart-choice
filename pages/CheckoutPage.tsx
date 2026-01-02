@@ -12,40 +12,35 @@ const CheckoutPage: React.FC<{ user: any; logout: () => void }> = ({ user, logou
     const [loading, setLoading] = useState(false);
 
     const handlePayment = async () => {
-        if (cart.length === 0) {
-            alert("Your cart is empty.");
-            return;
-        }
-        
-        if (!(window as any).Razorpay) {
-            alert("Payment gateway is not ready. Please refresh.");
-            return;
-        }
+        if (cart.length === 0) return alert("Cart empty");
+        if (!(window as any).Razorpay) return alert("Razorpay SDK not loaded");
 
         setLoading(true);
 
         try {
-            // Get Public Key
+            // 1. Get Public Key from Backend
             const keyRes = await fetch(getApiUrl('/api/orders/key'));
             const { key } = await keyRes.json();
 
-            // Open Razorpay (Pure Magic Mode)
-            // Note: Dashboard-enabled Magic Checkout will automatically handle 
-            // address, login, and coupons. We only pass the key and metadata.
+            // 2. Prepare Razorpay Options
             const options = {
                 key: key,
-                amount: cartTotal * 100, // Amount in paise
+                amount: cartTotal * 100, 
                 currency: "INR",
-                name: siteSettings?.storeName || "Ayushree Ayurveda",
-                description: "Complete your purchase",
+                name: siteSettings?.storeName || "Ladies Smart Choice",
+                description: "Order Purchase",
                 image: siteSettings?.logoUrl || "",
+                // Magic Checkout needs notes to identify the order items
+                notes: {
+                    merchant_order_id: `ORD_${Date.now()}`,
+                    cart_items: JSON.stringify(cart.map(i => ({ id: i.id, name: i.name, qty: i.quantity })))
+                },
                 prefill: {
                     name: user?.name || "",
                     email: user?.email || "",
                     contact: user?.phone || ""
                 },
                 handler: async function (response: any) {
-                    setLoading(true);
                     try {
                         const verifyRes = await fetch(getApiUrl('/api/orders/verify'), {
                             method: 'POST',
@@ -60,35 +55,46 @@ const CheckoutPage: React.FC<{ user: any; logout: () => void }> = ({ user, logou
                                         productId: i.id,
                                         name: i.name,
                                         quantity: i.quantity,
-                                        price: i.price
+                                        price: i.price,
+                                        imageUrl: i.imageUrl
                                     })), 
                                     total: cartTotal,
-                                    customerEmail: user?.email || ""
+                                    customerEmail: user?.email || "guest@example.com"
                                 }
                             })
                         });
+                        
                         const result = await verifyRes.json();
                         if (result.success) {
                             clearCart();
-                            window.location.href = user ? "/dashboard?status=success" : "/track-order?id=" + result.orderId;
+                            // Redirect to success page or dashboard
+                            window.location.href = "/dashboard?status=success";
                         } else {
-                            alert("Order storage failed. Contact support with Payment ID: " + response.razorpay_payment_id);
+                            alert("Backend Error: " + result.message);
                         }
                     } catch (e) {
-                        alert("Network error during verification.");
-                    } finally {
-                        setLoading(false);
+                        alert("Verification Failed");
                     }
                 },
-                theme: { color: siteSettings?.primaryColor || "#16423C" },
-                modal: { ondismiss: () => setLoading(false) }
+                theme: { color: "#16423C" },
+                // Disable direct method selection to force Magic Login flow if enabled
+                "options": {
+                    "checkout": {
+                        "method": {
+                            "netbanking": "1",
+                            "card": "1",
+                            "upi": "1",
+                            "wallet": "1"
+                        }
+                    }
+                }
             };
 
             const rzp = new (window as any).Razorpay(options);
             rzp.open();
         } catch (error) {
-            console.error("Checkout failed:", error);
-            alert("Could not initialize checkout.");
+            console.error("Checkout fail:", error);
+        } finally {
             setLoading(false);
         }
     };
@@ -96,54 +102,37 @@ const CheckoutPage: React.FC<{ user: any; logout: () => void }> = ({ user, logou
     return (
         <div className="min-h-screen bg-[#FBF9F1]">
             <Header user={user} logout={logout} />
-            <main className="container mx-auto px-4 py-16 max-w-5xl">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-                    {/* Order Summary Card */}
-                    <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100">
-                        <h2 className="text-3xl font-serif font-black text-gray-900 mb-8 italic">Your Basket</h2>
-                        <div className="space-y-6">
-                            {cart.map(item => (
-                                <div key={item.id} className="flex justify-between items-center pb-4 border-b border-gray-50 last:border-0">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 bg-gray-50 rounded-lg overflow-hidden border">
-                                            <img src={item.imageUrl} className="w-full h-full object-cover" />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-bold text-gray-800 uppercase tracking-tight">{item.name}</p>
-                                            <p className="text-[10px] text-gray-400 font-black">QTY: {item.quantity}</p>
-                                        </div>
+            <main className="container mx-auto px-4 py-16 max-w-4xl">
+                <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
+                    <div className="p-8 border-b bg-gray-50">
+                        <h1 className="text-3xl font-serif font-black text-gray-900 italic">Secure Checkout</h1>
+                    </div>
+                    <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-12">
+                        <div>
+                            <h3 className="text-xs font-black uppercase text-gray-400 tracking-widest mb-6">Order Summary</h3>
+                            <div className="space-y-4">
+                                {cart.map(item => (
+                                    <div key={item.id} className="flex justify-between items-center text-sm">
+                                        <span className="font-bold text-gray-700">{item.name} x {item.quantity}</span>
+                                        <span className="font-black text-gray-900">₹{(item.price * item.quantity).toLocaleString()}</span>
                                     </div>
-                                    <span className="text-sm font-black text-gray-900">₹{(item.price * item.quantity).toLocaleString()}</span>
+                                ))}
+                                <div className="pt-4 border-t-2 border-dashed flex justify-between items-center text-2xl font-serif font-black text-[#16423C]">
+                                    <span>Total</span>
+                                    <span>₹{cartTotal.toLocaleString()}</span>
                                 </div>
-                            ))}
-                        </div>
-                        <div className="mt-8 pt-8 border-t-2 border-dashed border-gray-100">
-                            <div className="flex justify-between text-3xl font-serif font-black text-[#16423C]">
-                                <span>Total</span>
-                                <span className="italic">₹{cartTotal.toLocaleString()}</span>
                             </div>
                         </div>
-                    </div>
-
-                    {/* Checkout Action Area */}
-                    <div className="flex flex-col justify-center h-full">
-                        <div className="text-center lg:text-left mb-8">
-                             <h1 className="text-5xl font-serif font-black text-gray-900 mb-4 leading-tight">
-                                One-Click <br/><span className="text-brand-accent">Checkout</span>
-                             </h1>
-                             <p className="text-gray-500 font-medium">
-                                 We use Razorpay Magic to handle your login and address automatically. Click below to proceed securely.
-                             </p>
+                        <div className="flex flex-col justify-center text-center">
+                            <p className="text-gray-500 text-sm mb-8">We use Razorpay Magic for a faster checkout. You will be able to select your address in the popup.</p>
+                            <button 
+                                onClick={handlePayment}
+                                disabled={loading || cart.length === 0}
+                                className="w-full bg-[#16423C] text-white h-16 rounded-2xl font-black text-lg shadow-2xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+                            >
+                                {loading ? "Processing..." : "Pay Securely Now"}
+                            </button>
                         </div>
-                        <button 
-                            onClick={handlePayment}
-                            disabled={loading || cart.length === 0}
-                            className="group relative bg-[#16423C] text-white h-20 rounded-2xl font-black text-xl shadow-2xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
-                        >
-                            <span className="flex items-center justify-center gap-4">
-                                {loading ? <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"></div> : "Secure Magic Pay"}
-                            </span>
-                        </button>
                     </div>
                 </div>
             </main>

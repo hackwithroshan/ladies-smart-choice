@@ -5,6 +5,7 @@ import AdminHeader from '../components/admin/AdminHeader';
 import DashboardOverview from '../components/admin/Dashboard';
 import ProductList from '../components/admin/ProductList';
 import OrderList from '../components/admin/OrderList';
+import AbandonedLeads from '../components/admin/AbandonedLeads';
 import Analytics from '../components/admin/Analytics';
 import Customers from '../components/admin/Customers';
 import Marketing from '../components/admin/Marketing';
@@ -22,15 +23,12 @@ import MediaLibrary from '../components/admin/MediaLibrary';
 import { User } from '../types';
 import { useSiteData } from '../contexts/SiteDataContext';
 
-// Fix: Defining AdminView locally to match AdminSidebar.tsx type requirements
-type AdminView = 'dashboard' | 'analytics' | 'products' | 'inventory' | 'categories' | 'orders' | 'create-order' | 'customers' | 'marketing' | 'discounts' | 'settings' | 'cms' | 'shop-videos' | 'slider' | 'media' | 'blogs' | 'pages' | 'contact-messages' | 'admin-profile' | 'shipping-integrations';
+type AdminView = 'dashboard' | 'analytics' | 'products' | 'inventory' | 'categories' | 'orders' | 'abandoned-checkouts' | 'create-order' | 'customers' | 'marketing' | 'discounts' | 'settings' | 'cms' | 'shop-videos' | 'slider' | 'media' | 'blogs' | 'pages' | 'contact-messages' | 'admin-profile' | 'shipping-integrations';
 
 const AdminDashboardPage: React.FC<{ user: User; logout: () => void }> = ({ user: initialUser, logout }) => {
-    // Fix: Updated state to use currentView instead of activeTab to match AdminSidebarProps
     const [currentView, setCurrentView] = useState<AdminView>('dashboard');
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
-    // Fix: Add state to track user updates from profile locally
     const [user, setUser] = useState<User>(initialUser);
     const { products } = useSiteData();
     const token = localStorage.getItem('token');
@@ -43,13 +41,13 @@ const AdminDashboardPage: React.FC<{ user: User; logout: () => void }> = ({ user
             case 'categories': return <CollectionSettings token={token} />;
             case 'shop-videos': return <VideoSettings token={token} />;
             case 'orders': return <OrderList token={token} />;
+            case 'abandoned-checkouts': return <AbandonedLeads token={token} />;
             case 'create-order': return <CreateOrder token={token} onOrderCreated={() => setCurrentView('orders')} />;
             case 'customers': return <Customers token={token} />;
             case 'marketing': return <Marketing token={token} />;
             case 'discounts': return <Discounts token={token} />;
             case 'settings': return <Settings token={token} />;
             case 'cms': return <CMSManagement token={token} />;
-            // Fix: Map sub-views of CMS to CMSManagement with appropriate initial tab
             case 'slider': return <CMSManagement token={token} initialTab="slider" />;
             case 'blogs': return <CMSManagement token={token} initialTab="blogs" />;
             case 'pages': return <CMSManagement token={token} initialTab="pages" />;
@@ -63,7 +61,6 @@ const AdminDashboardPage: React.FC<{ user: User; logout: () => void }> = ({ user
 
     return (
         <div className="flex h-screen bg-[#FBF9F1] overflow-hidden">
-            {/* Fix: Passed correct prop names (currentView, setCurrentView) and added user prop to AdminSidebar */}
             <AdminSidebar 
                 user={user}
                 currentView={currentView} 
@@ -72,7 +69,6 @@ const AdminDashboardPage: React.FC<{ user: User; logout: () => void }> = ({ user
                 setIsOpen={setIsSidebarOpen}
             />
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-                {/* Fix: Passed missing openGlobalSearch and setCurrentView props to AdminHeader */}
                 <AdminHeader 
                     user={user} 
                     logout={logout} 

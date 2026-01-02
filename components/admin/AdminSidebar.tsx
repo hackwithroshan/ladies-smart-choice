@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Icons, COLORS } from '../../constants';
 import { User } from '../../types';
 
-type AdminView = 'dashboard' | 'analytics' | 'products' | 'inventory' | 'categories' | 'orders' | 'create-order' | 'customers' | 'marketing' | 'discounts' | 'settings' | 'cms' | 'shop-videos' | 'slider' | 'media' | 'blogs' | 'pages' | 'contact-messages' | 'admin-profile' | 'shipping-integrations';
+type AdminView = 'dashboard' | 'analytics' | 'products' | 'inventory' | 'categories' | 'orders' | 'abandoned-checkouts' | 'create-order' | 'customers' | 'marketing' | 'discounts' | 'settings' | 'cms' | 'shop-videos' | 'slider' | 'media' | 'blogs' | 'pages' | 'contact-messages' | 'admin-profile' | 'shipping-integrations';
 
 interface AdminSidebarProps {
   user: User;
@@ -58,6 +58,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ user, currentView, setCurre
       icon: Icons.orders,
       children: [
         { id: 'orders-list', label: 'All Orders', view: 'orders' },
+        { id: 'abandoned-leads', label: 'Abandoned Checkouts', view: 'abandoned-checkouts' },
         { id: 'create-order', label: 'New Manual Order', view: 'create-order' },
         { id: 'customers', label: 'Customer Database', view: 'customers' },
         { id: 'discounts', label: 'Coupons', view: 'discounts' },
