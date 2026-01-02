@@ -1,3 +1,4 @@
+
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
@@ -15,15 +16,40 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Database Connection
-mongoose.connect(process.env.MONGO_URI)
-    .then(() => console.log('MongoDB Connected: Ladies Smart Choice (Port 5000)'))
-    .catch(err => console.error('MongoDB Error:', err.message));
+// MongoDB Connection with improved options
+const connectDB = async () => {
+    try {
+        console.log('Attempting to connect to MongoDB...');
+        await mongoose.connect(process.env.MONGO_URI, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true,
+            serverSelectionTimeoutMS: 5000, // 5 seconds tak wait karega connection ke liye
+        });
+        console.log('✅ MongoDB Connected Successfully!');
+    } catch (err) {
+        console.error('❌ MongoDB Connection Failed:', err.message);
+        console.log('Check if your IP is whitelisted in MongoDB Atlas or if Local MongoDB is running.');
+        // Don't exit here to allow for manual debugging if needed, 
+        // but Mongoose will throw errors on queries.
+    }
+};
+
+connectDB();
+
+// Global Mongoose Config to prevent buffering hang
+mongoose.set('bufferCommands', false);
+
+// --- SHORT URL MAPPING FOR WEBHOOKS ---
+const orderRoutes = require('./routes/orders');
+app.post('/rzp', (req, res, next) => {
+    req.url = '/webhook/razorpay'; 
+    next();
+}, orderRoutes);
 
 // API Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/products', require('./routes/products'));
-app.use('/api/orders', require('./routes/orders'));
+app.use('/api/orders', orderRoutes);
 app.use('/api/users', require('./routes/users'));
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/slides', require('./routes/slides'));
@@ -57,4 +83,4 @@ if (fs.existsSync(distPath)) {
 }
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Ladies Smart Choice Active on Port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Ladies Smart Choice Active on Port ${PORT}`));

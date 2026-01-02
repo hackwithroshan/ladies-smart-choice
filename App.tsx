@@ -33,39 +33,20 @@ const WishlistPage: React.ComponentType<PageWithUserProps> = lazy(() => import('
 
 const LoadingSpinner: React.FC = () => (
     <div className="flex justify-center items-center h-screen w-screen bg-gray-50">
-        <div className="animate-spin rounded-full h-24 w-24 border-t-2 border-b-2 border-rose-600"></div>
+        <div className="animate-spin rounded-full h-24 w-24 border-t-2 border-b-2 border-[#16423C]"></div>
     </div>
 );
-
-const MasterTracker: React.FC = () => {
-    const location = useLocation();
-    const { siteSettings, loading: siteDataLoading } = useSiteData();
-    const warningLogged = useRef(false);
-
-    useEffect(() => {
-        if (siteDataLoading) return;
-        if (!(window as any)._pixelInitialized) {
-            if (siteSettings?.metaPixelId) {
-                initFacebookPixel(siteSettings.metaPixelId);
-                (window as any)._pixelInitialized = true;
-            } else if (!warningLogged.current) {
-                console.warn("M-Tracker: Meta Pixel ID not found in site settings.");
-                warningLogged.current = true;
-            }
-        }
-        if ((window as any)._pixelInitialized) {
-            masterTracker('PageView');
-        }
-    }, [location, siteSettings, siteDataLoading]);
-
-    return null;
-};
 
 const AppContent: React.FC = () => {
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [user, setUser] = useState<any>(JSON.parse(localStorage.getItem('user') || 'null'));
   const { siteSettings } = useSiteData();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Detect Subdomain
+  const hostname = window.location.hostname;
+  const isDashboardSubdomain = hostname.startsWith('dashboard.') || location.pathname.startsWith('/app');
 
   useEffect(() => {
     if (token && user) {
@@ -80,8 +61,16 @@ const AppContent: React.FC = () => {
   const handleAuthSuccess = (data: { token: string; user: any }) => {
     setToken(data.token);
     setUser(data.user);
-    if (data.user?.isAdmin) navigate('/admin');
-    else navigate('/dashboard');
+    if (data.user?.isAdmin) {
+        // If on main domain, redirect to dashboard subdomain if possible, else use /app
+        if (!hostname.startsWith('dashboard.')) {
+            window.location.href = `${window.location.protocol}//dashboard.${hostname.replace('www.', '')}/app/dashboard`;
+        } else {
+            navigate('/app/dashboard');
+        }
+    } else {
+        navigate('/dashboard');
+    }
   };
 
   const handleLogout = () => {
@@ -92,45 +81,56 @@ const AppContent: React.FC = () => {
 
   const isMaintenance = siteSettings?.isMaintenanceMode && !user?.isAdmin;
 
+  // --- SUBDOMAIN DASHBOARD ROUTING ---
+  if (isDashboardSubdomain) {
+      return (
+          <Suspense fallback={<LoadingSpinner />}>
+              <Routes>
+                  {/* Redirect root of dashboard to /app/dashboard */}
+                  <Route path="/" element={<Navigate to="/app/dashboard" replace />} />
+                  <Route path="/app/*" element={user?.isAdmin ? <AdminDashboardPage user={user} logout={handleLogout} /> : <Navigate to="/login" />} />
+                  <Route path="/login" element={<LoginPage onAuthSuccess={handleAuthSuccess} />} />
+                  <Route path="*" element={<Navigate to="/app/dashboard" replace />} />
+              </Routes>
+          </Suspense>
+      );
+  }
+
+  // --- MAIN STORE ROUTING ---
   return (
-    <>
-      <MasterTracker />
-      <div className="min-h-screen bg-gray-50">
-        <Suspense fallback={<LoadingSpinner />}>
-          {isMaintenance ? (
-             <Routes>
-                <Route path="/login" element={<LoginPage onAuthSuccess={handleAuthSuccess} />} />
-                <Route path="*" element={<MaintenancePage />} />
-             </Routes>
-          ) : (
-            <Routes>
-              <Route path="/" element={<HomePage user={user} logout={handleLogout} />} />
-              <Route path="/login" element={!user ? <LoginPage onAuthSuccess={handleAuthSuccess} /> : <Navigate to="/" />} />
-              <Route path="/register" element={!user ? <RegisterPage onAuthSuccess={handleAuthSuccess} /> : <Navigate to="/" />} />
-              <Route path="/admin/*" element={user?.isAdmin ? <AdminDashboardPage user={user} logout={handleLogout} /> : <Navigate to="/" />} />
-              <Route path="/dashboard" element={user ? <UserDashboardPage user={user} logout={handleLogout} /> : <Navigate to="/login" />} />
-              <Route path="/product/:slug" element={<ProductDetailsPage user={user} logout={handleLogout} />} />
-              <Route path="/collections/:id" element={<CollectionPage user={user} logout={handleLogout} />} />
-              <Route path="/pages/:slug" element={<DynamicPage user={user} logout={handleLogout} />} />
-              <Route path="/cart" element={<CartPage user={user} logout={handleLogout} />} />
-              <Route path="/wishlist" element={<WishlistPage user={user} logout={handleLogout} />} />
-              {/* FIXED: Checkout is now public to support Guest Checkout */}
-              <Route path="/checkout" element={<CheckoutPage user={user} logout={handleLogout} />} />
-              <Route path="/contact" element={<ContactPage user={user} logout={handleLogout} />} />
-              <Route path="/track-order" element={<OrderTrackingPage user={user} logout={handleLogout} />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          )}
-        </Suspense>
-        
-        {!user?.isAdmin && !isMaintenance && (
-          <>
-            <SmartPopup />
-            <WhatsAppWidget />
-          </>
+    <div className="min-h-screen bg-gray-50">
+      <Suspense fallback={<LoadingSpinner />}>
+        {isMaintenance ? (
+           <Routes>
+              <Route path="/login" element={<LoginPage onAuthSuccess={handleAuthSuccess} />} />
+              <Route path="*" element={<MaintenancePage />} />
+           </Routes>
+        ) : (
+          <Routes>
+            <Route path="/" element={<HomePage user={user} logout={handleLogout} />} />
+            <Route path="/login" element={!user ? <LoginPage onAuthSuccess={handleAuthSuccess} /> : <Navigate to="/" />} />
+            <Route path="/register" element={!user ? <RegisterPage onAuthSuccess={handleAuthSuccess} /> : <Navigate to="/" />} />
+            <Route path="/dashboard" element={user ? <UserDashboardPage user={user} logout={handleLogout} /> : <Navigate to="/login" />} />
+            <Route path="/product/:slug" element={<ProductDetailsPage user={user} logout={handleLogout} />} />
+            <Route path="/collections/:id" element={<CollectionPage user={user} logout={handleLogout} />} />
+            <Route path="/pages/:slug" element={<DynamicPage user={user} logout={handleLogout} />} />
+            <Route path="/cart" element={<CartPage user={user} logout={handleLogout} />} />
+            <Route path="/wishlist" element={<WishlistPage user={user} logout={handleLogout} />} />
+            <Route path="/checkout" element={<CheckoutPage user={user} logout={handleLogout} />} />
+            <Route path="/contact" element={<ContactPage user={user} logout={handleLogout} />} />
+            <Route path="/track-order" element={<OrderTrackingPage user={user} logout={handleLogout} />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
         )}
-      </div>
-    </>
+      </Suspense>
+      
+      {!user?.isAdmin && !isMaintenance && (
+        <>
+          <SmartPopup />
+          <WhatsAppWidget />
+        </>
+      )}
+    </div>
   );
 };
 

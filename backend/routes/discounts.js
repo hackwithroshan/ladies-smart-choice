@@ -4,91 +4,116 @@ const router = express.Router();
 const Discount = require('../models/Discount');
 const { protect, admin } = require('../middleware/authMiddleware');
 
-// --- RAZORPAY MAGIC CHECKOUT ENDPOINTS ---
-
-// @desc    Get applicable promotions for Razorpay
-// @route   GET /api/discounts/razorpay/list
-// @access  Public (Called by Razorpay)
-router.get('/razorpay/list', async (req, res) => {
+/**
+ * 1. PROMOTIONS LISTING API
+ * POST /api/discounts/promotions
+ */
+router.post('/promotions', async (req, res) => {
     try {
+        const { order_id, contact, email } = req.body;
         const now = new Date();
-        // Fetch all active, non-expired discounts
-        const discounts = await Discount.find({
-            expiry: { $gt: now }
+
+        const activeDiscounts = await Discount.find({
+            expiry: { $gt: now },
+            $expr: { $lt: ["$usageCount", "$maxUsage"] }
         });
 
-        // Map to Razorpay Promotion Object Format
-        const promotions = discounts.map(d => ({
-            code: d.code,
-            description: d.type === 'Percentage' ? `${d.value}% Off on your order` : `Flat ₹${d.value} Off`,
-            label: d.code,
-            // You can add logic here to filter by order_id or customer if needed
-        }));
+        const promotions = activeDiscounts.map(d => {
+            let summary = "";
+            let description = "";
 
-        res.json({ promotions });
+            if (d.type === 'Percentage') {
+                summary = `${d.value}% OFF`;
+                description = `${d.value}% discount on your total cart value.`;
+            } else if (d.type === 'Flat') {
+                summary = `₹${d.value} OFF`;
+                description = `Flat ₹${d.value} discount applied to your order.`;
+            } else if (d.type === 'Free Shipping') {
+                summary = "FREE SHIPPING";
+                description = "No shipping charges for this order.";
+            }
+
+            return {
+                code: d.code,
+                summary: summary,
+                description: description
+            };
+        });
+
+        res.status(200).json({ promotions });
+
     } catch (err) {
-        console.error("Razorpay List Coupons Error:", err);
-        res.status(500).json({ promotions: [] });
+        console.error("PROMOTIONS LISTING ERROR:", err);
+        res.status(200).json({ promotions: [] });
     }
 });
 
-// @desc    Apply/Validate promotion for Razorpay
-// @route   POST /api/discounts/razorpay/apply
-// @access  Public (Called by Razorpay)
-router.post('/razorpay/apply', async (req, res) => {
-    const { code, order_amount } = req.body;
-
+/**
+ * 2. PROMOTION APPLY/VALIDATE API (AS REQUESTED)
+ * POST /api/discounts/apply-promo
+ * Request Body: { order_id, contact, email, code }
+ */
+router.post('/apply-promo', async (req, res) => {
     try {
+        const { order_id, contact, email, code } = req.body;
+        
+        // 1. Find the discount code in DB
         const discount = await Discount.findOne({ 
             code: code.toUpperCase(),
             expiry: { $gt: new Date() }
         });
 
-        if (!discount) {
-            return res.status(200).json({
-                valid: false,
-                error_message: "Invalid or expired coupon code."
+        // 2. Validation Check
+        if (!discount || discount.usageCount >= discount.maxUsage) {
+            return res.status(400).json({
+                error: {
+                    code: "INVALID_PROMOTION",
+                    description: "This coupon code is invalid or has expired."
+                }
             });
         }
 
-        if (discount.usageCount >= discount.maxUsage) {
-            return res.status(200).json({
-                valid: false,
-                error_message: "Coupon usage limit reached."
-            });
-        }
+        // 3. Prepare response data
+        // Convert internal types to Razorpay compatible types
+        const valueType = discount.type === 'Percentage' ? 'percentage' : 'fixed_amount';
+        
+        /**
+         * Note: Razorpay accepts value in paise for 'fixed_amount' 
+         * and in basis points or direct integer for 'percentage'. 
+         * As per your example: 50000 value = ₹500.
+         */
+        const value = discount.type === 'Percentage' ? (discount.value * 100) : (discount.value * 100);
 
-        // Calculate discount amount (in Paisa, as Razorpay uses smallest currency unit)
-        // Note: order_amount from Razorpay is usually in Paisa
-        let discountAmountPaisa = 0;
-        const amount = order_amount / 100; // Convert to Rupees for calculation
-
-        if (discount.type === 'Percentage') {
-            discountAmountPaisa = Math.round((amount * (discount.value / 100)) * 100);
-        } else if (discount.type === 'Flat') {
-            discountAmountPaisa = discount.value * 100;
-        }
-
-        res.json({
-            valid: true,
-            discount_amount: discountAmountPaisa,
-            description: `Discount of ${discount.type === 'Percentage' ? discount.value + '%' : '₹' + discount.value} applied!`
+        // 4. Send Success Response in requested format
+        res.status(200).json({
+            promotion: {
+                "reference_id": `promo_ref_${Date.now()}`, 
+                "type": "offer",
+                "code": discount.code, 
+                "value": value, 
+                "value_type": valueType, 
+                "description": `${discount.type === 'Percentage' ? discount.value + '%' : '₹' + discount.value} Discount Applied!`
+            }
         });
+
     } catch (err) {
-        console.error("Razorpay Apply Coupon Error:", err);
-        res.status(200).json({ valid: false, error_message: "Internal server error." });
+        console.error("PROMOTION APPLY ERROR:", err);
+        res.status(500).json({ 
+            error: {
+                code: "SERVER_ERROR",
+                description: "Something went wrong while applying the promotion."
+            }
+        });
     }
 });
 
-// --- STANDARD ADMIN CRUD ENDPOINTS ---
+// --- ADMIN CRUD ---
 
 router.get('/', protect, admin, async (req, res) => {
     try {
         const discounts = await Discount.find({}).sort({ createdAt: -1 });
         res.json(discounts);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
+    } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
 router.post('/', protect, admin, async (req, res) => {
@@ -96,18 +121,14 @@ router.post('/', protect, admin, async (req, res) => {
     try {
         await newDiscount.save();
         res.status(201).json(newDiscount);
-    } catch (err) {
-        res.status(400).json({ message: err.message });
-    }
+    } catch (err) { res.status(400).json({ message: err.message }); }
 });
 
 router.delete('/:id', protect, admin, async (req, res) => {
     try {
         await Discount.findByIdAndDelete(req.params.id);
         res.json({ message: 'Discount deleted' });
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
+    } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
 module.exports = router;

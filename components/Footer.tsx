@@ -26,7 +26,7 @@ const Footer: React.FC = () => {
   const BrandName = siteSettings?.storeName || "Ayushree Ayurveda";
   
   const footerBaseStyle: React.CSSProperties = {
-      backgroundColor: footerSettings.backgroundColor || '#16423C',
+      backgroundColor: footerSettings?.backgroundColor || '#16423C',
       position: 'relative',
       minHeight: '400px'
   };
@@ -34,7 +34,7 @@ const Footer: React.FC = () => {
   const bgImageStyle: React.CSSProperties = {
       position: 'absolute',
       inset: 0,
-      backgroundImage: footerSettings.backgroundImage ? `url(${footerSettings.backgroundImage})` : 'none',
+      backgroundImage: footerSettings?.backgroundImage ? `url(${footerSettings.backgroundImage})` : 'none',
       backgroundSize: 'cover',
       backgroundPosition: 'center',
       zIndex: 0
@@ -43,14 +43,14 @@ const Footer: React.FC = () => {
   const overlayStyle: React.CSSProperties = {
       position: 'absolute',
       inset: 0,
-      backgroundColor: footerSettings.overlayColor || '#000000',
-      opacity: (footerSettings.overlayOpacity || 0) / 100,
+      backgroundColor: footerSettings?.overlayColor || '#000000',
+      opacity: (footerSettings?.overlayOpacity || 0) / 100,
       zIndex: 1
   };
 
-  const textStyle = { color: footerSettings.textColor || '#D1D5DB' };
-  const headingStyle = { color: footerSettings.headingColor || '#6A9C89' };
-  const linkStyle = { color: footerSettings.linkColor || '#9CA3AF' };
+  const textStyle = { color: footerSettings?.textColor || '#D1D5DB' };
+  const headingStyle = { color: footerSettings?.headingColor || '#6A9C89' };
+  const linkStyle = { color: footerSettings?.linkColor || '#9CA3AF' };
 
   const handleSubscribe = async (e: React.FormEvent) => {
       e.preventDefault();
@@ -81,10 +81,10 @@ const Footer: React.FC = () => {
     <div className={`${isColumn ? 'flex flex-col h-full' : 'flex flex-col lg:flex-row justify-between items-center gap-10'}`}>
         <div className={`${isColumn ? 'mb-6' : 'max-w-xl text-center lg:text-left'}`}>
             <h3 className={`${isColumn ? 'text-[10px] font-black tracking-[0.4em]' : 'text-2xl md:text-3xl font-brand font-black italic tracking-tighter'} uppercase mb-4`} style={headingStyle}>
-                {footerSettings.newsletterTitle || 'Join Our Journey'}
+                {footerSettings?.newsletterTitle || 'Join Our Journey'}
             </h3>
             <p className={`${isColumn ? 'text-xs leading-relaxed opacity-80' : 'text-sm font-medium leading-relaxed opacity-90'}`} style={textStyle}>
-                {footerSettings.newsletterSubtitle || 'Get exclusive updates and herbal tips.'}
+                {footerSettings?.newsletterSubtitle || 'Get exclusive updates and herbal tips.'}
             </p>
         </div>
         <div className={`${isColumn ? 'w-full' : 'w-full max-w-md'}`}>
@@ -121,7 +121,7 @@ const Footer: React.FC = () => {
       <div className="container mx-auto py-16 px-4 sm:px-6 lg:px-8 relative z-10">
         
         {/* Newsletter: TOP POSITION (Full Width) */}
-        {footerSettings.showNewsletter && footerSettings.newsletterPlacement === 'Top' && (
+        {footerSettings?.showNewsletter && footerSettings?.newsletterPlacement === 'Top' && (
             <div className="mb-20 pb-16 border-b border-white/10">
                 <NewsletterBox />
             </div>
@@ -129,10 +129,10 @@ const Footer: React.FC = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12 border-b border-white/10 pb-16">
           
-          {/* Brand Identity Column (Usually starts at the left) */}
+          {/* Brand Identity Column */}
           <div className="col-span-1 lg:col-span-2 space-y-8">
             <Link to="/" className="inline-block">
-                {footerSettings.logoUrl ? (
+                {footerSettings?.logoUrl ? (
                     <img src={footerSettings.logoUrl} alt={BrandName} className="h-10 md:h-12 w-auto object-contain" />
                 ) : (
                     <h2 className="text-3xl font-brand font-black italic tracking-tighter uppercase" style={headingStyle}>{BrandName}</h2>
@@ -140,11 +140,11 @@ const Footer: React.FC = () => {
             </Link>
             
             <p className="text-sm leading-relaxed font-medium max-w-sm" style={textStyle}>
-              {footerSettings.brandDescription || `Reviving ancient secrets for your daily health at ${BrandName}. Our products are ethically sourced and 100% natural.`}
+              {footerSettings?.brandDescription || `Reviving ancient secrets for your daily health at ${BrandName}. Our products are ethically sourced and 100% natural.`}
             </p>
 
             <div className="flex flex-wrap gap-3 pt-2">
-                {footerSettings.socialLinks.map((s, i) => (
+                {(footerSettings?.socialLinks || []).map((s, i) => (
                     <a 
                         key={i} 
                         href={s.url} 
@@ -159,12 +159,12 @@ const Footer: React.FC = () => {
             </div>
           </div>
           
-          {/* Menu Columns (Rendered in the middle) */}
-          {footerSettings.columns.map((col, idx) => (
+          {/* Menu Columns */}
+          {(footerSettings?.columns || []).map((col, idx) => (
               <div key={idx} className="col-span-1">
                 <h3 className="text-[10px] font-black tracking-[0.4em] uppercase mb-8" style={headingStyle}>{col.title}</h3>
                 <ul className="space-y-4">
-                    {col.links.map((link, lIdx) => (
+                    {(col.links || []).map((link, lIdx) => (
                         <li key={lIdx}>
                             <Link to={link.url} className="text-sm hover:text-white transition-colors block font-medium" style={linkStyle}>
                                 {link.text}
@@ -175,8 +175,8 @@ const Footer: React.FC = () => {
               </div>
           ))}
 
-          {/* Newsletter: COLUMN POSITION (Moved here to show at the END / RIGHT) */}
-          {footerSettings.showNewsletter && footerSettings.newsletterPlacement === 'InColumn' && (
+          {/* Newsletter: COLUMN POSITION */}
+          {footerSettings?.showNewsletter && footerSettings?.newsletterPlacement === 'InColumn' && (
               <div className="col-span-1">
                   <NewsletterBox isColumn />
               </div>
@@ -185,7 +185,7 @@ const Footer: React.FC = () => {
         
         <div className="mt-10 flex flex-col lg:flex-row justify-between items-center gap-6">
           <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8 text-[9px] uppercase tracking-[0.3em] font-bold text-gray-500 text-center md:text-left">
-             <p style={textStyle}>{footerSettings.copyrightText || `© ${new Date().getFullYear()} ${BrandName}.`}</p>
+             <p style={textStyle}>{footerSettings?.copyrightText || `© ${new Date().getFullYear()} ${BrandName}.`}</p>
              <div className="hidden md:flex gap-6">
                 <span className="flex items-center gap-2" style={textStyle}><span className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-lg shadow-green-500/50"></span> SSL SECURE</span>
                 <span className="flex items-center gap-2" style={textStyle}><span className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-lg shadow-green-500/50"></span> QUALITY VERIFIED</span>

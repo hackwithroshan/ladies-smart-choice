@@ -73,17 +73,17 @@ const Header: React.FC<HeaderProps> = ({ user, logout }) => {
   }, [searchTerm]);
 
   useEffect(() => {
-    const messages = headerSettings.announcementMessages || [headerSettings.announcementMessage || 'Welcome to our store'];
+    const messages = headerSettings?.announcementMessages || [headerSettings?.announcementMessage || 'Welcome to our store'];
     if (messages.length > 1) {
         const interval = setInterval(() => {
             setCurrentAnnouncementIndex(prev => (prev + 1) % messages.length);
         }, 5000);
         return () => clearInterval(interval);
     }
-  }, [headerSettings.announcementMessages]);
+  }, [headerSettings?.announcementMessages]);
 
-  const announcementBg = headerSettings.announcementBgColor || 'var(--brand-primary)';
-  const announcementText = headerSettings.announcementTextColor || '#FFFFFF';
+  const announcementBg = headerSettings?.announcementBgColor || 'var(--brand-primary)';
+  const announcementText = headerSettings?.announcementTextColor || '#FFFFFF';
   const BrandBrandName = siteSettings?.storeName || "Ayushree Ayurveda";
   const { cartCount } = useCart();
   const { wishlistCount } = useWishlist();
@@ -112,7 +112,7 @@ const Header: React.FC<HeaderProps> = ({ user, logout }) => {
 
       <div style={{ backgroundColor: announcementBg, color: announcementText }} className="py-2 text-center px-4 overflow-hidden relative shadow-sm z-50">
           <p className="text-[10px] md:text-xs font-bold tracking-widest uppercase animate-fade-in">
-              {(headerSettings.announcementMessages?.length ? headerSettings.announcementMessages : ['Authentic Ayurvedic Wellness'])[currentAnnouncementIndex]}
+              {(headerSettings?.announcementMessages?.length ? headerSettings.announcementMessages : ['Authentic Ayurvedic Wellness'])[currentAnnouncementIndex]}
           </p>
       </div>
 
@@ -161,7 +161,7 @@ const Header: React.FC<HeaderProps> = ({ user, logout }) => {
                             <div className="max-h-[400px] overflow-y-auto">
                                 {searchTerm.length < 2 ? (
                                     <div className="grid grid-cols-2 gap-2 p-3">
-                                        {collections.slice(0, 4).map(col => (
+                                        {(collections || []).slice(0, 4).map(col => (
                                             <Link key={col.id} to={`/collections/${col.slug || col.id}`} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-xl transition-colors">
                                                 <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100"><img src={col.imageUrl} className="w-full h-full object-cover" /></div>
                                                 <span className="text-xs font-bold text-gray-700">{col.title}</span>
@@ -219,7 +219,7 @@ const Header: React.FC<HeaderProps> = ({ user, logout }) => {
                         <div className="p-6">
                             <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-6">Collections</h4>
                             <div className="space-y-4">
-                                {collections.slice(0, 5).map(col => (
+                                {(collections || []).slice(0, 5).map(col => (
                                     <Link key={col.id} to={`/collections/${col.slug || col.id}`} className="flex items-center justify-between group">
                                         <div className="flex items-center gap-4"><div className="w-10 h-10 rounded-full overflow-hidden border shadow-sm"><img src={col.imageUrl} className="w-full h-full object-cover" /></div><span className="text-sm font-bold text-gray-800">{col.title}</span></div>
                                         <NavArrowIcon className="text-gray-300 w-3 h-3" />
@@ -235,7 +235,7 @@ const Header: React.FC<HeaderProps> = ({ user, logout }) => {
 
       <div className="bg-white hidden lg:block border-b border-gray-100 shadow-sm">
           <div className="container mx-auto px-4"><nav className="flex items-center justify-center space-x-10 h-12">
-                  {headerSettings.mainNavLinks.map((link, idx) => (<Link key={idx} to={link.url} className={`text-[11px] font-bold uppercase tracking-[0.2em] hover:text-brand-accent transition-all py-4 ${link.isSpecial ? 'text-brand-primary border-b-2 border-brand-primary' : 'text-gray-600'}`}>{link.text}</Link>))}
+                  {(headerSettings?.mainNavLinks || []).map((link, idx) => (<Link key={idx} to={link.url} className={`text-[11px] font-bold uppercase tracking-[0.2em] hover:text-brand-accent transition-all py-4 ${link.isSpecial ? 'text-brand-primary border-b-2 border-brand-primary' : 'text-gray-600'}`}>{link.text}</Link>))}
                   <Link to="/track-order" className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-600 hover:text-brand-accent">Track Order</Link>
           </nav></div>
       </div>
@@ -260,7 +260,7 @@ const Header: React.FC<HeaderProps> = ({ user, logout }) => {
                             <span className="text-sm font-bold text-gray-800">Home</span>
                             <NavArrowIcon className="text-gray-300 w-3 h-3 group-hover:text-brand-primary" />
                         </Link>
-                        {headerSettings.mainNavLinks.map((link, idx) => (
+                        {(headerSettings?.mainNavLinks || []).map((link, idx) => (
                             <Link key={idx} to={link.url} className="flex items-center justify-between py-3.5 px-3 rounded-xl hover:bg-gray-50 group border-b border-transparent">
                                 <span className="text-sm font-bold text-gray-800">{link.text}</span>
                                 <NavArrowIcon className="text-gray-300 w-3 h-3 group-hover:text-brand-primary" />
