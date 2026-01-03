@@ -1,3 +1,4 @@
+
 const mongoose = require('mongoose');
 
 const SiteSettingsSchema = new mongoose.Schema({
@@ -7,22 +8,24 @@ const SiteSettingsSchema = new mongoose.Schema({
     faviconUrl: String,
     
     // Design System
-    primaryColor: { type: String, default: '#16423C' }, // Deep Green
-    accentColor: { type: String, default: '#6A9C89' },  // Sage Green
+    primaryColor: { type: String, default: '#16423C' },
+    accentColor: { type: String, default: '#6A9C89' },
     fontFamily: { type: String, default: 'Playfair Display' },
+    
+    // STRICT CHECKOUT MODE
+    // 'standard' = Custom checkout form on our site
+    // 'magic' = Immediate Razorpay popup, no local form
+    checkoutMode: { 
+        type: String, 
+        enum: ['standard', 'magic'], 
+        default: 'standard' 
+    },
     
     // Commerce Settings
     currency: { type: String, default: 'INR' },
     taxRate: { type: Number, default: 0 },
     shippingCharge: { type: Number, default: 0 },
     videoAutoplay: { type: Boolean, default: true },
-    
-    // Magic Checkout & COD Toggles
-    isMagicCheckoutEnabled: { type: Boolean, default: true },
-    isCodEnabled: { type: Boolean, default: true },
-    
-    // Maintenance Mode
-    isMaintenanceMode: { type: Boolean, default: false },
     
     // WhatsApp Configuration
     whatsappNumber: { type: String, default: '919876543210' },

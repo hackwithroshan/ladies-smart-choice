@@ -133,6 +133,7 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>('All');
+  const [filterType, setFilterType] = useState<string>('All'); // NEW: Source filter
   const [searchTerm, setSearchTerm] = useState('');
   
   // Navigation View State
@@ -262,11 +263,12 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
         const orderDate = new Date(order.date);
         const matchesDate = orderDate >= dateRange.startDate && orderDate <= dateRange.endDate;
         const matchesStatus = filterStatus === 'All' || order.status === filterStatus;
+        const matchesType = filterType === 'All' || (order as any).checkoutType === filterType.toLowerCase();
         const matchesSearch = searchTerm === '' || 
                             order.orderNumber?.toString().includes(searchTerm) ||
                             order.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             order.customerEmail?.toLowerCase().includes(searchTerm.toLowerCase());
-        return matchesDate && matchesStatus && matchesSearch;
+        return matchesDate && matchesStatus && matchesSearch && matchesType;
     });
 
   if (loading) return <div className="p-12 text-center flex justify-center"><div className="w-10 h-10 border-4 border-gray-200 border-t-[#16423C] rounded-full animate-spin"></div></div>;
@@ -291,16 +293,29 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
             </div>
 
             <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden min-w-0">
-                <div className="flex border-b border-gray-200 px-4 overflow-x-auto scrollbar-hide shrink-0 admin-scroll">
-                    {['All', 'Pending', 'Paid', 'Processing', 'Shipped', 'Delivered', 'Cancelled'].map(status => (
-                        <button 
-                            key={status} 
-                            onClick={() => setFilterStatus(status)}
-                            className={`px-5 py-4 text-xs font-bold whitespace-nowrap transition-all border-b-2 -mb-px ${filterStatus === status ? 'border-gray-900 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
-                        >
-                            {status}
-                        </button>
-                    ))}
+                <div className="flex justify-between items-center border-b border-gray-200 pr-4">
+                    <div className="flex overflow-x-auto scrollbar-hide shrink-0 admin-scroll">
+                        {['All', 'Pending', 'Paid', 'Processing', 'Shipped', 'Delivered', 'Cancelled'].map(status => (
+                            <button 
+                                key={status} 
+                                onClick={() => setFilterStatus(status)}
+                                className={`px-5 py-4 text-xs font-bold whitespace-nowrap transition-all border-b-2 -mb-px ${filterStatus === status ? 'border-gray-900 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+                            >
+                                {status}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="hidden lg:flex items-center gap-2 bg-gray-100 p-1 rounded-lg border border-gray-200">
+                        {['All', 'Standard', 'Magic'].map(t => (
+                            <button 
+                                key={t} 
+                                onClick={() => setFilterType(t)}
+                                className={`px-3 py-1 text-[10px] font-black uppercase rounded-md transition-all ${filterType === t ? 'bg-white shadow text-gray-900' : 'text-gray-400 hover:text-gray-600'}`}
+                            >
+                                {t}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row gap-4 min-w-0">
@@ -328,11 +343,13 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
                                 <th className="px-6 py-4 text-left text-[10px] font-black text-gray-500 uppercase tracking-widest">Customer</th>
                                 <th className="px-6 py-4 text-left text-[10px] font-black text-gray-500 uppercase tracking-widest">Total</th>
                                 <th className="px-6 py-4 text-left text-[10px] font-black text-gray-500 uppercase tracking-widest">Status</th>
+                                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-500 uppercase tracking-widest">Type</th>
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-50">
                             {processedOrders.length > 0 ? processedOrders.map((order) => {
                                 const orderId = order.id || (order as any)._id;
+                                const checkoutType = (order as any).checkoutType || 'standard';
                                 return (
                                 <tr key={orderId} className="hover:bg-gray-50 transition-colors cursor-pointer group" onClick={() => handleOrderClick(order)}>
                                     <td className="px-6 py-4" onClick={e => e.stopPropagation()}><input type="checkbox" className="rounded border-gray-300 text-[#16423C]" /></td>
@@ -352,10 +369,21 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
                                             {order.status}
                                         </span>
                                     </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        {checkoutType === 'magic' ? (
+                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-600 border border-blue-100 text-[9px] font-black uppercase">
+                                                <span className="animate-pulse">⚡</span> Magic
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-green-50 text-green-600 border border-green-100 text-[9px] font-black uppercase">
+                                                🛒 Standard
+                                            </span>
+                                        )}
+                                    </td>
                                 </tr>
                                 )
                             }) : (
-                                <tr><td colSpan={6} className="px-6 py-20 text-center text-gray-400 italic text-sm">No orders found.</td></tr>
+                                <tr><td colSpan={7} className="px-6 py-20 text-center text-gray-400 italic text-sm">No orders found.</td></tr>
                             )}
                         </tbody>
                     </table>
@@ -367,6 +395,7 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
 
   // --- RENDER DETAIL VIEW SECTION ---
   const orderIdForDisplay = selectedOrder?.orderNumber || (selectedOrder?.id || (selectedOrder as any)?._id)?.toString().substring(0,8);
+  const selectedCheckoutType = (selectedOrder as any)?.checkoutType || 'standard';
   
   return (
     <div className="space-y-6 animate-fade-in-up pb-20">
@@ -376,7 +405,14 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}><path d="M15 19l-7-7 7-7" /></svg>
                 </button>
                 <div className="min-w-0">
-                    <h2 className="text-2xl font-black text-gray-900 truncate uppercase tracking-tighter">Order #{orderIdForDisplay}</h2>
+                    <div className="flex items-center gap-3">
+                        <h2 className="text-2xl font-black text-gray-900 truncate uppercase tracking-tighter">Order #{orderIdForDisplay}</h2>
+                        {selectedCheckoutType === 'magic' ? (
+                            <span className="bg-blue-600 text-white text-[8px] font-black uppercase px-2 py-0.5 rounded-md tracking-widest shadow-sm">⚡ Magic</span>
+                        ) : (
+                            <span className="bg-green-600 text-white text-[8px] font-black uppercase px-2 py-0.5 rounded-md tracking-widest shadow-sm">🛒 Standard</span>
+                        )}
+                    </div>
                     <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{new Date(selectedOrder?.date || '').toLocaleString()}</span>
                         <span className="px-2 py-0.5 text-[9px] font-black rounded-lg bg-yellow-50 text-yellow-700 border border-yellow-100 uppercase">{selectedOrder?.status}</span>

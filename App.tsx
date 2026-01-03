@@ -44,9 +44,9 @@ const AppContent: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Detect Subdomain
   const hostname = window.location.hostname;
-  const isDashboardSubdomain = hostname.startsWith('dashboard.') || location.pathname.startsWith('/app');
+  // Dashboard Mode detection: Either 'dashboard.' subdomain OR path starts with '/app'
+  const isDashboardMode = hostname.startsWith('dashboard.') || location.pathname.startsWith('/app');
 
   useEffect(() => {
     if (token && user) {
@@ -61,9 +61,15 @@ const AppContent: React.FC = () => {
   const handleAuthSuccess = (data: { token: string; user: any }) => {
     setToken(data.token);
     setUser(data.user);
+    
     if (data.user?.isAdmin) {
-        // If on main domain, redirect to dashboard subdomain if possible, else use /app
-        if (!hostname.startsWith('dashboard.')) {
+        const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
+        
+        if (isLocal) {
+            // Localhost doesn't resolve dashboard.localhost easily, so use path prefix
+            navigate('/app/dashboard');
+        } else if (!hostname.startsWith('dashboard.')) {
+            // Production: Redirect to the official dashboard subdomain
             window.location.href = `${window.location.protocol}//dashboard.${hostname.replace('www.', '')}/app/dashboard`;
         } else {
             navigate('/app/dashboard');
@@ -76,17 +82,16 @@ const AppContent: React.FC = () => {
   const handleLogout = () => {
     setToken(null);
     setUser(null);
-    navigate('/'); 
+    navigate('/login'); 
   };
 
   const isMaintenance = siteSettings?.isMaintenanceMode && !user?.isAdmin;
 
-  // --- SUBDOMAIN DASHBOARD ROUTING ---
-  if (isDashboardSubdomain) {
+  // --- DASHBOARD ROUTING (SUBDOMAIN OR /APP PATH) ---
+  if (isDashboardMode) {
       return (
           <Suspense fallback={<LoadingSpinner />}>
               <Routes>
-                  {/* Redirect root of dashboard to /app/dashboard */}
                   <Route path="/" element={<Navigate to="/app/dashboard" replace />} />
                   <Route path="/app/*" element={user?.isAdmin ? <AdminDashboardPage user={user} logout={handleLogout} /> : <Navigate to="/login" />} />
                   <Route path="/login" element={<LoginPage onAuthSuccess={handleAuthSuccess} />} />
@@ -96,7 +101,7 @@ const AppContent: React.FC = () => {
       );
   }
 
-  // --- MAIN STORE ROUTING ---
+  // --- FRONT STORE ROUTING ---
   return (
     <div className="min-h-screen bg-gray-50">
       <Suspense fallback={<LoadingSpinner />}>

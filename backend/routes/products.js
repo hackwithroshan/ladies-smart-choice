@@ -72,6 +72,13 @@ router.get('/search', async (req, res) => {
     try {
         const query = req.query.q || '';
         const category = req.query.category || '';
+        
+        // If query is empty, return latest 5 active products
+        if (!query && !category) {
+            const latest = await Product.find({ status: 'Active' }).sort({ createdAt: -1 }).limit(5);
+            return res.json(latest);
+        }
+
         const filter = {
             status: 'Active',
             $or: [
@@ -81,7 +88,7 @@ router.get('/search', async (req, res) => {
             ],
         };
         if (category) filter.category = category;
-        const products = await Product.find(filter).limit(5);
+        const products = await Product.find(filter).sort({ createdAt: -1 }).limit(10);
         res.json(products);
     } catch (err) { res.status(500).json({ message: err.message }); }
 });

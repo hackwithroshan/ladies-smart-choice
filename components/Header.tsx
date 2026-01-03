@@ -25,6 +25,7 @@ const Header: React.FC<HeaderProps> = ({ user, logout }) => {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [recommendations, setRecommendations] = useState<Product[]>([]);
+  const [latestProducts, setLatestProducts] = useState<Product[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const { headerSettings, siteSettings, collections } = useSiteData();
   const [currentAnnouncementIndex, setCurrentAnnouncementIndex] = useState(0);
@@ -49,6 +50,17 @@ const Header: React.FC<HeaderProps> = ({ user, logout }) => {
     setIsMobileSearchOpen(false);
     setIsSearchFocused(false);
   }, [location]);
+
+  // Fetch Latest Products for empty search focus
+  useEffect(() => {
+    const fetchLatest = async () => {
+        try {
+            const res = await fetch(getApiUrl('/api/products/search?q='));
+            if (res.ok) setLatestProducts(await res.json());
+        } catch (e) { console.error(e); }
+    };
+    fetchLatest();
+  }, []);
 
   useEffect(() => {
     if (searchTerm.trim().length > 1) {
@@ -155,25 +167,40 @@ const Header: React.FC<HeaderProps> = ({ user, logout }) => {
                     <div className="absolute top-full left-4 right-4 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden animate-fade-in-up z-50">
                         <div className="flex flex-col">
                             <div className="p-4 border-b border-gray-50 bg-gray-50/50 flex justify-between items-center">
-                                <span className="text-xs font-bold text-gray-500 italic">{searchTerm.length < 2 ? 'Popular Collections' : `Results for "${searchTerm}"`}</span>
+                                <span className="text-xs font-black uppercase text-gray-400 tracking-widest italic">{searchTerm.length < 2 ? 'Latest Arrivals' : `Results for "${searchTerm}"`}</span>
                                 {searchTerm.length >= 2 && <button onClick={handleSearchSubmit} className="text-xs font-black text-brand-primary uppercase hover:underline">View All</button>}
                             </div>
-                            <div className="max-h-[400px] overflow-y-auto">
+                            <div className="max-h-[450px] overflow-y-auto admin-scroll">
                                 {searchTerm.length < 2 ? (
-                                    <div className="grid grid-cols-2 gap-2 p-3">
-                                        {(collections || []).slice(0, 4).map(col => (
-                                            <Link key={col.id} to={`/collections/${col.slug || col.id}`} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-xl transition-colors">
-                                                <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100"><img src={col.imageUrl} className="w-full h-full object-cover" /></div>
-                                                <span className="text-xs font-bold text-gray-700">{col.title}</span>
-                                            </Link>
+                                    <div className="flex flex-col">
+                                        {latestProducts.map(prod => (
+                                            <div key={prod.id} onClick={() => handleRecommendationClick(prod.slug || '')} className="flex items-center gap-4 p-4 hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-50 last:border-0">
+                                                <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 border shadow-sm"><img src={prod.imageUrl} className="w-full h-full object-cover" /></div>
+                                                <div className="flex-1 min-w-0">
+                                                    <h5 className="text-sm font-bold text-gray-900 truncate uppercase tracking-tight">{prod.name}</h5>
+                                                    <p className="text-xs text-brand-primary font-black mt-0.5">₹{prod.price.toLocaleString()}</p>
+                                                </div>
+                                                <span className="text-[9px] font-black uppercase px-2 py-1 bg-green-50 text-green-600 rounded">New</span>
+                                            </div>
                                         ))}
+                                        <div className="p-4 bg-gray-50">
+                                            <span className="text-[10px] font-black uppercase text-gray-400 mb-3 block tracking-widest">Shop Collections</span>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {(collections || []).slice(0, 4).map(col => (
+                                                    <Link key={col.id} to={`/collections/${col.slug || col.id}`} className="flex items-center gap-3 p-2 bg-white rounded-xl border hover:border-brand-primary transition-all">
+                                                        <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100"><img src={col.imageUrl} className="w-full h-full object-cover" /></div>
+                                                        <span className="text-[11px] font-bold text-gray-700 truncate">{col.title}</span>
+                                                    </Link>
+                                                ))}
+                                            </div>
+                                        </div>
                                     </div>
                                 ) : recommendations.length > 0 ? recommendations.map(prod => (
                                     <div key={prod.id} onClick={() => handleRecommendationClick(prod.slug || '')} className="flex items-center gap-4 p-4 hover:bg-brand-accent/5 cursor-pointer transition-colors border-b border-gray-50 last:border-0">
                                         <img src={prod.imageUrl} className="w-14 h-14 rounded-lg object-cover flex-shrink-0 border" />
-                                        <div className="flex-1 min-w-0"><h5 className="text-sm font-bold text-gray-900 truncate">{prod.name}</h5><p className="text-xs text-brand-primary font-black">₹{prod.price.toLocaleString()}</p></div>
+                                        <div className="flex-1 min-w-0"><h5 className="text-sm font-bold text-gray-900 truncate uppercase tracking-tight">{prod.name}</h5><p className="text-xs text-brand-primary font-black">₹{prod.price.toLocaleString()}</p></div>
                                     </div>
-                                )) : <div className="p-10 text-center text-gray-400 italic text-sm">No products found.</div>}
+                                )) : <div className="p-10 text-center text-gray-400 italic text-sm">No products found for "{searchTerm}".</div>}
                             </div>
                         </div>
                     </div>
@@ -217,6 +244,19 @@ const Header: React.FC<HeaderProps> = ({ user, logout }) => {
                         </div>
                     ) : (
                         <div className="p-6">
+                            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-6">Latest Products</h4>
+                            <div className="grid grid-cols-1 gap-4 mb-10">
+                                {latestProducts.map(prod => (
+                                    <div key={prod.id} onClick={() => handleRecommendationClick(prod.slug || '')} className="flex items-center gap-4 group">
+                                        <div className="w-16 h-16 rounded-2xl overflow-hidden border shadow-sm"><img src={prod.imageUrl} className="w-full h-full object-cover" /></div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-bold text-gray-800 truncate uppercase tracking-tight">{prod.name}</p>
+                                            <p className="text-[10px] font-black text-brand-primary mt-1">₹{prod.price.toLocaleString()}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
                             <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-6">Collections</h4>
                             <div className="space-y-4">
                                 {(collections || []).slice(0, 5).map(col => (

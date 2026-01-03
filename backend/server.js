@@ -13,43 +13,49 @@ if (!process.env.MONGO_URI) {
 
 const app = express();
 
-app.use(cors());
+// --- DYNAMIC CORS SETUP ---
+const allowedOrigins = [
+    'http://localhost:3000',
+    'https://ladiessmartchoice.com',
+    'https://www.ladiessmartchoice.com',
+    'https://dashboard.ladiessmartchoice.com'
+];
+
+app.use(cors({
+    origin: function (origin, callback) {
+        // allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.indexOf(origin) === -1) {
+            const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+            return callback(new Error(msg), false);
+        }
+        return callback(null, true);
+    },
+    credentials: true
+}));
+
 app.use(express.json());
 
-// MongoDB Connection with improved options
+// MongoDB Connection
 const connectDB = async () => {
     try {
-        console.log('Attempting to connect to MongoDB...');
         await mongoose.connect(process.env.MONGO_URI, {
             useNewUrlParser: true,
             useUnifiedTopology: true,
-            serverSelectionTimeoutMS: 5000, // 5 seconds tak wait karega connection ke liye
         });
         console.log('✅ MongoDB Connected Successfully!');
     } catch (err) {
         console.error('❌ MongoDB Connection Failed:', err.message);
-        console.log('Check if your IP is whitelisted in MongoDB Atlas or if Local MongoDB is running.');
-        // Don't exit here to allow for manual debugging if needed, 
-        // but Mongoose will throw errors on queries.
     }
 };
 
 connectDB();
-
-// Global Mongoose Config to prevent buffering hang
 mongoose.set('bufferCommands', false);
-
-// --- SHORT URL MAPPING FOR WEBHOOKS ---
-const orderRoutes = require('./routes/orders');
-app.post('/rzp', (req, res, next) => {
-    req.url = '/webhook/razorpay'; 
-    next();
-}, orderRoutes);
 
 // API Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/products', require('./routes/products'));
-app.use('/api/orders', orderRoutes);
+app.use('/api/orders', require('./routes/orders'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/slides', require('./routes/slides'));
@@ -68,7 +74,6 @@ app.use('/api/integrations', require('./routes/integrations'));
 app.use('/api/shipping', require('./routes/shipping'));
 app.use('/api/app-data', require('./routes/appData'));
 
-// Static Folder for React Build
 const distPath = path.resolve(__dirname, '..', 'dist');
 
 if (fs.existsSync(distPath)) {
@@ -78,9 +83,9 @@ if (fs.existsSync(distPath)) {
     });
 } else {
     app.get('/', (req, res) => {
-        res.send('Backend is running. Please run "npm run build" in the root folder to serve the frontend.');
+        res.send('Backend is running.');
     });
 }
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Ladies Smart Choice Active on Port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Server on Port ${PORT}`));

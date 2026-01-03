@@ -239,6 +239,8 @@ export interface SiteSettings {
     faviconUrl?: string; 
     primaryColor?: string; 
     accentColor?: string; 
+    // Added checkoutMode to reflect backend model and resolve UI errors
+    checkoutMode?: 'standard' | 'magic';
 }
 
 export interface HomePageSettings { seoTitle: string; seoDescription: string; seoKeywords?: string[]; }

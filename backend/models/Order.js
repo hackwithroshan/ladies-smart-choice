@@ -8,6 +8,15 @@ const OrderSchema = new mongoose.Schema({
     customerName: { type: String, required: true },
     customerEmail: { type: String, required: true },
     customerPhone: { type: String },
+    
+    // SOURCE TRACKING
+    checkoutType: { 
+        type: String, 
+        enum: ['standard', 'magic'], 
+        required: true,
+        default: 'standard' // Fallback for legacy orders
+    },
+
     items: [{
         productId: { type: String },
         name: { type: String },

@@ -18,7 +18,7 @@ interface MenuItem {
   label: string;
   icon?: React.ReactNode;
   view?: AdminView;
-  path?: string; // Real path for the URL
+  path?: string; 
   children?: MenuItem[];
 }
 
@@ -34,7 +34,6 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ user, currentView, setCurre
   const handleItemClick = (item: MenuItem) => {
     if (item.view) {
       setCurrentView(item.view);
-      // Update URL without full refresh to match requested pattern
       const newPath = item.path || `/app/${item.view}`;
       window.history.pushState({}, '', newPath);
       
@@ -105,7 +104,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ user, currentView, setCurre
         <div className="h-20 flex items-center justify-between px-6 border-b border-[#2D5A27] bg-[#16423C] flex-shrink-0">
             <div className="flex flex-col">
                  <span className="text-white text-xl font-serif font-extrabold tracking-tight italic">Indoshopsee</span>
-                 <span className="text-[8px] text-brand-accent uppercase tracking-[0.2em] mt-1 font-black">Powered by Apexnucles</span>
+                 <span className="text-[8px] text-brand-accent uppercase tracking-[0.2em] mt-1 font-black">Admin Panel</span>
             </div>
         </div>
 
