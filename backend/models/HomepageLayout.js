@@ -12,6 +12,7 @@ const SectionSchema = new mongoose.Schema({
     isActive: { type: Boolean, default: true },
     settings: { type: mongoose.Schema.Types.Mixed, default: {} },
     code: { type: String, default: '' }, // For CustomCode type
+    settingsJson: { type: String, default: '' }, // NEW: Shopify-like Schema JSON
 });
 
 const HomepageLayoutSchema = new mongoose.Schema({

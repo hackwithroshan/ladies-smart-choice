@@ -1,7 +1,8 @@
 
 import React from 'react';
-import { Product } from '../types';
+import { Product, ProductVariant } from '../types';
 import { COLORS } from '../constants';
+import { cn } from '../utils/utils';
 
 interface ProductStickyBarProps {
   isVisible: boolean;
@@ -28,42 +29,17 @@ const ProductStickyBar: React.FC<ProductStickyBarProps> = ({
 
   return (
     <div
-      className={`fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-gray-200 shadow-[0_-10px_40px_rgba(0,0,0,0.08)] z-[100] transition-all duration-500 ease-out transform ${
+      className={cn(
+        "fixed bottom-0 left-0 right-0 bg-white/98 backdrop-blur-md border-t border-zinc-100 shadow-[0_-5px_20px_rgba(0,0,0,0.08)] z-[110] transition-all duration-700 ease-in-out transform",
         isVisible ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'
-      }`}
-    >
-      {product.hasVariants && product.variants && product.variants.length > 0 && (
-          <div className="bg-gray-50/50 border-b border-gray-100 py-2.5 px-4 overflow-x-auto">
-              <div className="container mx-auto flex items-center gap-5 justify-center md:justify-start scrollbar-hide">
-                  {product.variants.map((variant) => (
-                      <div key={variant.name} className="flex items-center gap-2.5 shrink-0 bg-white border border-gray-200 px-3 py-1 rounded-full shadow-sm">
-                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{variant.name}</span>
-                          <div className="h-3 w-px bg-gray-200"></div>
-                          <div className="relative group">
-                            <select
-                                value={selectedVariants[variant.name] || ''}
-                                onChange={(e) => onVariantChange(variant.name, e.target.value)}
-                                className="appearance-none bg-transparent text-xs font-bold text-gray-900 pr-5 cursor-pointer outline-none"
-                            >
-                                {variant.options.map((opt) => (
-                                    <option key={opt.value} value={opt.value}>{opt.value}</option>
-                                ))}
-                            </select>
-                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center text-gray-400">
-                                <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg>
-                            </div>
-                          </div>
-                      </div>
-                  ))}
-              </div>
-          </div>
       )}
-
-      <div className="container mx-auto px-4 py-3 md:py-4">
-        <div className="flex items-center justify-between gap-4 max-w-[1200px] mx-auto">
+    >
+      <div className="container mx-auto px-4 md:px-8 py-3 md:py-4">
+        <div className="flex items-center justify-between gap-4 md:gap-10 max-w-[1400px] mx-auto">
           
-          <div className="flex items-center gap-3 min-w-0 overflow-hidden">
-            <div className="h-10 w-10 md:h-12 md:w-12 shrink-0 rounded-lg overflow-hidden border border-gray-100 shadow-inner bg-white">
+          {/* PRODUCT INFO */}
+          <div className="hidden lg:flex items-center gap-4 min-w-0 overflow-hidden">
+            <div className="h-12 w-12 shrink-0 border border-zinc-100 bg-white overflow-hidden rounded-md">
                 <img 
                     src={product.imageUrl} 
                     alt={product.name} 
@@ -71,42 +47,78 @@ const ProductStickyBar: React.FC<ProductStickyBarProps> = ({
                 />
             </div>
             <div className="flex flex-col min-w-0">
-              <h3 className="text-sm font-bold text-gray-900 truncate leading-none mb-1">{product.name}</h3>
-              <span className="text-sm font-bold text-rose-600">₹{product.price.toLocaleString()}</span>
+              <h3 className="text-[12px] font-bold text-zinc-900 truncate leading-none uppercase tracking-tight">{product.name}</h3>
+              <div className="flex items-center gap-2 mt-1">
+                 <span className="text-sm font-black text-zinc-900">₹{product.price.toLocaleString()}</span>
+                 {product.mrp && product.mrp > product.price && (
+                    <span className="text-[10px] text-zinc-400 line-through">₹{product.mrp.toLocaleString()}</span>
+                 )}
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 md:gap-3 shrink-0">
-              <div className="hidden lg:flex items-center bg-gray-100 rounded-full p-1 border border-gray-200 shadow-inner">
-                  <button 
-                      onClick={() => onQuantityChange(Math.max(1, quantity - 1))}
-                      className="w-8 h-8 flex items-center justify-center rounded-full bg-white text-gray-600 hover:text-black shadow-sm transition-transform active:scale-90"
-                      aria-label="Reduce"
-                  >−</button>
-                  <span className="w-8 text-center text-xs font-black text-gray-900">{quantity}</span>
-                  <button 
-                      onClick={() => onQuantityChange(quantity + 1)}
-                      className="w-8 h-8 flex items-center justify-center rounded-full bg-white text-gray-600 hover:text-black shadow-sm transition-transform active:scale-90"
-                      aria-label="Increase"
-                  >+</button>
-              </div>
+          {/* VARIANT SELECTOR IN STICKY BAR */}
+          {product.hasVariants && (
+            <div className="flex-1 flex items-center gap-6 overflow-x-auto scrollbar-hide py-1">
+                {product.variants?.map((v) => {
+                    const isColor = ['color', 'colors', 'colour', 'colours'].includes(v.name.toLowerCase());
+                    return (
+                        <div key={v.name} className="flex items-center gap-3 shrink-0">
+                            <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest hidden sm:inline">{v.name}:</span>
+                            <div className="flex items-center gap-1.5">
+                                {isColor ? (
+                                    v.options.map((opt) => (
+                                        <button
+                                            key={opt.value}
+                                            onClick={() => onVariantChange(v.name, opt.value)}
+                                            className={cn(
+                                                "w-6 h-8 border transition-all relative group",
+                                                selectedVariants[v.name] === opt.value ? "border-zinc-900 ring-1 ring-zinc-900" : "border-zinc-200"
+                                            )}
+                                        >
+                                            <img src={opt.image || product.imageUrl} className="w-full h-full object-cover" alt={opt.value} />
+                                            {selectedVariants[v.name] === opt.value && <div className="absolute inset-0 bg-zinc-900/10" />}
+                                        </button>
+                                    ))
+                                ) : (
+                                    <div className="flex bg-zinc-100 p-0.5 rounded-sm">
+                                        {v.options.map((opt) => (
+                                            <button
+                                                key={opt.value}
+                                                onClick={() => onVariantChange(v.name, opt.value)}
+                                                className={cn(
+                                                    "px-2.5 py-1 text-[9px] font-bold transition-all uppercase rounded-sm",
+                                                    selectedVariants[v.name] === opt.value 
+                                                        ? "bg-white text-zinc-900 shadow-sm" 
+                                                        : "text-zinc-500 hover:text-zinc-900"
+                                                )}
+                                            >
+                                                {opt.value}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+          )}
 
-              <div className="flex items-center gap-2">
-                <button
-                    onClick={onBuyNow}
-                    disabled={product.stock <= 0}
-                    className="hidden sm:flex items-center justify-center bg-black text-white px-6 md:px-8 py-3 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest shadow-xl hover:bg-gray-800 transition-all active:scale-95 disabled:bg-gray-300 disabled:shadow-none whitespace-nowrap"
-                >
-                    Buy Now
-                </button>
+          {/* ACTIONS */}
+          <div className="flex items-center gap-3 shrink-0">
+                <div className="hidden sm:flex items-center bg-zinc-100 rounded-sm p-0.5 mr-2">
+                    <button onClick={() => onQuantityChange(Math.max(1, quantity - 1))} className="w-8 h-8 flex items-center justify-center font-bold text-zinc-500 hover:text-zinc-900">-</button>
+                    <span className="w-8 text-center text-[10px] font-black">{quantity}</span>
+                    <button onClick={() => onQuantityChange(quantity + 1)} className="w-8 h-8 flex items-center justify-center font-bold text-zinc-500 hover:text-zinc-900">+</button>
+                </div>
                 <button
                     onClick={onAddToCart}
                     disabled={product.stock <= 0}
-                    className="flex items-center justify-center bg-rose-600 text-white px-6 md:px-8 py-3 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest shadow-xl shadow-rose-200 hover:bg-rose-700 transition-all active:scale-95 disabled:bg-gray-300 disabled:shadow-none whitespace-nowrap"
+                    className="h-10 md:h-12 bg-zinc-900 text-white px-6 md:px-10 rounded-sm text-[10px] font-bold uppercase tracking-widest shadow-lg hover:brightness-110 transition-all active:scale-95 disabled:bg-zinc-200 disabled:text-zinc-400 whitespace-nowrap"
                 >
-                    {product.stock > 0 ? (window.innerWidth < 640 ? 'Buy Now' : 'Add to Cart') : 'Sold Out'}
+                    {product.stock > 0 ? 'Add To Bag' : 'Sold Out'}
                 </button>
-              </div>
           </div>
 
         </div>

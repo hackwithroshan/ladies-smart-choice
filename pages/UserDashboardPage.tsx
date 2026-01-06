@@ -30,16 +30,25 @@ const UserDashboardPage: React.FC<UserDashboardPageProps> = ({ user, logout }) =
   };
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen bg-zinc-50/50">
       <Header user={user} logout={logout} />
-      <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="flex flex-col md:flex-row gap-8">
-          <UserSidebar currentView={currentView} setCurrentView={setCurrentView} />
-          <div className="flex-1">
-            {renderContent()}
-          </div>
+      
+      <main className="flex-grow container mx-auto px-4 py-12 lg:py-20">
+        <div className="max-w-[1200px] mx-auto space-y-10">
+            <div className="space-y-0.5">
+                <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Account</h1>
+                <p className="text-zinc-500">Manage your profile, orders, and wellness journey.</p>
+            </div>
+
+            <div className="flex flex-col md:flex-row gap-12 items-start">
+                <UserSidebar currentView={currentView} setCurrentView={setCurrentView} />
+                <div className="flex-1 w-full animate-in fade-in slide-in-from-bottom-2">
+                    {renderContent()}
+                </div>
+            </div>
         </div>
       </main>
+      
       <Footer />
     </div>
   );

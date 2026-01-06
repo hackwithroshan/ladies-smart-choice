@@ -9,31 +9,29 @@ interface UserSidebarProps {
 }
 
 const UserSidebar: React.FC<UserSidebarProps> = ({ currentView, setCurrentView }) => {
-  // Fix: Explicitly type navItems to ensure item.view is of type UserDashboardView
   const navItems: { view: UserDashboardView; label: string }[] = [
     { view: 'profile', label: 'My Profile' },
     { view: 'orders', label: 'Order History' },
   ];
 
   return (
-    <aside className="w-full md:w-64 bg-white p-4 rounded-lg shadow-md md:flex-shrink-0 h-fit">
-      <nav className="space-y-1">
+    <aside className="w-full md:w-64 shrink-0 overflow-hidden">
+      <nav className="flex md:flex-col gap-1 overflow-x-auto scrollbar-hide pb-2 md:pb-0">
         {navItems.map(item => (
-          <a
+          <button
             key={item.view}
-            href="#"
             onClick={(e) => {
               e.preventDefault();
               setCurrentView(item.view);
             }}
-            className={`block px-4 py-2.5 text-sm font-medium rounded-md transition-colors duration-150 ${
+            className={`whitespace-nowrap px-4 py-2.5 text-sm font-medium rounded-md transition-colors text-left flex items-center ${
               currentView === item.view
-                ? 'bg-orange-100 text-orange-700'
-                : 'text-gray-600 hover:bg-gray-100'
+                ? 'bg-white shadow-sm ring-1 ring-zinc-200 text-zinc-950'
+                : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'
             }`}
           >
             {item.label}
-          </a>
+          </button>
         ))}
       </nav>
     </aside>

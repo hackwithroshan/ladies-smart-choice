@@ -3,8 +3,7 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const Product = require('../models/Product');
-const Collection = require('../models/Collection'); // Changed from Category to Collection
-const Order = require('../models/Order');
+const Collection = require('../models/Collection');
 const ActivityLog = require('../models/ActivityLog');
 const { protect, admin } = require('../middleware/authMiddleware');
 
@@ -24,178 +23,117 @@ const logAction = async (req, action, target, targetId, details) => {
     } catch (e) { console.error("Logging failed", e); }
 };
 
-// POST a new product
-router.post('/', protect, admin, async (req, res) => {
+// @desc    Get all products (Admin)
+// @route   GET /api/products/all
+router.get('/all', protect, admin, async (req, res) => {
     try {
-        const newProduct = new Product(req.body);
-        const savedProduct = await newProduct.save();
-        await logAction(req, 'created', 'Product', savedProduct._id, `Added new product: ${savedProduct.name}`);
-        res.status(201).json(savedProduct);
-    } catch (err) {
-        if (err.code === 11000) {
-            const field = Object.keys(err.keyPattern)[0];
-            return res.status(400).json({ message: `A product with this ${field} already exists.` });
-        }
-        res.status(400).json({ message: err.message });
-    }
+        const products = await Product.find({}).sort({ createdAt: -1 });
+        res.json(products);
+    } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
-// PUT update a product
+// @desc    Get single product by ID (Admin)
+// @route   GET /api/products/:id
+router.get('/:id', async (req, res) => {
+    try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({ message: 'Invalid Record ID format' });
+        }
+        const product = await Product.findById(req.params.id);
+        if (!product) return res.status(404).json({ message: 'Record not found' });
+        res.json(product);
+    } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+// @desc    Update product (Admin)
+// @route   PUT /api/products/:id
 router.put('/:id', protect, admin, async (req, res) => {
     try {
-        const updatedProduct = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
-        if (!updatedProduct) return res.status(404).json({ message: 'Product not found' });
-        await logAction(req, 'updated', 'Product', updatedProduct._id, `Modified product details for ${updatedProduct.name}`);
-        res.json(updatedProduct);
+        const updated = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+        if (!updated) return res.status(404).json({ message: 'Record not found' });
+        await logAction(req, 'updated', 'Product', updated._id, `Modified master record: ${updated.name}`);
+        res.json(updated);
     } catch (err) {
-        if (err.code === 11000) {
-            const field = Object.keys(err.keyPattern)[0];
-            return res.status(400).json({ message: `Another product already uses this ${field}.` });
-        }
+        if (err.code === 11000) return res.status(400).json({ message: 'Duplicate Slug or SKU detected.' });
         res.status(400).json({ message: err.message });
     }
 });
 
-// DELETE a product
+// @desc    Delete product (Admin)
+// @route   DELETE /api/products/:id
 router.delete('/:id', protect, admin, async (req, res) => {
     try {
-        const product = await Product.findByIdAndDelete(req.params.id);
-        if (!product) return res.status(404).json({ message: 'Product not found' });
-        await logAction(req, 'deleted', 'Product', req.params.id, `Removed product: ${product.name}`);
-        res.json({ message: 'Product deleted' });
+        const p = await Product.findByIdAndDelete(req.params.id);
+        if (!p) return res.status(404).json({ message: 'Record not found' });
+        await logAction(req, 'deleted', 'Product', req.params.id, `Terminated record: ${p.name}`);
+        res.json({ message: 'Record purged successfully' });
+    } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+// @desc    Create product (Admin)
+// @route   POST /api/products
+router.post('/', protect, admin, async (req, res) => {
+    try {
+        const product = new Product(req.body);
+        const saved = await product.save();
+        await logAction(req, 'created', 'Product', saved._id, `Initialized record: ${saved.name}`);
+        res.status(201).json(saved);
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        if (err.code === 11000) return res.status(400).json({ message: 'Duplicate Slug or SKU detected.' });
+        res.status(400).json({ message: err.message });
     }
 });
 
-router.get('/search', async (req, res) => {
-    try {
-        const query = req.query.q || '';
-        const category = req.query.category || '';
-        
-        // If query is empty, return latest 5 active products
-        if (!query && !category) {
-            const latest = await Product.find({ status: 'Active' }).sort({ createdAt: -1 }).limit(5);
-            return res.json(latest);
-        }
-
-        const filter = {
-            status: 'Active',
-            $or: [
-                { name: { $regex: query, $options: 'i' } },
-                { shortDescription: { $regex: query, $options: 'i' } },
-                { tags: { $regex: query, $options: 'i' } },
-            ],
-        };
-        if (category) filter.category = category;
-        const products = await Product.find(filter).sort({ createdAt: -1 }).limit(10);
-        res.json(products);
-    } catch (err) { res.status(500).json({ message: err.message }); }
-});
-
-router.get('/featured', async (req, res) => {
-    try {
-        const products = await Product.aggregate([{ $match: { status: 'Active' } }, { $sample: { size: 4 } }]);
-        res.json(products);
-    } catch (err) { res.status(500).json({ message: err.message }); }
-});
-
-router.get('/:id/frequently-bought-together', async (req, res) => {
-    try {
-        const productId = req.params.id;
-        const recommendations = await Order.aggregate([
-            { $match: { 'items.productId': new mongoose.Types.ObjectId(productId) } },
-            { $unwind: '$items' },
-            { $match: { 'items.productId': { $ne: new mongoose.Types.ObjectId(productId) } } },
-            { $group: { _id: '$items.productId', count: { $sum: 1 } } },
-            { $sort: { count: -1 } },
-            { $limit: 2 },
-            { $lookup: { from: 'products', localField: '_id', foreignField: '_id', as: 'productDetails' } },
-            { $unwind: '$productDetails' },
-            { $replaceRoot: { newRoot: '$productDetails' } },
-            { $match: { status: 'Active' } }
-        ]);
-        if (recommendations.length < 2) {
-            const currentProduct = await Product.findById(productId);
-            if (currentProduct) {
-                const existingIds = [productId, ...recommendations.map(r => r._id.toString())];
-                const filler = await Product.find({ category: currentProduct.category, _id: { $nin: existingIds }, status: 'Active' }).limit(2 - recommendations.length);
-                recommendations.push(...filler);
-            }
-        }
-        res.json(recommendations);
-    } catch (err) { res.status(500).json({ message: err.message }); }
-});
+// --- Public Access Routes ---
 
 router.get('/', async (req, res) => {
     try {
-        const products = await Product.find({ status: 'Active' });
+        const products = await Product.find({ status: 'Active' }).sort({ createdAt: -1 });
         res.json(products);
     } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
 router.get('/slug/:slug', async (req, res) => {
     try {
-        const product = await Product.findOne({ slug: req.params.slug });
-        if (!product) return res.status(404).json({ message: 'Product not found' });
-        res.json(product);
+        const p = await Product.findOne({ slug: req.params.slug });
+        if (!p) return res.status(404).json({ message: 'Not found' });
+        res.json(p);
     } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
-// @desc    Get all categories (Synchronized with Collections)
-// @route   GET /api/products/categories
+router.get('/search', async (req, res) => {
+    try {
+        const q = req.query.q || '';
+        const filter = { status: 'Active', $or: [{ name: { $regex: q, $options: 'i' } }, { tags: { $regex: q, $options: 'i' } }] };
+        const results = await Product.find(filter).limit(10);
+        res.json(results);
+    } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+// --- Category/Collection Management (Admin Interface) ---
+
 router.get('/categories', async (req, res) => {
     try {
-        // Fetch all collections and map them to the expected category format
         const collections = await Collection.find({}).sort({ title: 1 });
-        const categories = collections.map(col => ({
-            id: col._id,
-            name: col.title,
-            imageUrl: col.imageUrl,
-            isActive: col.isActive
-        }));
-        res.json(categories);
+        res.json(collections.map(c => ({ id: c._id, name: c.title })));
     } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
-// @desc    Add a new category (Creates a new Collection)
-// @route   POST /api/products/categories
 router.post('/categories', protect, admin, async (req, res) => {
     try {
         const { name } = req.body;
-        if (!name) return res.status(400).json({ message: "Category name is required." });
-
-        const existing = await Collection.findOne({ title: name });
-        if (existing) return res.status(400).json({ message: "Category/Collection already exists." });
-
-        const newCollection = new Collection({
-            title: name,
-            isActive: true,
-            displayStyle: 'Rectangle'
-        });
-        
-        await newCollection.save();
-        res.status(201).json({ id: newCollection._id, name: newCollection.title });
-    } catch (err) {
-        res.status(400).json({ message: err.message });
-    }
+        const exists = await Collection.findOne({ title: name });
+        if (exists) return res.status(400).json({ message: "Category exists" });
+        const c = new Collection({ title: name, isActive: true });
+        await c.save();
+        res.status(201).json({ id: c._id, name: c.title });
+    } catch (err) { res.status(400).json({ message: err.message }); }
 });
 
-// @desc    Delete a category (Deletes the Collection)
-// @route   DELETE /api/products/categories/:id
 router.delete('/categories/:id', protect, admin, async (req, res) => {
     try {
         await Collection.findByIdAndDelete(req.params.id);
-        res.json({ message: 'Category/Collection removed' });
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
-
-router.get('/all', protect, admin, async (req, res) => {
-    try {
-        const products = await Product.find({}).sort({ createdAt: -1 });
-        res.json(products);
+        res.json({ message: 'Purged' });
     } catch (err) { res.status(500).json({ message: err.message }); }
 });
 

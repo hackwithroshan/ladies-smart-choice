@@ -1,96 +1,97 @@
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ayushree Ayurveda | Authentic Herbal Wellness</title>
+    <title>Ayushree Ayurveda | Admin Control</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <!-- Branding Font: Playfair Display for Headings, Inter for Body -->
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
+      :root {
+        --background: 0 0% 100%;
+        --foreground: 240 10% 3.9%;
+        --card: 0 0% 100%;
+        --card-foreground: 240 10% 3.9%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 240 10% 3.9%;
+        --primary: 168 50% 17%; /* Ayushree Deep Green #16423C */
+        --primary-foreground: 0 0% 98%;
+        --secondary: 240 4.8% 95.9%;
+        --secondary-foreground: 240 5.9% 10%;
+        --muted: 240 4.8% 95.9%;
+        --muted-foreground: 240 3.8% 46.1%;
+        --accent: 240 4.8% 95.9%;
+        --accent-foreground: 240 5.9% 10%;
+        --destructive: 0 84.2% 60.2%;
+        --destructive-foreground: 0 0% 98%;
+        --border: 240 5.9% 90%;
+        --input: 240 5.9% 90%;
+        --ring: 240 5.9% 10%;
+        --radius: 0.6rem;
+
+        /* Sidebar Variables - Shadcn Style */
+        --sidebar: 0 0% 100%;
+        --sidebar-foreground: 240 5.3% 26.1%;
+        --sidebar-primary: 240 5.9% 10%;
+        --sidebar-primary-foreground: 0 0% 98%;
+        --sidebar-accent: 240 4.8% 95.9%;
+        --sidebar-accent-foreground: 240 5.9% 10%;
+        --sidebar-border: 220 13% 91%;
+        --sidebar-ring: 217.2 91.2% 59.8%;
+      }
+
       body {
         font-family: 'Inter', sans-serif;
-        background-color: #FBF9F1;
+        background-color: #f8fafc;
+        color: hsl(var(--foreground));
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
       }
+      
       h1, h2, h3, h4, .font-brand {
-        font-family: 'Playfair Display', serif;
+        font-family: 'Inter', sans-serif;
+        letter-spacing: -0.04em;
       }
-      /* Hide scrollbar but keep functionality */
-      .scrollbar-hide::-webkit-scrollbar {
-        display: none;
-      }
-      .scrollbar-hide {
-        -ms-overflow-style: none;  /* IE and Edge */
-        scrollbar-width: none;  /* Firefox */
-      }
-      /* Custom Scrollbar for Admin */
-      .admin-scroll::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
-      }
-      .admin-scroll::-webkit-scrollbar-track {
-        background: #f1f1f1; 
-      }
-      .admin-scroll::-webkit-scrollbar-thumb {
-        background: #16423C; 
-        border-radius: 3px;
-      }
-      /* Animation for dropdowns */
-      @keyframes fadeInUp {
-        from {
-          opacity: 0;
-          transform: translateY(-10px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
+
+      .admin-scroll::-webkit-scrollbar { width: 4px; }
+      .admin-scroll::-webkit-scrollbar-track { background: transparent; }
+      .admin-scroll::-webkit-scrollbar-thumb { background: #e4e4e7; border-radius: 10px; }
+
+      @keyframes fade-in-up {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
       }
       .animate-fade-in-up {
-        animation: fadeInUp 0.3s ease-out forwards;
-      }
-      @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-      }
-      .animate-fade-in {
-        animation: fadeIn 0.2s ease-in-out forwards;
-      }
-      /* Animation for mobile menu slide-in */
-      @keyframes slideInLeft {
-        from {
-          transform: translateX(-100%);
-        }
-        to {
-          transform: translateX(0);
-        }
-      }
-      .animate-slide-in-left {
-        animation: slideInLeft 0.3s ease-out forwards;
+        animation: fade-in-up 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
       }
     </style>
-<script type="importmap">
-{
-  "imports": {
-    "react": "https://aistudiocdn.com/react@^19.2.0",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "react/": "https://aistudiocdn.com/react@^19.2.0/",
-    "react-router-dom": "https://aistudiocdn.com/react-router-dom@^7.9.6",
-    "react-helmet-async": "https://aistudiocdn.com/react-helmet-async@^2.0.5",
-    "recharts": "https://aistudiocdn.com/recharts@^3.5.0",
-    "vite": "https://aistudiocdn.com/vite@^7.2.4",
-    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1",
-    "recharts/": "https://aistudiocdn.com/recharts@^3.5.1/"
-  }
-}
-</script>
-<link rel="stylesheet" href="/index.css">
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://aistudiocdn.com/react@^19.2.0",
+        "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+        "react/": "https://aistudiocdn.com/react@^19.2.0/",
+        "react-router-dom": "https://aistudiocdn.com/react-router-dom@^7.9.6",
+        "react-helmet-async": "https://aistudiocdn.com/react-helmet-async@^2.0.5",
+        "recharts": "https://aistudiocdn.com/recharts@^3.5.0",
+        "vite": "https://aistudiocdn.com/vite@^7.2.4",
+        "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1",
+        "recharts/": "https://aistudiocdn.com/recharts@^3.5.1/",
+        "lucide-react": "https://unpkg.com/lucide-react@0.460.0/dist/esm/lucide-react.js",
+        "@radix-ui/react-slot": "https://esm.sh/@radix-ui/react-slot@^1.2.4",
+        "class-variance-authority": "https://esm.sh/class-variance-authority@^0.7.1",
+        "clsx": "https://esm.sh/clsx@^2.1.1",
+        "tailwind-merge": "https://esm.sh/tailwind-merge@^2.3.0"
+      }
+    }
+    </script>
+  <link rel="stylesheet" href="/index.css">
 </head>
-  <body class="bg-[#FBF9F1] text-[#333333]">
+  <body>
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>

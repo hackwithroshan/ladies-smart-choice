@@ -1,430 +1,185 @@
 
-import React, { useState, useEffect } from 'react';
-import { Product, Category } from '../../types';
-import { COLORS } from '../../constants';
-import ProductForm from './ProductForm';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Product } from '../../types';
 import { getApiUrl } from '../../utils/apiHelper';
+import * as ReactRouterDom from 'react-router-dom';
+const { useNavigate } = ReactRouterDom as any;
+import { DataTable, ColumnDef } from '../ui/data-table';
+import { ArrowUpDown, IndianRupee, Package, Activity, MoreHorizontal, EditPencil, Trash2, FileText } from '../Icons';
+import { Drawer, DrawerHeader, DrawerTitle, DrawerDescription, DrawerContent, DrawerFooter } from '../ui/drawer';
+import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
+import { DropdownMenu, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '../ui/dropdown-menu';
+import { cn } from '../../utils/utils';
 
 const ProductList: React.FC<{token: string | null}> = ({token}) => {
+  const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-
-  // Search & Pagination State
-  const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
-
-  // Bulk Action State
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [bulkAction, setBulkAction] = useState<string>('');
-  const [targetCategory, setTargetCategory] = useState<string>('');
-  const [processingBulk, setProcessingBulk] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [activeTab, setActiveTab] = useState("all");
 
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      setError(null);
-      
-      const [prodRes, catRes] = await Promise.all([
-          fetch(getApiUrl('/api/products/all'), { headers: { 'Authorization': `Bearer ${token}` } }),
-          fetch(getApiUrl('/api/products/categories'))
-      ]);
-
-      if (!prodRes.ok) throw new Error("Failed to fetch products");
-      
-      setProducts(await prodRes.json());
-      if(catRes.ok) setCategories(await catRes.json());
-      
-      setCurrentPage(1); // Reset to first page on refresh
-      setSelectedIds(new Set()); // Clear selection
-    } catch (error: any) {
-      setError(error.message);
-    } finally {
-      setLoading(false);
-    }
+      const res = await fetch(getApiUrl('/api/products/all'), { headers: { 'Authorization': `Bearer ${token}` } });
+      if (res.ok) setProducts(await res.json());
+    } catch (error) { console.error(error); } finally { setLoading(false); }
   };
 
-  useEffect(() => {
-    fetchProducts();
-  }, [token]);
+  useEffect(() => { fetchProducts(); }, [token]);
 
-  // Reset to page 1 when search term changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm]);
-
-  // --- Handlers ---
-
-  const handleAddClick = () => {
-    setEditingProduct(null);
-    setIsModalOpen(true);
-  };
-
-  const handleEditClick = (product: Product) => {
-    setEditingProduct(product);
-    setIsModalOpen(true);
-  };
-
-  const handleSave = async (productToSave: Omit<Product, 'id'> & { id?: string }) => {
-    const isEditing = !!productToSave.id;
-    const url = isEditing ? getApiUrl(`/api/products/${productToSave.id}`) : getApiUrl('/api/products');
-    const method = isEditing ? 'PUT' : 'POST';
-
+  const handleDeleteProduct = async (id: string) => {
+    if (!window.confirm("Permanent delete? This action is irreversible.")) return;
     try {
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(productToSave)
-      });
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.message || 'Failed to save product');
+        const res = await fetch(getApiUrl(`/api/products/${id}`), {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) fetchProducts();
+    } catch (e) { alert("Delete failed."); }
+  };
+
+  const columns: ColumnDef<Product>[] = useMemo(() => [
+    {
+      accessorKey: "name",
+      header: "Catalogue Asset",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-4">
+          <img className="h-12 w-12 rounded-2xl object-cover border border-zinc-200 shadow-sm" src={row.original.imageUrl} />
+          <div className="flex flex-col min-w-0">
+            <span className="font-black text-zinc-900 truncate leading-none mb-1">{row.original.name}</span>
+            <span className="text-[9px] text-zinc-400 font-black uppercase tracking-widest">{row.original.category} / {row.original.sku || 'No SKU'}</span>
+          </div>
+        </div>
+      )
+    },
+    {
+      accessorKey: "status",
+      header: "Lifecycle",
+      cell: ({ getValue }) => {
+        const val = getValue() as string;
+        const styles: any = { 
+            'Active': 'bg-emerald-50 text-emerald-700 border-emerald-100', 
+            'Draft': 'bg-zinc-100 text-zinc-500 border-zinc-200',
+            'Archived': 'bg-rose-50 text-rose-700 border-rose-100'
+        };
+        return <Badge variant="outline" className={cn("text-[9px] font-black uppercase px-2 shadow-sm", styles[val])}>{val}</Badge>
       }
-      setIsModalOpen(false);
-      fetchProducts(); // Refresh list
-    } catch (err: any) {
-      setError(err.message);
+    },
+    {
+      accessorKey: "price",
+      header: "Unit Cost",
+      cell: ({ getValue }) => <div className="font-black text-zinc-900 italic">₹{Number(getValue()).toLocaleString()}</div>
+    },
+    {
+      accessorKey: "stock",
+      header: "Inventory",
+      cell: ({ getValue }) => {
+        const stock = getValue() as number;
+        return (
+          <div className="flex flex-col">
+             <span className={cn("font-black text-xs italic", stock < 5 ? 'text-rose-600' : 'text-zinc-700')}>{stock} Units</span>
+             {stock < 5 && <span className="text-[8px] font-black text-rose-500 uppercase tracking-tighter animate-pulse">Critical Level</span>}
+          </div>
+        )
+      }
+    },
+    {
+      id: "actions",
+      header: () => <div className="text-right pr-4">Control</div>,
+      cell: ({ row }) => {
+        const p = row.original;
+        const pid = p.id || (p as any)._id;
+        return (
+          <div className="flex justify-end pr-2" onClick={(e) => e.stopPropagation()}>
+            <DropdownMenu 
+              trigger={
+                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              }
+            >
+              <React.Fragment>
+                <DropdownMenuLabel>Product Ops</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => navigate(`/app/products/edit?id=${pid}`)}>
+                  <EditPencil className="mr-2 h-3.5 w-3.5" /> Modify Record
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate(`/app/products/design?productId=${pid}`)}>
+                  <Activity className="mr-2 h-3.5 w-3.5" /> Launch Designer
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => handleDeleteProduct(pid!)} variant="destructive">
+                  <Trash2 className="mr-2 h-3.5 w-3.5" /> Wipe Record
+                </DropdownMenuItem>
+              </React.Fragment>
+            </DropdownMenu>
+          </div>
+        )
+      }
     }
-  };
+  ], [navigate, token]);
 
-  const handleDelete = async (productId: string) => {
-    if (!window.confirm('Are you sure you want to delete this product?')) return;
-    try {
-      const response = await fetch(getApiUrl(`/api/products/${productId}`), {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (!response.ok) throw new Error('Failed to delete product');
-      fetchProducts(); // Refresh list
-    } catch (err: any) {
-      setError(err.message);
-    }
-  };
-
-  // --- Bulk Action Handlers ---
-
-  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (e.target.checked) {
-          // Select all visible on current page
-          const ids = new Set(selectedIds);
-          currentProducts.forEach(p => ids.add(p.id));
-          setSelectedIds(ids);
-      } else {
-          // Deselect all visible on current page
-          const ids = new Set(selectedIds);
-          currentProducts.forEach(p => ids.delete(p.id));
-          setSelectedIds(ids);
-      }
-  };
-
-  const handleSelectOne = (id: string) => {
-      const ids = new Set(selectedIds);
-      if (ids.has(id)) ids.delete(id);
-      else ids.add(id);
-      setSelectedIds(ids);
-  };
-
-  const executeBulkAction = async () => {
-      if (!bulkAction) return;
-      if (bulkAction === 'category' && !targetCategory) return alert("Please select a category.");
-      
-      const confirmMessage = bulkAction === 'delete' 
-        ? `Permanently delete ${selectedIds.size} products?` 
-        : `Apply '${bulkAction}' to ${selectedIds.size} products?`;
-      
-      if (!window.confirm(confirmMessage)) return;
-
-      setProcessingBulk(true);
-      try {
-          const res = await fetch(getApiUrl('/api/products/bulk'), {
-              method: 'POST',
-              headers: { 
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${token}`
-              },
-              body: JSON.stringify({
-                  ids: Array.from(selectedIds),
-                  action: bulkAction,
-                  data: bulkAction === 'category' ? { category: targetCategory } : undefined
-              })
-          });
-
-          if (res.ok) {
-              await fetchProducts(); // Refresh data and clear selection
-              setBulkAction('');
-              setTargetCategory('');
-          } else {
-              const data = await res.json();
-              alert(`Error: ${data.message}`);
-          }
-      } catch (err) {
-          console.error(err);
-          alert("Failed to execute bulk action.");
-      } finally {
-          setProcessingBulk(false);
-      }
-  };
-
-  // --- Filtering Logic (Client-Side Search) ---
-  const filteredProducts = products.filter(product => {
-    const term = searchTerm.toLowerCase();
-    const nameMatch = product.name.toLowerCase().includes(term);
-    const categoryMatch = (product.category || '').toLowerCase().includes(term);
-    const statusMatch = (product.status || '').toLowerCase().includes(term);
-    return nameMatch || categoryMatch || statusMatch;
-  });
-
-  // --- Pagination Logic (Applied to Filtered Results) ---
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentProducts = filteredProducts.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
-
-  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
-
-  // Check if all visible items are selected
-  const allVisibleSelected = currentProducts.length > 0 && currentProducts.every(p => selectedIds.has(p.id));
-
-  if (loading) return <div>Loading products...</div>;
+  const filteredProducts = useMemo(() => {
+      if (activeTab === "all") return products;
+      return products.filter(p => (p.status || '').toLowerCase() === activeTab.toLowerCase());
+  }, [products, activeTab]);
 
   return (
-    <>
-      <div className="bg-white p-6 rounded-lg shadow-md">
-        
-        {/* Header & Search Bar */}
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
-          <h2 className="text-2xl font-bold text-gray-800">Manage Products ({filteredProducts.length})</h2>
-          
-          <div className="flex gap-3 w-full sm:w-auto">
-             <div className="relative flex-1 sm:w-64">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                </span>
-                <input 
-                    type="text" 
-                    placeholder="Search name, category, status..." 
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full border border-gray-300 rounded-md py-2 pl-10 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent"
-                />
-             </div>
-             <button 
-                onClick={handleAddClick}
-                className="px-4 py-2 text-sm font-medium text-white rounded-md shadow-sm whitespace-nowrap hover:opacity-90 transition-opacity"
-                style={{backgroundColor: COLORS.accent}}
-             >
-                + Add Product
-             </button>
-          </div>
-        </div>
+    <div className="space-y-6">
+      <DataTable 
+        columns={columns} 
+        data={filteredProducts} 
+        searchKey="name" 
+        searchPlaceholder="Lookup catalogue asset..." 
+        onRowClick={setSelectedProduct}
+        tabs={[
+            { value: "all", label: "Registry", count: products.length },
+            { value: "active", label: "Live Hub", count: products.filter(p => p.status === 'Active').length },
+            { value: "draft", label: "Pre-Flight", count: products.filter(p => p.status === 'Draft').length }
+        ]}
+        onTabChange={setActiveTab}
+        actions={
+            <Button onClick={() => navigate('/app/products/new')} className="h-10 bg-[#16423C] text-white font-black uppercase tracking-widest italic text-[10px] rounded-xl px-8 shadow-xl transition-all active:scale-95">+ Inject Asset</Button>
+        }
+      />
 
-        {/* Bulk Action Bar - Only Visible when items are selected */}
-        {selectedIds.size > 0 && (
-            <div className="mb-4 bg-blue-50 border border-blue-200 p-3 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-4 animate-fade-in">
-                <div className="flex items-center gap-2">
-                    <span className="bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full">{selectedIds.size}</span>
-                    <span className="text-sm text-blue-800 font-medium">products selected</span>
-                </div>
-                
-                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                    <select 
-                        value={bulkAction} 
-                        onChange={(e) => setBulkAction(e.target.value)}
-                        className="text-sm border-blue-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    >
-                        <option value="">-- Choose Action --</option>
-                        <option value="activate">Set Status: Active</option>
-                        <option value="draft">Set Status: Draft</option>
-                        <option value="archive">Set Status: Archived</option>
-                        <option value="category">Move to Category...</option>
-                        <option value="delete">Delete Selected</option>
-                    </select>
+      <Drawer isOpen={!!selectedProduct} onClose={() => setSelectedProduct(null)} title="Record Overview">
+         {selectedProduct && (
+             <div className="space-y-8 h-full flex flex-col">
+                 <DrawerHeader className="border-b bg-zinc-50/50 pb-8">
+                    <div className="h-56 w-full rounded-3xl overflow-hidden shadow-2xl mb-8 border border-zinc-200">
+                        <img src={selectedProduct.imageUrl} className="w-full h-full object-cover" />
+                    </div>
+                    <DrawerTitle>{selectedProduct.name}</DrawerTitle>
+                    <DrawerDescription>MASTER PROTOCOL: {selectedProduct.sku || 'UNASSIGNED'}</DrawerDescription>
+                    <div className="flex gap-4 mt-8">
+                        <div className="bg-white p-4 rounded-2xl border border-zinc-200 flex-1 shadow-sm"><p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Status</p><p className="text-sm font-black italic">{selectedProduct.status}</p></div>
+                        <div className="bg-white p-4 rounded-2xl border border-zinc-200 flex-1 shadow-sm"><p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Liquidity</p><p className="text-sm font-black italic">₹{selectedProduct.price.toLocaleString()}</p></div>
+                    </div>
+                 </DrawerHeader>
 
-                    {bulkAction === 'category' && (
-                        <select
-                            value={targetCategory}
-                            onChange={(e) => setTargetCategory(e.target.value)}
-                            className="text-sm border-blue-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                        >
-                            <option value="">Select Category</option>
-                            {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                        </select>
-                    )}
-
-                    <button 
-                        onClick={executeBulkAction} 
-                        disabled={!bulkAction || processingBulk}
-                        className={`px-4 py-2 rounded-md text-sm font-bold text-white transition-colors ${bulkAction === 'delete' ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'} disabled:opacity-50`}
-                    >
-                        {processingBulk ? 'Applying...' : 'Apply'}
-                    </button>
-                </div>
-            </div>
-        )}
-
-        {error && <p className="mb-4 text-sm text-red-600 bg-red-100 p-3 rounded-md">{error}</p>}
-        
-        <div className="overflow-x-auto border border-gray-200 rounded-lg">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 w-10 text-center">
-                    <input 
-                        type="checkbox" 
-                        checked={allVisibleSelected} 
-                        onChange={handleSelectAll}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
-                    />
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
-                <th scope="col" className="relative px-6 py-3"><span className="sr-only">Actions</span></th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {currentProducts.length > 0 ? (
-                  currentProducts.map((product) => (
-                    <tr key={product.id} className={`hover:bg-gray-50 transition-colors ${selectedIds.has(product.id) ? 'bg-blue-50' : ''}`}>
-                      <td className="px-4 py-4 text-center">
-                          <input 
-                            type="checkbox" 
-                            checked={selectedIds.has(product.id)} 
-                            onChange={() => handleSelectOne(product.id)}
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
-                          />
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0 h-10 w-10">
-                            <img className="h-10 w-10 rounded-full object-cover border border-gray-200" src={product.imageUrl || 'https://via.placeholder.com/40'} alt={product.name} />
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                            <div className="text-xs text-gray-500">{product.category}</div>
-                          </div>
+                 <DrawerContent className="flex-1">
+                    <div className="space-y-8">
+                        <div className="p-6 bg-zinc-900 rounded-3xl text-white shadow-xl">
+                            <h4 className="text-[9px] font-black uppercase tracking-[0.3em] opacity-40 mb-3">Narrative Excerpt</h4>
+                            <p className="text-xs leading-relaxed font-medium opacity-80">{selectedProduct.shortDescription || 'No teaser defined.'}</p>
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            product.status === 'Active' ? 'bg-green-100 text-green-800' :
-                            product.status === 'Draft' ? 'bg-gray-100 text-gray-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
-                              {product.status}
-                          </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₹{product.price.toFixed(2)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${product.stock > 10 ? 'bg-green-100 text-green-800' : product.stock > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
-                              {product.stock}
-                          </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-4">
-                        <button onClick={() => handleEditClick(product)} className="text-indigo-600 hover:text-indigo-900">Edit</button>
-                        <button onClick={() => handleDelete(product.id)} className="text-red-600 hover:text-red-900">Delete</button>
-                      </td>
-                    </tr>
-                  ))
-              ) : (
-                  <tr>
-                      <td colSpan={6} className="px-6 py-10 text-center text-gray-500">
-                          {searchTerm ? 'No products found matching your search.' : 'No products available.'}
-                      </td>
-                  </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="p-4 bg-zinc-50 rounded-2xl border"><p className="text-[9px] font-black text-zinc-400 uppercase mb-1">Stock</p><p className="text-sm font-black italic">{selectedProduct.stock} Units</p></div>
+                            <div className="p-4 bg-zinc-50 rounded-2xl border"><p className="text-[9px] font-black text-zinc-400 uppercase mb-1">Category</p><p className="text-sm font-black italic truncate">{selectedProduct.category}</p></div>
+                        </div>
+                    </div>
+                 </DrawerContent>
 
-        {/* Pagination Controls */}
-        {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-6 border-t border-gray-200 pt-4">
-                <div className="flex-1 flex justify-between sm:hidden">
-                    <button 
-                        onClick={() => paginate(currentPage - 1)} 
-                        disabled={currentPage === 1}
-                        className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-                    >
-                        Previous
-                    </button>
-                    <button 
-                        onClick={() => paginate(currentPage + 1)} 
-                        disabled={currentPage === totalPages}
-                        className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-                    >
-                        Next
-                    </button>
-                </div>
-                <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                    <div>
-                        <p className="text-sm text-gray-700">
-                            Showing <span className="font-medium">{indexOfFirstItem + 1}</span> to <span className="font-medium">{Math.min(indexOfLastItem, filteredProducts.length)}</span> of <span className="font-medium">{filteredProducts.length}</span> results
-                        </p>
-                    </div>
-                    <div>
-                        <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                            <button
-                                onClick={() => paginate(currentPage - 1)}
-                                disabled={currentPage === 1}
-                                className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                            >
-                                <span className="sr-only">Previous</span>
-                                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                    <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                                </svg>
-                            </button>
-                            {/* Page Numbers */}
-                            {[...Array(totalPages)].map((_, idx) => (
-                                <button
-                                    key={idx}
-                                    onClick={() => paginate(idx + 1)}
-                                    className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                                        currentPage === idx + 1
-                                            ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
-                                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                                    }`}
-                                >
-                                    {idx + 1}
-                                </button>
-                            ))}
-                            <button
-                                onClick={() => paginate(currentPage + 1)}
-                                disabled={currentPage === totalPages}
-                                className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                            >
-                                <span className="sr-only">Next</span>
-                                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                                </svg>
-                            </button>
-                        </nav>
-                    </div>
-                </div>
-            </div>
-        )}
-      </div>
-      
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex justify-center items-center p-0 md:p-4 backdrop-blur-sm">
-          <div className="bg-white md:rounded-lg shadow-xl w-full h-full md:h-[95vh] overflow-hidden z-50 flex flex-col">
-            <ProductForm
-              product={editingProduct}
-              onSave={handleSave}
-              onCancel={() => setIsModalOpen(false)}
-            />
-          </div>
-        </div>
-      )}
-    </>
+                 <DrawerFooter>
+                    <Button variant="outline" className="flex-1 font-black text-[10px] uppercase tracking-widest rounded-xl" onClick={() => navigate(`/app/products/design?productId=${selectedProduct.id || (selectedProduct as any)._id}`)}>Designer</Button>
+                    <Button className="flex-1 font-black text-[10px] uppercase tracking-widest bg-[#16423C] rounded-xl" onClick={() => navigate(`/app/products/edit?id=${selectedProduct.id || (selectedProduct as any)._id}`)}>Master Edit</Button>
+                 </DrawerFooter>
+             </div>
+         )}
+      </Drawer>
+    </div>
   );
 };
 

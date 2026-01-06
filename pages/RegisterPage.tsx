@@ -1,9 +1,7 @@
 
 import React, { useState } from 'react';
-// Fix: Use namespace import and cast to any to resolve "no exported member" errors
 import * as ReactRouterDom from 'react-router-dom';
 const { Link } = ReactRouterDom as any;
-import { TailGridsLogo } from '../components/Icons';
 import { handleApiError, getFriendlyErrorMessage } from '../utils/errorHandler';
 import ErrorMessage from '../components/ErrorMessage';
 import { getApiUrl } from '../utils/apiHelper';
@@ -21,7 +19,7 @@ const RegisterPage: React.FC<RegisterProps> = ({ onAuthSuccess }) => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const BrandName = siteSettings?.storeName || "Ayushree Ayurveda";
+  const BrandName = siteSettings?.storeName || "Ayushree";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,17 +29,13 @@ const RegisterPage: React.FC<RegisterProps> = ({ onAuthSuccess }) => {
     try {
       const response = await fetch(getApiUrl('/api/auth/register'), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password }),
       });
 
       if (!response.ok) throw response;
-      
       const data = await response.json();
       onAuthSuccess(data); 
-
     } catch (err: any) {
        const apiError = await handleApiError(err);
        setError(getFriendlyErrorMessage(apiError));
@@ -51,73 +45,70 @@ const RegisterPage: React.FC<RegisterProps> = ({ onAuthSuccess }) => {
   };
 
   return (
-    <div className="min-h-screen flex bg-white">
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-brand-primary">
-        <img 
-          src="https://images.unsplash.com/photo-1496747611176-843222e1e57c?q=80&w=1920&auto=format&fit=crop" 
-          alt="Brand Community" 
-          className="absolute inset-0 w-full h-full object-cover opacity-60"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-brand-primary via-brand-primary/30 to-transparent"></div>
-        <div className="relative z-10 flex flex-col justify-end p-16 text-white h-full">
-           <div className="mb-8">
-             <h2 className="text-4xl font-bold font-brand mb-4 tracking-tight">Join Our Community</h2>
-             <p className="text-lg text-white/80 max-w-md leading-relaxed">
-               Start your journey with {BrandName}. Create an account to unlock early access to herbal launches and ethical wellness deals.
-             </p>
-           </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-zinc-50 flex flex-col items-center justify-center p-6">
+      <Link to="/" className="flex items-center gap-2 mb-10">
+          <div className="h-9 w-9 bg-zinc-900 rounded-lg flex items-center justify-center text-zinc-50 font-black text-xl italic">A</div>
+          <span className="text-xl font-black tracking-tighter uppercase text-zinc-900">{BrandName}</span>
+      </Link>
 
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 sm:p-12 lg:p-24 bg-white">
-        <div className="w-full max-w-md space-y-8">
-          <div className="text-center lg:text-left">
-             <div className="lg:hidden flex justify-center mb-6">
-                {siteSettings?.logoUrl ? <img src={siteSettings.logoUrl} className="h-10" alt={BrandName}/> : <TailGridsLogo />}
-             </div>
-             <h2 className="text-3xl font-bold text-gray-900 font-brand tracking-tight">Create Account</h2>
-             <p className="mt-2 text-sm text-gray-500">
-               Welcome to {BrandName}.
-             </p>
+      <div className="w-full max-w-[400px] space-y-6">
+          <div className="bg-white rounded-xl border border-zinc-200 shadow-sm p-8 space-y-6">
+              <div className="space-y-1 text-center">
+                  <h1 className="text-2xl font-bold tracking-tight">Create an account</h1>
+                  <p className="text-sm text-zinc-500">Join our wellness community today</p>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Full Name</label>
+                      <input 
+                        type="text" 
+                        required 
+                        value={name} 
+                        onChange={(e) => setName(e.target.value)} 
+                        className="flex h-10 w-full rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-zinc-950" 
+                        placeholder="Jane Doe" 
+                      />
+                  </div>
+                  <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Email Address</label>
+                      <input 
+                        type="email" 
+                        required 
+                        value={email} 
+                        onChange={(e) => setEmail(e.target.value)} 
+                        className="flex h-10 w-full rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-zinc-950" 
+                        placeholder="name@example.com" 
+                      />
+                  </div>
+                  <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Password</label>
+                      <input 
+                        type="password" 
+                        required 
+                        value={password} 
+                        onChange={(e) => setPassword(e.target.value)} 
+                        className="flex h-10 w-full rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-zinc-950" 
+                        placeholder="••••••••" 
+                      />
+                  </div>
+
+                  <ErrorMessage message={error} />
+
+                  <button 
+                    type="submit" 
+                    disabled={loading} 
+                    className="w-full h-10 inline-flex items-center justify-center rounded-md bg-zinc-900 px-8 text-sm font-bold text-zinc-50 shadow transition-colors hover:bg-zinc-900/90 disabled:opacity-50"
+                  >
+                    {loading ? 'Creating Account...' : 'Sign Up'}
+                  </button>
+              </form>
           </div>
 
-          <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-            <div className="space-y-5">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 uppercase mb-1">Full Name</label>
-                <input type="text" required value={name} onChange={(e) => setName(e.target.value)} className="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-accent outline-none" placeholder="Jane Doe" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 uppercase mb-1">Email Address</label>
-                <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-accent outline-none" placeholder="your@email.com" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 uppercase mb-1">Password</label>
-                <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-accent outline-none" placeholder="••••••••" />
-              </div>
-            </div>
-
-            <ErrorMessage message={error} onClose={() => setError(null)} />
-
-            <button type="submit" disabled={loading} className="w-full bg-brand-primary text-white py-3.5 rounded-lg font-bold shadow-lg hover:opacity-90 disabled:opacity-70 transition-all uppercase tracking-widest text-xs">
-              {loading ? 'Creating Account...' : 'Sign Up'}
-            </button>
-            
-            <div className="text-center mt-6 space-y-2">
-                <p className="text-sm text-gray-600">
-                    Already have an account?{' '}
-                    <Link to="/login" className="text-brand-accent font-bold hover:underline">
-                        Sign in here
-                    </Link>
-                </p>
-                <p>
-                    <Link to="/" className="text-xs text-gray-500 hover:text-brand-primary transition-colors">
-                        &larr; Back to Store
-                    </Link>
-                </p>
-            </div>
-          </form>
-        </div>
+          <p className="text-center text-sm text-zinc-500">
+              Already have an account?{' '}
+              <Link to="/login" className="font-bold text-zinc-900 hover:underline underline-offset-4">Sign In</Link>
+          </p>
       </div>
     </div>
   );
