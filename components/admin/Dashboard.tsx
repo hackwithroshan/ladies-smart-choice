@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
 import { TrendingUp, TrendingDown } from '../Icons';
 import { getApiUrl } from '../../utils/apiHelper';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardAction } from '../ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '../ui/chart';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
@@ -83,13 +82,14 @@ const DashboardOverview: React.FC<{ token: string | null }> = ({ token }) => {
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card className="p-4 sm:p-5 md:p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-3">
+                <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
                         <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                             Total revenue
                         </span>
+                        {/* Fix: changed variant to 'outline' to match available types */}
                         <Badge
-                            variant="secondary"
+                            variant="outline"
                             className={`flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold ${
                                 revenueGrowth >= 0
                                     ? "border-emerald-100 bg-emerald-50 text-emerald-700"
@@ -105,7 +105,7 @@ const DashboardOverview: React.FC<{ token: string | null }> = ({ token }) => {
                             {Math.abs(revenueGrowth).toFixed(1)}%
                         </Badge>
                     </CardHeader>
-                    <CardContent className="p-0 pt-1">
+                    <CardContent>
                         <div className="text-3xl font-semibold tracking-tight">
                             ₹{stats?.kpis.totalRevenue.value.toLocaleString("en-IN")}
                         </div>
@@ -115,13 +115,14 @@ const DashboardOverview: React.FC<{ token: string | null }> = ({ token }) => {
                     </CardContent>
                 </Card>
 
-                <Card className="p-4 sm:p-5 md:p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-3">
+                <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
                         <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                             Total orders
                         </span>
+                        {/* Fix: changed variant to 'outline' */}
                         <Badge
-                            variant="secondary"
+                            variant="outline"
                             className={`flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold ${
                                 ordersGrowth >= 0
                                     ? "border-emerald-100 bg-emerald-50 text-emerald-700"
@@ -137,7 +138,7 @@ const DashboardOverview: React.FC<{ token: string | null }> = ({ token }) => {
                             {Math.abs(ordersGrowth).toFixed(1)}%
                         </Badge>
                     </CardHeader>
-                    <CardContent className="p-0 pt-1">
+                    <CardContent>
                         <div className="text-3xl font-semibold tracking-tight">
                             {stats?.kpis.totalOrders.value.toLocaleString("en-IN")}
                         </div>
@@ -147,13 +148,14 @@ const DashboardOverview: React.FC<{ token: string | null }> = ({ token }) => {
                     </CardContent>
                 </Card>
 
-                <Card className="p-4 sm:p-5 md:p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-3">
+                <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
                         <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                             New customers
                         </span>
+                        {/* Fix: changed variant to 'outline' */}
                         <Badge
-                            variant="secondary"
+                            variant="outline"
                             className={`flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold ${
                                 customersGrowth >= 0
                                     ? "border-emerald-100 bg-emerald-50 text-emerald-700"
@@ -169,7 +171,7 @@ const DashboardOverview: React.FC<{ token: string | null }> = ({ token }) => {
                             {Math.abs(customersGrowth).toFixed(1)}%
                         </Badge>
                     </CardHeader>
-                    <CardContent className="p-0 pt-1">
+                    <CardContent>
                         <div className="text-3xl font-semibold tracking-tight">
                             {stats?.kpis.newCustomers.value.toLocaleString("en-IN")}
                         </div>
@@ -179,13 +181,14 @@ const DashboardOverview: React.FC<{ token: string | null }> = ({ token }) => {
                     </CardContent>
                 </Card>
 
-                <Card className="p-4 sm:p-5 md:p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-3">
+                <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
                         <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                             Avg. order value
                         </span>
+                        {/* Fix: changed variant to 'outline' */}
                         <Badge
-                            variant="secondary"
+                            variant="outline"
                             className={`flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold ${
                                 aovGrowth >= 0
                                     ? "border-emerald-100 bg-emerald-50 text-emerald-700"
@@ -201,7 +204,7 @@ const DashboardOverview: React.FC<{ token: string | null }> = ({ token }) => {
                             {Math.abs(aovGrowth).toFixed(1)}%
                         </Badge>
                     </CardHeader>
-                    <CardContent className="p-0 pt-1">
+                    <CardContent>
                         <div className="text-3xl font-semibold tracking-tight">
                             ₹{stats?.kpis.avgOrderValue.value.toLocaleString("en-IN")}
                         </div>
@@ -222,32 +225,30 @@ const DashboardOverview: React.FC<{ token: string | null }> = ({ token }) => {
                             Interactive performance metrics
                         </CardDescription>
                     </div>
-                    <CardAction className="relative top-0 right-0 sm:static">
+                    <div className="flex items-center gap-2">
                         <ToggleGroup
                             type="single"
                             value={timeRange}
                             onValueChange={(v) => v && setTimeRange(v)}
-                            variant="outline"
-                            className="hidden md:flex bg-zinc-900 border-zinc-800 p-1 rounded-xl"
+                            className="hidden md:flex bg-zinc-100 border-zinc-200 p-1 rounded-xl"
                         >
                             <ToggleGroupItem value="90d">90 Days</ToggleGroupItem>
                             <ToggleGroupItem value="30d">30 Days</ToggleGroupItem>
                             <ToggleGroupItem value="7d">7 Days</ToggleGroupItem>
                         </ToggleGroup>
                         <div className="md:hidden w-40">
-                             {/* Fixed Select: Added required SelectContent and SelectItems */}
                              <Select value={timeRange} onValueChange={setTimeRange}>
-                                <SelectTrigger className="bg-zinc-900 border-zinc-800 text-zinc-400 font-bold">
+                                <SelectTrigger className="bg-zinc-100 border-zinc-200 text-zinc-600 font-bold">
                                     <SelectValue placeholder="Select Range" />
                                 </SelectTrigger>
-                                <SelectContent className="bg-zinc-900 border-zinc-800">
+                                <SelectContent className="bg-white border-zinc-200">
                                     <SelectItem value="90d">90 Days</SelectItem>
                                     <SelectItem value="30d">30 Days</SelectItem>
                                     <SelectItem value="7d">7 Days</SelectItem>
                                 </SelectContent>
                              </Select>
                         </div>
-                    </CardAction>
+                    </div>
                 </CardHeader>
                 <CardContent className="px-2 pt-8 sm:px-6">
                     <ChartContainer
@@ -265,7 +266,7 @@ const DashboardOverview: React.FC<{ token: string | null }> = ({ token }) => {
                             <stop offset="95%" stopColor="var(--color-mobile)" stopOpacity={0}/>
                           </linearGradient>
                         </defs>
-                        <CartesianGrid vertical={false} stroke="#27272a" strokeDasharray="3 3" />
+                        <CartesianGrid vertical={false} stroke="#e4e4e7" strokeDasharray="3 3" />
                         <XAxis
                           dataKey="date"
                           tickLine={false}

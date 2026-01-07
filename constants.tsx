@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 export const COLORS = {
@@ -9,6 +8,11 @@ export const COLORS = {
   earth: '#C7B7A3', // Muted Clay/Sand
 };
 
+/**
+ * CLOUDINARY CONFIGURATION
+ * Important: Ensure that you have created an "Unsigned" upload preset 
+ * named "ayushree" in your Cloudinary Dashboard Settings -> Upload tab.
+ */
 export const CLOUDINARY = {
   UPLOAD_PRESET: 'ayushree',
   CLOUD_NAME: 'djbv48acj',

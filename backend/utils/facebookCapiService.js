@@ -1,4 +1,3 @@
-
 const fetch = require('node-fetch');
 const crypto = require('crypto');
 const SiteSettings = require('../models/SiteSettings');
@@ -48,6 +47,11 @@ const sendCapiEvent = async ({ eventName, eventUrl, eventId, userData, customDat
                 },
             }]
         };
+
+        // If this is a test event, add the test_event_code to the root of the payload (outside data array)
+        if (customData.test_event_code) {
+            eventPayload.test_event_code = customData.test_event_code;
+        }
 
         // Instant POST to Meta
         const response = await fetch(`https://graph.facebook.com/v19.0/${settings.metaPixelId}/events`, {

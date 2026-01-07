@@ -4,8 +4,7 @@ import { COLORS, CLOUDINARY } from '../../constants';
 import { getApiUrl } from '../../utils/apiHelper';
 
 // Using centralized Cloudinary config from constants
-const CLOUDINARY_UPLOAD_PRESET = CLOUDINARY.UPLOAD_PRESET;
-const CLOUDINARY_CLOUD_NAME = CLOUDINARY.CLOUD_NAME;
+const CLOUDINARY_UPLOAD_PRESET = CLOUDINARY.UPLOAD_PRESET; // This is 'ayushree'
 const CLOUDINARY_UPLOAD_URL = CLOUDINARY.UPLOAD_URL;
 
 interface MediaPickerProps {
@@ -13,24 +12,21 @@ interface MediaPickerProps {
     onChange: (url: string) => void;
     type?: 'image' | 'video' | 'any';
     placeholder?: string;
-    renderTrigger?: (open: () => void) => React.ReactNode; // NEW: Custom trigger prop
+    renderTrigger?: (open: () => void) => React.ReactNode;
 }
 
 const MediaPicker: React.FC<MediaPickerProps> = ({ value, onChange, type = 'any', placeholder = "Select Media", renderTrigger }) => {
     const [isOpen, setIsOpen] = useState(false);
     const token = localStorage.getItem('token');
 
-    // Modal state
     const [activeTab, setActiveTab] = useState<'upload' | 'library'>('upload');
     const [media, setMedia] = useState<MediaItem[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // Upload state
     const [uploading, setUploading] = useState(false);
     const [dragActive, setDragActive] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Fetch media for the library tab when the modal opens and that tab is active
     useEffect(() => {
         if (isOpen && activeTab === 'library') {
             const fetchMedia = async () => {
@@ -58,7 +54,6 @@ const MediaPicker: React.FC<MediaPickerProps> = ({ value, onChange, type = 'any'
         setIsOpen(false);
     };
 
-    // --- Upload Logic ---
     const handleUpload = async (files: FileList | null) => {
         if (!files || files.length === 0) return;
         setUploading(true);
@@ -67,10 +62,16 @@ const MediaPicker: React.FC<MediaPickerProps> = ({ value, onChange, type = 'any'
         const uploads = Array.from(files).map(async (file, index) => {
             const formData = new FormData();
             formData.append('file', file);
+            // CRITICAL: Ensure the preset matches your Cloudinary settings exactly
             formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
             
             try {
-                const res = await fetch(CLOUDINARY_UPLOAD_URL, { method: 'POST', body: formData });
+                console.log(`Attempting upload to Cloudinary with preset: ${CLOUDINARY_UPLOAD_PRESET}`);
+                const res = await fetch(CLOUDINARY_UPLOAD_URL, { 
+                    method: 'POST', 
+                    body: formData 
+                });
+                
                 const data = await res.json();
 
                 if (data.secure_url) {
@@ -90,18 +91,19 @@ const MediaPicker: React.FC<MediaPickerProps> = ({ value, onChange, type = 'any'
                         })
                     });
                 } else {
-                    console.error("Cloudinary upload error:", data);
-                    alert(`Upload failed for ${file.name}: ${data.error?.message || "Unknown error"}`);
+                    console.error("Cloudinary Error Response:", data);
+                    const errMsg = data.error?.message || "Unknown Cloudinary Error";
+                    alert(`Upload failed for ${file.name}: ${errMsg}. \n\nPlease verify that the 'Unsigned' upload preset '${CLOUDINARY_UPLOAD_PRESET}' is created in your Cloudinary Settings > Upload tab.`);
                 }
             } catch (error) {
-                console.error("Upload failed for file", file.name, error);
+                console.error("Network/Upload failure:", error);
+                alert("Network error during upload. Please check connection.");
             }
         });
 
         await Promise.all(uploads);
         setUploading(false);
 
-        // If an upload was successful, select the first one and close modal for a seamless workflow
         if (firstUrl) {
             handleSelect(firstUrl);
         }
@@ -142,7 +144,6 @@ const MediaPicker: React.FC<MediaPickerProps> = ({ value, onChange, type = 'any'
 
     return (
         <div>
-            {/* Render Custom Trigger if provided, else Default Input UI */}
             {renderTrigger ? (
                 renderTrigger(() => { setIsOpen(true); setActiveTab('library'); })
             ) : (

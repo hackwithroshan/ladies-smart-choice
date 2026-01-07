@@ -205,81 +205,83 @@ const Discounts: React.FC<{ token: string | null }> = ({ token }) => {
             <Drawer isOpen={!!selectedDiscount} onClose={() => setSelectedDiscount(null)} title={selectedDiscount?.id || (selectedDiscount as any)?._id ? "Update Logic" : "Promotion Injection"}>
                 {selectedDiscount && (
                     <div className="flex flex-col h-full">
-                        {/* Removed invalid className prop */}
-                        <DrawerHeader>
-                            <div className="space-y-6">
-                                <div>
-                                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 block">Coupon Identifier</label>
-                                    <Input 
-                                        value={selectedDiscount.code || ''} 
-                                        onChange={e => setSelectedDiscount({...selectedDiscount, code: e.target.value.toUpperCase().replace(/\s/g, '')})} 
-                                        className="font-black text-lg h-14 rounded-xl border-zinc-200 focus-visible:ring-zinc-950 uppercase italic"
-                                        placeholder="e.g. WELCOME50"
-                                    />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
+                        <div className="p-6">
+                            <DrawerHeader>
+                                <div className="space-y-6">
                                     <div>
-                                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 block">Strategy</label>
-                                        <select 
-                                            value={selectedDiscount.type || 'Percentage'} 
-                                            onChange={e => setSelectedDiscount({...selectedDiscount, type: e.target.value as any})}
-                                            className="w-full bg-white border border-zinc-200 rounded-xl h-11 text-xs font-bold px-3 outline-none focus:border-zinc-900 transition-all shadow-sm"
-                                        >
-                                            <option value="Percentage">Percentage (%)</option>
-                                            <option value="Flat">Fixed Amount (₹)</option>
-                                            <option value="Free Shipping">Free Shipping</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 block">Value</label>
+                                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 block">Coupon Identifier</label>
                                         <Input 
-                                            type="number"
-                                            disabled={selectedDiscount.type === 'Free Shipping'}
-                                            value={selectedDiscount.value || 0} 
-                                            onChange={e => setSelectedDiscount({...selectedDiscount, value: Number(e.target.value)})}
-                                            className="h-11 rounded-xl border-zinc-200 font-black italic"
+                                            value={selectedDiscount.code || ''} 
+                                            onChange={e => setSelectedDiscount({...selectedDiscount, code: e.target.value.toUpperCase().replace(/\s/g, '')})} 
+                                            className="font-black text-lg h-14 rounded-xl border-zinc-200 focus-visible:ring-zinc-950 uppercase italic"
+                                            placeholder="e.g. WELCOME50"
                                         />
                                     </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 block">Strategy</label>
+                                            <select 
+                                                value={selectedDiscount.type || 'Percentage'} 
+                                                onChange={e => setSelectedDiscount({...selectedDiscount, type: e.target.value as any})}
+                                                className="w-full bg-white border border-zinc-200 rounded-xl h-11 text-xs font-bold px-3 outline-none focus:border-zinc-900 transition-all shadow-sm"
+                                            >
+                                                <option value="Percentage">Percentage (%)</option>
+                                                <option value="Flat">Fixed Amount (₹)</option>
+                                                <option value="Free Shipping">Free Shipping</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 block">Value</label>
+                                            <Input 
+                                                type="number"
+                                                disabled={selectedDiscount.type === 'Free Shipping'}
+                                                value={selectedDiscount.value || 0} 
+                                                onChange={e => setSelectedDiscount({...selectedDiscount, value: Number(e.target.value)})}
+                                                className="h-11 rounded-xl border-zinc-200 font-black italic"
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        </DrawerHeader>
+                            </DrawerHeader>
+                        </div>
 
-                        <DrawerContent className="flex-1 space-y-8">
-                            <div className="bg-zinc-50 p-6 rounded-[2rem] border border-zinc-100 space-y-6">
-                                <h4 className="text-[10px] font-black text-zinc-900 uppercase tracking-[0.2em] flex items-center gap-2">
-                                    <Calendar className="w-3 h-3" /> Constraints & Lifecycle
-                                </h4>
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 block">Utilization Limit (Max Uses)</label>
-                                        <Input 
-                                            type="number"
-                                            value={selectedDiscount.maxUsage || 100} 
-                                            onChange={e => setSelectedDiscount({...selectedDiscount, maxUsage: Number(e.target.value)})}
-                                            className="rounded-xl border-zinc-200 font-bold"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 block">Sunset Date (Expiry)</label>
-                                        <Input 
-                                            type="date"
-                                            value={selectedDiscount.expiry ? new Date(selectedDiscount.expiry).toISOString().split('T')[0] : ''} 
-                                            onChange={e => setSelectedDiscount({...selectedDiscount, expiry: e.target.value})}
-                                            className="rounded-xl border-zinc-200 font-bold"
-                                        />
+                        <DrawerContent>
+                            <div className="space-y-8">
+                                <div className="bg-zinc-50 p-6 rounded-[2rem] border border-zinc-100 space-y-6">
+                                    <h4 className="text-[10px] font-black text-zinc-900 uppercase tracking-[0.2em] flex items-center gap-2">
+                                        <Calendar className="w-3 h-3" /> Constraints & Lifecycle
+                                    </h4>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 block">Utilization Limit (Max Uses)</label>
+                                            <Input 
+                                                type="number"
+                                                value={selectedDiscount.maxUsage || 100} 
+                                                onChange={e => setSelectedDiscount({...selectedDiscount, maxUsage: Number(e.target.value)})}
+                                                className="rounded-xl border-zinc-200 font-bold"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 block">Sunset Date (Expiry)</label>
+                                            <Input 
+                                                type="date"
+                                                value={selectedDiscount.expiry ? new Date(selectedDiscount.expiry).toISOString().split('T')[0] : ''} 
+                                                onChange={e => setSelectedDiscount({...selectedDiscount, expiry: e.target.value})}
+                                                className="rounded-xl border-zinc-200 font-bold"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            
-                            <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 flex gap-3">
-                                <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full mt-1 animate-pulse" />
-                                <p className="text-[10px] font-bold text-emerald-800 leading-relaxed uppercase tracking-tight italic">
-                                    Logic Tip: Codes are applied during checkout. If "Magic Checkout" is active, ensures codes are synced to Razorpay dashboard for real-time validation.
-                                </p>
+                                
+                                <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 flex gap-3">
+                                    <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full mt-1 animate-pulse" />
+                                    <p className="text-[10px] font-bold text-emerald-800 leading-relaxed uppercase tracking-tight italic">
+                                        Logic Tip: Codes are applied during checkout. If "Magic Checkout" is active, ensures codes are synced to Razorpay dashboard for real-time validation.
+                                    </p>
+                                </div>
                             </div>
                         </DrawerContent>
 
-                        {/* Removed invalid className prop */}
                         <DrawerFooter>
                             <Button variant="ghost" className="flex-1 rounded-xl text-[10px] font-black uppercase text-zinc-400 hover:text-zinc-900" onClick={() => setSelectedDiscount(null)}>Discard</Button>
                             <Button 

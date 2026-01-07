@@ -95,7 +95,7 @@ const Reviews: React.FC<{ token: string | null }> = ({ token }) => {
             cell: ({ row }) => (
                 <div className="flex items-center gap-3">
                     <div className="h-8 w-8 rounded-lg overflow-hidden border border-zinc-100 shrink-0">
-                        <img src={row.original.productImage} className="full h-full object-cover" />
+                        <img src={row.original.productImage} className="h-full w-full object-cover" alt="" />
                     </div>
                     <span className="text-xs font-bold text-zinc-600 truncate max-w-[150px] uppercase tracking-tight">{row.original.productName}</span>
                 </div>
@@ -198,8 +198,7 @@ const Reviews: React.FC<{ token: string | null }> = ({ token }) => {
             <Drawer isOpen={!!selectedReview} onClose={() => setSelectedReview(null)} title="Feedback Context">
                 {selectedReview && (
                     <div className="flex flex-col h-full">
-                        <div className="border-b bg-zinc-50/50 pb-8">
-                            {/* Removed invalid className prop */}
+                        <div className="border-b bg-zinc-50/50 pb-8 p-6">
                             <DrawerHeader>
                                 <div className="flex items-center gap-4 mb-8">
                                     <div className="h-16 w-16 rounded-full bg-zinc-900 text-white flex items-center justify-center text-xl font-black italic border-4 border-white shadow-xl">
@@ -226,29 +225,30 @@ const Reviews: React.FC<{ token: string | null }> = ({ token }) => {
                             </DrawerHeader>
                         </div>
 
-                        <DrawerContent className="flex-1 space-y-10">
-                            <div className="space-y-4">
-                                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block">Customer Narrative</label>
-                                <div className="p-6 bg-zinc-50 rounded-3xl border border-zinc-100">
-                                    <p className="text-zinc-600 font-medium italic text-base leading-relaxed">"{selectedReview.comment}"</p>
-                                </div>
-                            </div>
-
-                            <div className="space-y-4">
-                                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block">Linked Catalog Asset</label>
-                                <div className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-zinc-200 shadow-sm">
-                                    <div className="w-14 h-14 rounded-xl overflow-hidden border border-zinc-100 bg-zinc-50 shrink-0">
-                                        <img src={selectedReview.productImage} className="full h-full object-cover" />
+                        <DrawerContent>
+                            <div className="space-y-10">
+                                <div className="space-y-4">
+                                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block">Customer Narrative</label>
+                                    <div className="p-6 bg-zinc-50 rounded-3xl border border-zinc-100">
+                                        <p className="text-zinc-600 font-medium italic text-base leading-relaxed">"{selectedReview.comment}"</p>
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-black text-zinc-900 truncate uppercase">{selectedReview.productName}</p>
-                                        <p className="text-[9px] text-zinc-400 font-bold uppercase tracking-tighter italic">ID: {selectedReview.productId}</p>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block">Linked Catalog Asset</label>
+                                    <div className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-zinc-200 shadow-sm">
+                                        <div className="w-14 h-14 rounded-xl overflow-hidden border border-zinc-100 bg-zinc-50 shrink-0">
+                                            <img src={selectedReview.productImage} className="h-full w-full object-cover" alt="" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-black text-zinc-900 truncate uppercase">{selectedReview.productName}</p>
+                                            <p className="text-[9px] text-zinc-400 font-bold uppercase tracking-tighter italic">ID: {selectedReview.productId}</p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </DrawerContent>
 
-                        {/* Removed invalid className prop */}
                         <DrawerFooter>
                             <Button variant="ghost" className="flex-1 rounded-xl text-[10px] font-black uppercase text-zinc-400 hover:text-zinc-900" onClick={() => setSelectedReview(null)}>Discard</Button>
                             <Button 

@@ -56,18 +56,25 @@ const HomepageEditor: React.FC<{ token: string | null }> = ({ token }) => {
 
     const handleSave = async () => {
         if (jsonError) {
-            alert('Fix JSON syntax errors before saving.');
+            alert('Please fix JSON syntax errors before saving.');
             return;
         }
         setSaving(true);
         try {
-            await fetch(getApiUrl('/api/settings/layout'), {
+            const response = await fetch(getApiUrl('/api/settings/layout'), {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(layout)
             });
-            alert('Storefront Published!');
-        } catch (e) { console.error(e); }
+            if (response.ok) {
+                alert('Storefront Layout Published Successfully!');
+            } else {
+                alert('Failed to save layout.');
+            }
+        } catch (e) { 
+            console.error(e);
+            alert('Network error occurred.');
+        }
         finally { setSaving(false); }
     };
 
@@ -103,8 +110,9 @@ const HomepageEditor: React.FC<{ token: string | null }> = ({ token }) => {
     };
 
     const removeSection = (id: string) => {
-        if (!window.confirm("Delete this section?")) return;
+        if (!window.confirm("Are you sure you want to delete this block? This cannot be undone.")) return;
         setLayout({ ...layout, sections: layout.sections.filter(s => s.id !== id) });
+        if (activeEditId === id) setActiveEditId(null);
     };
 
     const moveSection = (index: number, direction: 'up' | 'down') => {
@@ -148,14 +156,20 @@ const HomepageEditor: React.FC<{ token: string | null }> = ({ token }) => {
         }
     };
 
-    if (loading) return <div className="p-20 text-center font-black italic text-zinc-400 animate-pulse">Syncing Layout Engine...</div>;
+    if (loading) return (
+        <div className="flex flex-col items-center justify-center p-20 text-center">
+            <div className="w-10 h-10 border-4 border-zinc-200 border-t-zinc-900 rounded-full animate-spin mb-4"></div>
+            <p className="font-black italic text-zinc-400 tracking-widest uppercase">Syncing Layout Engine...</p>
+        </div>
+    );
 
     return (
         <div className="space-y-8 animate-fade-in pb-20">
+            {/* Control Bar */}
             <div className="flex justify-between items-center bg-white p-8 rounded-3xl shadow-xl border border-zinc-100 sticky top-0 z-[60]">
                 <div className="flex flex-col">
                     <h3 className="text-3xl font-black text-zinc-900 tracking-tighter italic">Live Designer</h3>
-                    <p className="text-[10px] text-zinc-400 font-black uppercase tracking-[0.3em] mt-1">Homepage Visual Control</p>
+                    <p className="text-[10px] text-zinc-400 font-black uppercase tracking-[0.3em] mt-1">Home Page Blueprint</p>
                 </div>
                 <div className="flex gap-4">
                     <div className="relative" ref={addMenuRef}>
@@ -163,8 +177,8 @@ const HomepageEditor: React.FC<{ token: string | null }> = ({ token }) => {
                             onClick={() => setIsAddMenuOpen(!isAddMenuOpen)}
                             className="bg-zinc-50 text-zinc-800 px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-zinc-200 hover:bg-zinc-100 transition-all flex items-center gap-3 shadow-sm"
                          >
-                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" strokeWidth={3}/></svg>
-                             Add Block
+                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"/></svg>
+                             Add Section
                          </button>
                          {isAddMenuOpen && (
                             <div className="absolute right-0 top-full mt-3 w-64 bg-white shadow-2xl rounded-3xl border border-zinc-100 z-[70] overflow-hidden animate-fade-in-up p-1.5">
@@ -181,25 +195,26 @@ const HomepageEditor: React.FC<{ token: string | null }> = ({ token }) => {
                          )}
                     </div>
                     <button onClick={handleSave} disabled={saving} className="bg-[#16423C] text-white px-10 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] italic shadow-[0_15px_30px_-5px_rgba(22,66,60,0.4)] hover:brightness-110 disabled:opacity-50 transition-all transform active:scale-95">
-                        {saving ? 'Syncing...' : 'Save & Publish'}
+                        {saving ? 'Saving...' : 'Save & Publish'}
                     </button>
                 </div>
             </div>
 
+            {/* Sections List */}
             <div className="space-y-8">
                 {layout.sections.map((section, index) => (
                     <div key={section.id} className={`bg-white border-2 rounded-[2.5rem] shadow-sm overflow-hidden transition-all duration-500 ${section.isActive ? 'border-zinc-200 shadow-xl' : 'border-dashed border-zinc-300 opacity-60'}`}>
                         <div className="bg-zinc-50/80 px-8 py-6 border-b flex justify-between items-center">
                             <div className="flex items-center gap-6">
                                 <div className="flex flex-col gap-1.5">
-                                    <button onClick={() => moveSection(index, 'up')} className="text-zinc-300 hover:text-zinc-900 transition-colors" disabled={index === 0}><svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z"/></svg></button>
-                                    <button onClick={() => moveSection(index, 'down')} className="text-zinc-300 hover:text-zinc-900 transition-colors" disabled={index === layout.sections.length - 1}><svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg></button>
+                                    <button onClick={() => moveSection(index, 'up')} className="text-zinc-300 hover:text-zinc-900 transition-colors disabled:opacity-20" disabled={index === 0}><svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z"/></svg></button>
+                                    <button onClick={() => moveSection(index, 'down')} className="text-zinc-300 hover:text-zinc-900 transition-colors disabled:opacity-20" disabled={index === layout.sections.length - 1}><svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg></button>
                                 </div>
                                 <div className="space-y-1">
                                     <div className="flex items-center gap-3">
-                                        <span className="bg-[#6A9C89]/10 text-[#16423C] px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-[#16423C]/10">{section.type} Block</span>
+                                        <span className="bg-[#16423C]/10 text-[#16423C] px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-[#16423C]/10">{section.type} Block</span>
                                         <button onClick={() => { setActiveEditId(activeEditId === section.id ? null : section.id); setActiveTab('content'); }} className="text-[9px] font-black uppercase text-blue-600 underline tracking-widest hover:text-blue-800">
-                                            {activeEditId === section.id ? 'CLOSE EDITOR' : 'EDIT SETTINGS'}
+                                            {activeEditId === section.id ? 'CLOSE CONFIG' : 'EDIT SETTINGS'}
                                         </button>
                                     </div>
                                     <input 
@@ -207,25 +222,25 @@ const HomepageEditor: React.FC<{ token: string | null }> = ({ token }) => {
                                         value={section.title || ''} 
                                         onChange={(e) => updateSection(section.id, { title: e.target.value })} 
                                         className="font-black text-zinc-900 bg-transparent border-none focus:ring-0 p-0 text-xl placeholder-zinc-200 w-full md:w-96 italic uppercase tracking-tighter"
-                                        placeholder="Enter Section Headline"
+                                        placeholder="Section Headline"
                                     />
                                 </div>
                             </div>
                             <div className="flex items-center gap-8">
                                 <label className="flex items-center gap-3 cursor-pointer group">
                                     <div className="text-right">
-                                        <p className="text-[9px] font-black uppercase text-zinc-400 tracking-widest">Visibility</p>
+                                        <p className="text-[9px] font-black uppercase text-zinc-400 tracking-widest">Status</p>
                                         <p className={`text-[10px] font-black tracking-widest ${section.isActive ? 'text-emerald-500' : 'text-zinc-300'}`}>{section.isActive ? 'ACTIVE' : 'HIDDEN'}</p>
                                     </div>
                                     <input 
                                         type="checkbox" 
                                         checked={section.isActive} 
                                         onChange={() => updateSection(section.id, { isActive: !section.isActive })}
-                                        className="w-6 h-6 text-[#16423C] rounded-xl border-zinc-200 focus:ring-[#16423C]"
+                                        className="w-6 h-6 text-[#16423C] rounded-xl border-zinc-200 focus:ring-0 cursor-pointer"
                                     />
                                 </label>
                                 <button onClick={() => removeSection(section.id)} className="text-zinc-300 hover:text-rose-500 p-2 transition-colors">
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeWidth={2.5}/></svg>
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"/></svg>
                                 </button>
                             </div>
                         </div>
@@ -233,10 +248,10 @@ const HomepageEditor: React.FC<{ token: string | null }> = ({ token }) => {
                         {activeEditId === section.id && (
                             <div className="p-10 bg-white border-t border-zinc-50 animate-fade-in">
                                 <div className="flex gap-10 mb-10 border-b border-zinc-100 pb-2">
-                                    <button onClick={() => setActiveTab('content')} className={`text-[10px] font-black uppercase tracking-[0.25em] pb-3 border-b-2 transition-all ${activeTab === 'content' ? 'border-[#16423C] text-[#16423C]' : 'border-transparent text-zinc-300'}`}>Block Content</button>
-                                    <button onClick={() => setActiveTab('style')} className={`text-[10px] font-black uppercase tracking-[0.25em] pb-3 border-b-2 transition-all ${activeTab === 'style' ? 'border-[#16423C] text-[#16423C]' : 'border-transparent text-zinc-300'}`}>Visual Control</button>
+                                    <button onClick={() => setActiveTab('content')} className={`text-[10px] font-black uppercase tracking-[0.25em] pb-3 border-b-2 transition-all ${activeTab === 'content' ? 'border-[#16423C] text-[#16423C]' : 'border-transparent text-zinc-300'}`}>Content</button>
+                                    <button onClick={() => setActiveTab('style')} className={`text-[10px] font-black uppercase tracking-[0.25em] pb-3 border-b-2 transition-all ${activeTab === 'style' ? 'border-[#16423C] text-[#16423C]' : 'border-transparent text-zinc-300'}`}>Style</button>
                                     {section.type === 'CustomCode' && (
-                                        <button onClick={() => setActiveTab('json')} className={`text-[10px] font-black uppercase tracking-[0.25em] pb-3 border-b-2 transition-all ${activeTab === 'json' ? 'border-[#16423C] text-[#16423C]' : 'border-transparent text-zinc-300'}`}>Context Variables</button>
+                                        <button onClick={() => setActiveTab('json')} className={`text-[10px] font-black uppercase tracking-[0.25em] pb-3 border-b-2 transition-all ${activeTab === 'json' ? 'border-[#16423C] text-[#16423C]' : 'border-transparent text-zinc-300'}`}>JSON Logic</button>
                                     )}
                                 </div>
 
@@ -244,40 +259,37 @@ const HomepageEditor: React.FC<{ token: string | null }> = ({ token }) => {
                                     <div className="space-y-8 animate-fade-in">
                                         {section.type === 'CustomCode' ? (
                                             <div className="bg-zinc-900 rounded-[2rem] overflow-hidden shadow-2xl border border-zinc-800">
-                                                <div className="flex items-center justify-between px-8 py-4 bg-zinc-800/50 border-b border-zinc-800">
-                                                    <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Master HTML/CSS/JS Sandbox</span>
-                                                </div>
                                                 <textarea 
                                                     value={section.code || ''} 
                                                     onChange={(e) => updateSection(section.id, { code: e.target.value })}
-                                                    className="w-full bg-zinc-900 text-emerald-400 font-mono text-[11px] p-10 focus:ring-0 border-none outline-none min-h-[450px] resize-y"
-                                                    placeholder="<div class='custom-block'>...</div>"
+                                                    className="w-full bg-zinc-900 text-emerald-400 font-mono text-[11px] p-10 focus:ring-0 border-none outline-none min-h-[400px] resize-y"
+                                                    placeholder="<div class='custom'>...</div>"
                                                 />
                                             </div>
                                         ) : (
                                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 max-w-6xl">
-                                                <div className="space-y-2">
-                                                    <label className="block text-[10px] font-black uppercase text-zinc-400 mb-2 tracking-widest">Supporting Subheadline</label>
+                                                <div className="space-y-4">
+                                                    <label className="block text-[10px] font-black uppercase text-zinc-400 tracking-widest">Subheadline / Subtitle</label>
                                                     <textarea 
                                                         value={section.settings?.subtitle || ''} 
                                                         onChange={(e) => updateSectionSettings(section.id, 'subtitle', e.target.value)}
-                                                        className="w-full border border-zinc-200 rounded-2xl p-5 text-sm font-medium focus:ring-2 focus:ring-[#16423C] outline-none bg-zinc-50/50"
+                                                        className="w-full border border-zinc-200 rounded-2xl p-5 text-sm font-medium focus:ring-1 focus:ring-[#16423C] outline-none bg-zinc-50/50"
                                                         rows={3}
-                                                        placeholder="Add secondary text for this section..."
+                                                        placeholder="Secondary text for this section..."
                                                     />
                                                 </div>
                                                 <div className="grid grid-cols-2 gap-6">
-                                                    <div className="space-y-2">
-                                                        <label className="block text-[10px] font-black uppercase text-zinc-400 mb-2 tracking-widest">Entry Limit</label>
+                                                    <div className="space-y-4">
+                                                        <label className="block text-[10px] font-black uppercase text-zinc-400 tracking-widest">Entry Limit</label>
                                                         <input type="number" value={section.settings?.limit || 8} onChange={(e) => updateSectionSettings(section.id, 'limit', parseInt(e.target.value))} className="w-full border border-zinc-200 rounded-xl p-4 text-sm font-bold bg-zinc-50/50" />
                                                     </div>
                                                     <div className="flex flex-col justify-center gap-2">
-                                                        <label className="text-[10px] font-black uppercase text-zinc-400 mb-2 tracking-widest">Layout Engine</label>
+                                                        <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest mb-1">Display Mode</label>
                                                         <button 
                                                             onClick={() => updateSectionSettings(section.id, 'isSlider', !section.settings?.isSlider)}
-                                                            className={`px-6 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm ${section.settings?.isSlider ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white text-zinc-400 border-zinc-200 hover:border-zinc-900 hover:text-zinc-900'}`}
+                                                            className={`px-6 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm ${section.settings?.isSlider ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white text-zinc-400 border-zinc-200 hover:border-zinc-900'}`}
                                                         >
-                                                            {section.settings?.isSlider ? 'SLIDER MODE' : 'GRID MODE'}
+                                                            {section.settings?.isSlider ? 'SLIDER ACTIVE' : 'GRID ACTIVE'}
                                                         </button>
                                                     </div>
                                                 </div>
@@ -291,35 +303,33 @@ const HomepageEditor: React.FC<{ token: string | null }> = ({ token }) => {
                                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
                                             <div className="space-y-8">
                                                 <p className="text-[10px] font-black uppercase text-zinc-950 tracking-[0.3em] flex items-center gap-3">
-                                                    <span className="w-4 h-0.5 bg-[#16423C]"></span> Box Model & Geometry
+                                                    <span className="w-4 h-0.5 bg-[#16423C]"></span> Dimension Control
                                                 </p>
                                                 <div className="grid grid-cols-2 gap-8 bg-zinc-50/50 p-8 rounded-[2rem] border border-zinc-100">
-                                                    <ShadcnSlider label="Vertical Padding" value={section.settings?.paddingTop ?? 80} onChange={v => { updateSectionSettings(section.id, 'paddingTop', v); updateSectionSettings(section.id, 'paddingBottom', v); }} max={400} />
-                                                    <ShadcnSlider label="Bottom Spacing" value={section.settings?.marginBottom ?? 0} onChange={v => updateSectionSettings(section.id, 'marginBottom', v)} max={200} />
+                                                    <ShadcnSlider label="Vertical Padding" value={section.settings?.paddingTop ?? 80} onChange={v => { updateSectionSettings(section.id, 'paddingTop', v); updateSectionSettings(section.id, 'paddingBottom', v); }} max={300} />
+                                                    <ShadcnSlider label="Margin Bottom" value={section.settings?.marginBottom ?? 0} onChange={v => updateSectionSettings(section.id, 'marginBottom', v)} max={200} />
                                                     <div className="col-span-2 space-y-4">
-                                                        <div className="space-y-2">
-                                                            <label className="text-[9px] font-black text-zinc-400 block mb-1 uppercase tracking-widest">Desktop Canvas Width</label>
-                                                            <input type="text" value={section.settings?.desktopWidth || '1400px'} onChange={(e) => updateSectionSettings(section.id, 'desktopWidth', e.target.value)} className="w-full border border-zinc-200 rounded-xl p-4 text-xs font-mono bg-white shadow-sm" placeholder="1400px" />
-                                                        </div>
+                                                        <label className="text-[9px] font-black text-zinc-400 block uppercase tracking-widest">Max Desktop Width (e.g. 1400px)</label>
+                                                        <input type="text" value={section.settings?.desktopWidth || '1400px'} onChange={(e) => updateSectionSettings(section.id, 'desktopWidth', e.target.value)} className="w-full border border-zinc-200 rounded-xl p-4 text-xs font-mono bg-white shadow-sm" />
                                                     </div>
                                                 </div>
                                             </div>
 
                                             <div className="space-y-8">
                                                 <p className="text-[10px] font-black uppercase text-zinc-950 tracking-[0.3em] flex items-center gap-3">
-                                                    <span className="w-4 h-0.5 bg-[#16423C]"></span> Color & Typography
+                                                    <span className="w-4 h-0.5 bg-[#16423C]"></span> Visual Aesthetics
                                                 </p>
-                                                <div className="space-y-8 bg-zinc-50/50 p-8 rounded-[2rem] border border-zinc-100">
+                                                <div className="bg-zinc-50/50 p-8 rounded-[2rem] border border-zinc-100 space-y-8">
                                                     <div className="grid grid-cols-2 gap-6">
-                                                        <div className="space-y-2">
-                                                            <label className="text-[9px] font-black text-zinc-400 block mb-2 uppercase tracking-widest">Base Background</label>
+                                                        <div className="space-y-4">
+                                                            <label className="text-[9px] font-black text-zinc-400 block uppercase tracking-widest">Section Background</label>
                                                             <div className="flex gap-3 items-center bg-white p-2 rounded-xl border border-zinc-200">
                                                                 <input type="color" value={section.settings?.backgroundColor || '#FFFFFF'} onChange={(e) => updateSectionSettings(section.id, 'backgroundColor', e.target.value)} className="h-10 w-10 rounded-lg cursor-pointer border-none p-1 shadow-sm" />
                                                                 <span className="text-[10px] font-mono font-bold uppercase">{section.settings?.backgroundColor || '#FFFFFF'}</span>
                                                             </div>
                                                         </div>
-                                                        <div className="space-y-2">
-                                                            <label className="text-[9px] font-black text-zinc-400 block mb-2 uppercase tracking-widest">Content Alignment</label>
+                                                        <div className="space-y-4">
+                                                            <label className="text-[9px] font-black text-zinc-400 block uppercase tracking-widest">Alignment</label>
                                                             <div className="flex p-1 bg-white rounded-xl border border-zinc-200 shadow-sm">
                                                                 {['left', 'center', 'right'].map(align => (
                                                                     <button 
@@ -342,22 +352,22 @@ const HomepageEditor: React.FC<{ token: string | null }> = ({ token }) => {
                                 {activeTab === 'json' && (
                                     <div className="space-y-6 animate-fade-in max-w-4xl">
                                         <div className="p-6 bg-[#16423C] text-white rounded-3xl shadow-xl flex items-center gap-6">
-                                            <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center font-black italic">!</div>
+                                            <div className="w-10 h-10 bg-white/10 rounded-2xl flex items-center justify-center font-black italic">i</div>
                                             <div>
-                                                <p className="font-black uppercase tracking-widest text-xs italic">Developer Mode Active</p>
-                                                <p className="text-[11px] opacity-70 mt-1">Use this JSON object to pass custom variables into your SafeCustomCode blocks. Syntax: <code>{"{{variable_name}}"}</code></p>
+                                                <p className="font-black uppercase tracking-widest text-xs italic">JSON Config Active</p>
+                                                <p className="text-[11px] opacity-70 mt-1">Directly inject variables using <code>{"{{variable_name}}"}</code> in your custom code blocks.</p>
                                             </div>
                                         </div>
                                         <div className="bg-zinc-900 rounded-[2.5rem] overflow-hidden shadow-2xl border border-zinc-800">
                                             <div className="flex items-center justify-between px-8 py-4 bg-zinc-800/50 border-b border-zinc-800">
-                                                <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Context Definition (JSON)</span>
-                                                {jsonError && <span className="text-[9px] text-rose-500 font-black uppercase animate-pulse italic">Syntax Error Detected</span>}
+                                                <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Context Logic (JSON)</span>
+                                                {jsonError && <span className="text-[9px] text-rose-500 font-black uppercase animate-pulse italic">Invalid Syntax</span>}
                                             </div>
                                             <textarea 
                                                 value={section.settingsJson || ''} 
                                                 onChange={(e) => handleJsonChange(section.id, e.target.value)}
-                                                className={`w-full bg-zinc-900 text-orange-200 font-mono text-[11px] p-10 focus:ring-0 border-none outline-none min-h-[350px] resize-y ${jsonError ? 'text-rose-200' : ''}`}
-                                                placeholder='{ "custom_title": "World Class", "theme_hue": "#16423C" }'
+                                                className={`w-full bg-zinc-900 text-orange-200 font-mono text-[11px] p-10 focus:ring-0 border-none outline-none min-h-[300px] resize-y ${jsonError ? 'text-rose-200' : ''}`}
+                                                placeholder='{ "title": "Example", "theme": "#16423C" }'
                                             />
                                         </div>
                                     </div>
@@ -372,8 +382,8 @@ const HomepageEditor: React.FC<{ token: string | null }> = ({ token }) => {
                 <div className="py-40 text-center bg-zinc-50 rounded-[4rem] border-4 border-dashed border-zinc-100">
                     <div className="flex flex-col items-center gap-6">
                         <span className="text-5xl grayscale opacity-20">🏗️</span>
-                        <p className="text-zinc-300 font-black uppercase tracking-[0.4em] text-xs italic">Storefront Blueprint Empty</p>
-                        <button onClick={() => setIsAddMenuOpen(true)} className="text-[#16423C] font-black text-[10px] uppercase tracking-widest underline hover:opacity-70 transition-opacity">Launch Block Selector</button>
+                        <p className="text-zinc-300 font-black uppercase tracking-[0.4em] text-xs italic">Blueprint Is Empty</p>
+                        <button onClick={() => setIsAddMenuOpen(true)} className="text-[#16423C] font-black text-[10px] uppercase tracking-widest underline hover:opacity-70 transition-opacity">Select First Block</button>
                     </div>
                 </div>
             )}

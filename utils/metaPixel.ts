@@ -1,7 +1,6 @@
 
 import { trackUserEvent } from "./analytics";
 
-// Standard Facebook Pixel Type Definition
 declare global {
   interface Window {
     fbq: any;
@@ -9,16 +8,25 @@ declare global {
   }
 }
 
+// List of authorized domains for this Pixel
+const AUTHORIZED_DOMAINS = [
+    'ladiessmartchoice.com',
+    'www.ladiessmartchoice.com',
+    'ayushreeayurveda.in',
+    'localhost'
+];
+
 export const initFacebookPixel = (pixelId: string) => {
-  if (!pixelId) {
-    console.error("❌ Meta Pixel Error: Pixel ID is missing.");
-    return;
-  }
+  const currentDomain = window.location.hostname;
   
-  if (window.fbq) {
-    console.warn("ℹ️ Meta Pixel already initialized.");
+  // FIX for Image 2: Only initialize if domain is authorized
+  if (!AUTHORIZED_DOMAINS.includes(currentDomain)) {
+    console.warn(`⚠️ Meta Pixel blocked for unauthorized domain: ${currentDomain}`);
     return;
   }
+
+  if (!pixelId) return;
+  if (window.fbq) return;
 
   /* eslint-disable */
   (function(f:any,b:any,e:any,v:any,n?:any,t?:any,s?:any)
@@ -32,26 +40,13 @@ export const initFacebookPixel = (pixelId: string) => {
   /* eslint-enable */
 
   window.fbq('init', pixelId);
-  
-  // The initial PageView event is now handled by the MasterTracker component to ensure
-  // it fires consistently on initial load and all subsequent route changes.
-  
-  console.log(`✅ Meta Pixel Initialized with ID: ${pixelId}`);
+  console.log(`✅ Meta Pixel Active on ${currentDomain}`);
 };
 
-/**
- * Tracks a standard Meta Pixel event. This function is now primarily called by the masterTracker.
- * @param event The name of the event (e.g., 'ViewContent').
- * @param data The event payload, which should include an event_id for deduplication.
- */
 export const trackEvent = (event: string, data?: any) => {
-  if (!window.fbq) {
-    console.warn(` M-Pixel event "${event}" was not sent. Is an ad blocker active?`);
-    return;
-  }
+  const currentDomain = window.location.hostname;
+  if (!window.fbq || !AUTHORIZED_DOMAINS.includes(currentDomain)) return;
 
   const { event_id, ...params } = data || {};
-  
   window.fbq('track', event, params, { event_id });
-  console.log(` M-Pixel Event Sent: "${event}" (ID: ${event_id})`, params || '');
 };

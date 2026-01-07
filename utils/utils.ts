@@ -1,11 +1,10 @@
-
 /**
- * A simplified version of the 'cn' utility that does not rely on external 
- * dependencies like tailwind-merge or clsx, resolving local build errors.
+ * Standard utility to merge tailwind classes without external dependencies
+ * to avoid "Failed to resolve" errors in certain environments.
  */
 export function cn(...inputs: any[]) {
   return inputs
-    .flat(Infinity)
+    .flat()
     .filter(Boolean)
-    .join(' ');
+    .join(" ");
 }
