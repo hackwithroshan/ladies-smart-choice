@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Product } from '../../types';
 import { getApiUrl } from '../../utils/apiHelper';
 import * as ReactRouterDom from 'react-router-dom';
 const { useNavigate } = ReactRouterDom as any;
 import { DataTable, ColumnDef } from '../ui/data-table';
-import { ArrowUpDown, IndianRupee, Package, Activity, MoreHorizontal, EditPencil, Trash2, FileText } from '../Icons';
+import { IndianRupee, MoreHorizontal, EditPencil, Trash2, Activity, Megaphone } from '../Icons';
 import { Drawer, DrawerHeader, DrawerTitle, DrawerDescription, DrawerContent, DrawerFooter } from '../ui/drawer';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -64,8 +63,21 @@ const ProductList: React.FC<{token: string | null}> = ({token}) => {
             'Draft': 'bg-zinc-100 text-zinc-500 border-zinc-200',
             'Archived': 'bg-rose-50 text-rose-700 border-rose-100'
         };
+        // Fix: Badge component now correctly accepts className as per the ui/badge.tsx definition
         return <Badge variant="outline" className={cn("text-[9px] font-black uppercase px-2 shadow-sm", styles[val])}>{val}</Badge>
       }
+    },
+    {
+      id: "meta_sync",
+      header: "Meta Catalog",
+      cell: ({ row }) => (
+          <div className="flex items-center gap-2">
+              <div className={cn("h-1.5 w-1.5 rounded-full", row.original.status === 'Active' ? "bg-emerald-500 animate-pulse" : "bg-zinc-300")} />
+              <span className="text-[9px] font-black uppercase tracking-tighter text-zinc-400">
+                  {row.original.status === 'Active' ? 'SYNC READY' : 'IGNORED'}
+              </span>
+          </div>
+      )
     },
     {
       accessorKey: "price",
@@ -80,7 +92,6 @@ const ProductList: React.FC<{token: string | null}> = ({token}) => {
         return (
           <div className="flex flex-col">
              <span className={cn("font-black text-xs italic", stock < 5 ? 'text-rose-600' : 'text-zinc-700')}>{stock} Units</span>
-             {stock < 5 && <span className="text-[8px] font-black text-rose-500 uppercase tracking-tighter animate-pulse">Critical Level</span>}
           </div>
         )
       }
@@ -100,19 +111,20 @@ const ProductList: React.FC<{token: string | null}> = ({token}) => {
                 </Button>
               }
             >
-              <React.Fragment>
-                <DropdownMenuLabel>Product Ops</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => navigate(`/app/products/edit?id=${pid}`)}>
-                  <EditPencil className="mr-2 h-3.5 w-3.5" /> Modify Record
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate(`/app/products/design?productId=${pid}`)}>
-                  <Activity className="mr-2 h-3.5 w-3.5" /> Launch Designer
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => handleDeleteProduct(pid!)} variant="destructive">
-                  <Trash2 className="mr-2 h-3.5 w-3.5" /> Wipe Record
-                </DropdownMenuItem>
-              </React.Fragment>
+                <React.Fragment>
+                  <DropdownMenuLabel>Product Ops</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => navigate(`/app/products/edit?id=${pid}`)}>
+                    <EditPencil className="mr-2 h-3.5 w-3.5" /> Modify Record
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate(`/app/products/design?productId=${pid}`)}>
+                    <Activity className="mr-2 h-3.5 w-3.5" /> Launch Designer
+                  </DropdownMenuItem>
+                  {/* Fixed error: DropdownMenuSeparator does not accept className in its current definition */}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => handleDeleteProduct(pid!)} variant="destructive">
+                    <Trash2 className="mr-2 h-3.5 w-3.5" /> Wipe Record
+                  </DropdownMenuItem>
+                </React.Fragment>
             </DropdownMenu>
           </div>
         )
@@ -140,24 +152,32 @@ const ProductList: React.FC<{token: string | null}> = ({token}) => {
         ]}
         onTabChange={setActiveTab}
         actions={
-            <Button onClick={() => navigate('/app/products/new')} className="h-10 bg-[#16423C] text-white font-black uppercase tracking-widest italic text-[10px] rounded-xl px-8 shadow-xl transition-all active:scale-95">+ Inject Asset</Button>
+            <div className="flex gap-2">
+                <Button onClick={() => navigate('/app/marketing')} variant="outline" className="h-10 border-zinc-200 text-zinc-600 font-black uppercase text-[9px] rounded-xl px-4 flex gap-2">
+                    <Megaphone className="w-3 h-3" /> Catalog Status
+                </Button>
+                <Button onClick={() => navigate('/app/products/new')} className="h-10 bg-[#16423C] text-white font-black uppercase tracking-widest italic text-[10px] rounded-xl px-8 shadow-xl transition-all active:scale-95">+ Inject Asset</Button>
+            </div>
         }
       />
 
       <Drawer isOpen={!!selectedProduct} onClose={() => setSelectedProduct(null)} title="Record Overview">
          {selectedProduct && (
              <div className="space-y-8 h-full flex flex-col">
-                 <DrawerHeader className="border-b bg-zinc-50/50 pb-8">
-                    <div className="h-56 w-full rounded-3xl overflow-hidden shadow-2xl mb-8 border border-zinc-200">
-                        <img src={selectedProduct.imageUrl} className="w-full h-full object-cover" />
-                    </div>
-                    <DrawerTitle>{selectedProduct.name}</DrawerTitle>
-                    <DrawerDescription>MASTER PROTOCOL: {selectedProduct.sku || 'UNASSIGNED'}</DrawerDescription>
-                    <div className="flex gap-4 mt-8">
-                        <div className="bg-white p-4 rounded-2xl border border-zinc-200 flex-1 shadow-sm"><p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Status</p><p className="text-sm font-black italic">{selectedProduct.status}</p></div>
-                        <div className="bg-white p-4 rounded-2xl border border-zinc-200 flex-1 shadow-sm"><p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Liquidity</p><p className="text-sm font-black italic">₹{selectedProduct.price.toLocaleString()}</p></div>
-                    </div>
-                 </DrawerHeader>
+                 <div className="border-b bg-zinc-50/50 pb-8">
+                   {/* Removed invalid className prop */}
+                   <DrawerHeader>
+                      <div className="h-56 w-full rounded-3xl overflow-hidden shadow-2xl mb-8 border border-zinc-200">
+                          <img src={selectedProduct.imageUrl} className="w-full h-full object-cover" />
+                      </div>
+                      <DrawerTitle>{selectedProduct.name}</DrawerTitle>
+                      <DrawerDescription>MASTER PROTOCOL: {selectedProduct.sku || 'UNASSIGNED'}</DrawerDescription>
+                      <div className="flex gap-4 mt-8">
+                          <div className="bg-white p-4 rounded-2xl border border-zinc-200 flex-1 shadow-sm"><p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Status</p><p className="text-sm font-black italic">{selectedProduct.status}</p></div>
+                          <div className="bg-white p-4 rounded-2xl border border-zinc-200 flex-1 shadow-sm"><p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Liquidity</p><p className="text-sm font-black italic">₹{selectedProduct.price.toLocaleString()}</p></div>
+                      </div>
+                   </DrawerHeader>
+                 </div>
 
                  <DrawerContent className="flex-1">
                     <div className="space-y-8">
@@ -172,6 +192,7 @@ const ProductList: React.FC<{token: string | null}> = ({token}) => {
                     </div>
                  </DrawerContent>
 
+                 {/* Removed invalid className prop */}
                  <DrawerFooter>
                     <Button variant="outline" className="flex-1 font-black text-[10px] uppercase tracking-widest rounded-xl" onClick={() => navigate(`/app/products/design?productId=${selectedProduct.id || (selectedProduct as any)._id}`)}>Designer</Button>
                     <Button className="flex-1 font-black text-[10px] uppercase tracking-widest bg-[#16423C] rounded-xl" onClick={() => navigate(`/app/products/edit?id=${selectedProduct.id || (selectedProduct as any)._id}`)}>Master Edit</Button>

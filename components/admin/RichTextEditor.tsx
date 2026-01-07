@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { CodeIcon } from '../Icons';
 import { CLOUDINARY } from '../../constants';

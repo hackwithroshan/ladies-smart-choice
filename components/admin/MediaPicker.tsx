@@ -1,13 +1,12 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { MediaItem } from '../../types';
-import { COLORS } from '../../constants';
+import { COLORS, CLOUDINARY } from '../../constants';
 import { getApiUrl } from '../../utils/apiHelper';
 
-// Cloudinary config
-const CLOUDINARY_UPLOAD_PRESET = 'ladiesh';
-const CLOUDINARY_CLOUD_NAME = 'djbv48acj';
-const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`;
+// Using centralized Cloudinary config from constants
+const CLOUDINARY_UPLOAD_PRESET = CLOUDINARY.UPLOAD_PRESET;
+const CLOUDINARY_CLOUD_NAME = CLOUDINARY.CLOUD_NAME;
+const CLOUDINARY_UPLOAD_URL = CLOUDINARY.UPLOAD_URL;
 
 interface MediaPickerProps {
     value: string;
@@ -87,7 +86,7 @@ const MediaPicker: React.FC<MediaPickerProps> = ({ value, onChange, type = 'any'
                             url: data.secure_url,
                             public_id: data.public_id,
                             format: data.format,
-                            type: data.resource_type
+                            type: data.resource_type === 'video' ? 'video' : 'image'
                         })
                     });
                 } else {
@@ -181,7 +180,7 @@ const MediaPicker: React.FC<MediaPickerProps> = ({ value, onChange, type = 'any'
             )}
 
             {isOpen && (
-                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm p-4 animate-fade-in">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm p-4 animate-fade-in">
                     <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col h-[85vh]">
                         <div className="flex justify-between items-center p-4 border-b bg-gray-50/70">
                             <div className="flex items-center gap-2 p-1 bg-gray-200 rounded-lg">

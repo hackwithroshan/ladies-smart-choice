@@ -41,15 +41,17 @@ export const DropdownMenu = ({ trigger, children, align = "right" }: DropdownMen
   )
 }
 
+// Added optional className to fix potential recognition errors in parent components
 export const DropdownMenuItem = ({ 
   children, 
   onClick, 
-  variant = "default" 
+  variant = "default",
+  className
 }: { 
-  // Fix: Made children optional to prevent TypeScript errors in JSX blocks
   children?: React.ReactNode, 
   onClick?: () => void,
-  variant?: "default" | "destructive"
+  variant?: "default" | "destructive",
+  className?: string
 }) => (
   <button
     onClick={onClick}
@@ -57,16 +59,17 @@ export const DropdownMenuItem = ({
       "relative flex w-full cursor-default select-none items-center rounded-sm px-2 py-1.5 text-xs font-medium outline-none transition-colors",
       variant === "default" 
         ? "hover:bg-zinc-100 text-zinc-700 hover:text-zinc-900" 
-        : "text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+        : "text-rose-600 hover:bg-rose-50 hover:text-rose-700",
+      className
     )}
   >
     {children}
   </button>
 )
 
-// Fix: Made children optional to fix prop recognition errors
-export const DropdownMenuLabel = ({ children }: { children?: React.ReactNode }) => (
-  <div className="px-2 py-1.5 text-[10px] font-black uppercase tracking-widest text-zinc-400">
+// Added optional className to fix potential recognition errors in parent components
+export const DropdownMenuLabel = ({ children, className }: { children?: React.ReactNode, className?: string }) => (
+  <div className={cn("px-2 py-1.5 text-[10px] font-black uppercase tracking-widest text-zinc-400", className)}>
     {children}
   </div>
 )

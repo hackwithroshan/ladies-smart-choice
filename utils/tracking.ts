@@ -3,10 +3,10 @@ import { trackEvent as trackPixelEvent } from './metaPixel';
 import { trackUserEvent as trackInternalEvent } from './analytics';
 
 /**
- * Reads a cookie value by name.
- * @param name The name of the cookie.
- * @returns The cookie's value or an empty string.
+ * Advanced Multi-Domain Meta Tracker (Shopify-Style)
+ * Automatically detects the current environment and fires real-time events.
  */
+
 const getCookie = (name: string): string => {
     const value = `; ${document.cookie}`;
     const parts = value.split(`; ${name}=`);
@@ -14,39 +14,31 @@ const getCookie = (name: string): string => {
     return '';
 };
 
-/**
- * The master tracking function for all e-commerce and analytics events.
- * It generates a unique event ID and fires events to both the Meta Pixel (browser-side)
- * and the internal analytics backend (which then triggers a Meta CAPI event).
- * This ensures dual tracking with automatic deduplication.
- *
- * @param eventName The standard name of the event (e.g., 'ViewContent', 'AddToCart').
- * @param pixelData The data payload for the Meta Pixel event.
- * @param internalData The data payload for the internal analytics/CAPI event.
- */
 export const masterTracker = (
     eventName: string,
     pixelData: Record<string, any> = {},
     internalData: Record<string, any> = {}
 ) => {
-    // 1. Generate a unique event ID for deduplication
+    // 1. Generate a Unique Global Event ID for Deduplication
     const eventId = `${eventName.toLowerCase()}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
-    // 2. Fire the browser-side Meta Pixel event with the event ID
+    // 2. Real-time Browser Pixel (Runs on ANY domain where Pixel ID is configured)
     trackPixelEvent(eventName, {
         ...pixelData,
         event_id: eventId,
     });
 
-    // 3. Fire the server-side event via our internal analytics endpoint
+    // 3. Real-time Server-Side CAPI (Syncs immediately with Meta via Backend)
     trackInternalEvent(
         eventName,
         {
             ...internalData,
-            eventId: eventId, // Pass the same ID to the backend
-            // Pass Meta's browser cookies for better CAPI matching
+            eventId: eventId,
             fbp: getCookie('_fbp'),
             fbc: getCookie('_fbc'),
+            userAgent: navigator.userAgent,
+            sourceUrl: window.location.href,
+            domain: window.location.hostname // Dynamics: Tells Meta which domain triggered the event
         }
     );
 };

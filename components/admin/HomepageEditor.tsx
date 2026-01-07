@@ -134,7 +134,6 @@ const HomepageEditor: React.FC<{ token: string | null }> = ({ token }) => {
         });
     };
 
-    // Fix: Added missing handleJsonChange function for Context Variables tab
     const handleJsonChange = (id: string, value: string) => {
         updateSection(id, { settingsJson: value });
         if (!value.trim()) {

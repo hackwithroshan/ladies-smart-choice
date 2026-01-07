@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import * as ReactRouterDom from 'react-router-dom';
 const { useLocation, useSearchParams, useNavigate } = ReactRouterDom as any;
@@ -29,6 +28,7 @@ import FooterSettingsComponent from '../components/admin/FooterSettings';
 import AdminSettingsModal from '../components/admin/AdminSettingsModal';
 import TestimonialSettings from '../components/admin/TestimonialSettings';
 import HomePageSEOSettings from '../components/admin/HomePageSEOSettings';
+import Reviews from '../components/admin/Reviews';
 import { User, AdminView, Product } from '../types';
 import { useSiteData } from '../contexts/SiteDataContext';
 import { SidebarProvider, SidebarInset } from '../components/ui/sidebar';
@@ -84,7 +84,14 @@ const AdminDashboardPage: React.FC<{ user: User; logout: () => void }> = ({ user
                 fetchProduct();
             }
         } else if (path.includes('/products/design')) setCurrentView('pdp-builder');
-        else if (path.includes('/products')) setCurrentView('products');
+        else if (path.includes('/products')) {
+            if (path.includes('/inventory')) {
+                setCurrentView('inventory');
+            } else {
+                setCurrentView('products');
+            }
+        }
+        else if (path.includes('/categories')) setCurrentView('categories');
         else if (path.includes('/orders')) setCurrentView('orders');
         else if (path.includes('/analytics')) setCurrentView('analytics');
         else if (path.includes('/customers')) setCurrentView('customers');
@@ -92,6 +99,8 @@ const AdminDashboardPage: React.FC<{ user: User; logout: () => void }> = ({ user
         else if (path.includes('/content/footer')) setCurrentView('footer');
         else if (path.includes('/content/media')) setCurrentView('media');
         else if (path.includes('/marketing')) setCurrentView('marketing');
+        else if (path.includes('/inventory')) setCurrentView('inventory');
+        else if (path.includes('/reviews')) setCurrentView('reviews');
         else setCurrentView('dashboard');
     }, [location.pathname, editId, token]);
 
@@ -133,6 +142,8 @@ const AdminDashboardPage: React.FC<{ user: User; logout: () => void }> = ({ user
             case 'dashboard': return <DashboardOverview token={token} />;
             case 'analytics': return <Analytics token={token} />;
             case 'products': return <ProductList token={token} />;
+            case 'inventory': return <Inventory token={token} />;
+            case 'categories': return <CollectionSettings token={token} />;
             case 'create-product': return <ProductForm product={null} onSave={handleProductSave} onCancel={() => navigate('/app/products')} />;
             case 'edit-product': 
                 return editingProduct 
@@ -147,6 +158,7 @@ const AdminDashboardPage: React.FC<{ user: User; logout: () => void }> = ({ user
             case 'media': return <MediaLibrary token={token} />;
             case 'cms': return <CMSManagement token={token} initialTab="page-builder" />;
             case 'homepage-seo': return <HomePageSEOSettings token={token} />;
+            case 'reviews': return <Reviews token={token} />;
             default: return <DashboardOverview token={token} />;
         }
     };

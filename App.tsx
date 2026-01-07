@@ -11,6 +11,8 @@ import ErrorBoundary from './components/ErrorBoundary';
 import SmartPopup from './components/SmartPopup';
 import WhatsAppWidget from './components/WhatsAppWidget';
 import MaintenancePage from './pages/MaintenancePage';
+import { initFacebookPixel } from './utils/metaPixel';
+import { masterTracker } from './utils/tracking';
 
 type PageWithUserProps = { user: any; logout: () => void };
 
@@ -27,6 +29,21 @@ const CollectionPage: React.ComponentType<PageWithUserProps> = lazy(() => import
 const ContactPage: React.ComponentType<PageWithUserProps> = lazy(() => import('./pages/ContactPage'));
 const OrderTrackingPage: React.ComponentType<PageWithUserProps> = lazy(() => import('./pages/OrderTrackingPage'));
 const WishlistPage: React.ComponentType<PageWithUserProps> = lazy(() => import('./pages/WishlistPage'));
+
+// Tracking Component to handle every route change
+const RouteTracker: React.FC = () => {
+    const location = useLocation();
+    const { siteSettings } = useSiteData();
+
+    useEffect(() => {
+        if (siteSettings?.metaPixelId) {
+            initFacebookPixel(siteSettings.metaPixelId);
+            masterTracker('PageView', {}, {});
+        }
+    }, [location.pathname, siteSettings?.metaPixelId]);
+
+    return null;
+};
 
 const LoadingSpinner: React.FC = () => (
     <div className="flex justify-center items-center h-screen w-screen bg-white">
@@ -70,9 +87,9 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen selection:bg-zinc-900 selection:text-zinc-50">
+      <RouteTracker />
       <Suspense fallback={<LoadingSpinner />}>
           <Routes>
-            {/* Public Storefront */}
             <Route path="/" element={<HomePage user={user} logout={handleLogout} />} />
             <Route path="/product/:slug" element={<ProductDetailsPage user={user} logout={handleLogout} />} />
             <Route path="/collections/:id" element={<CollectionPage user={user} logout={handleLogout} />} />
@@ -82,16 +99,10 @@ const AppContent: React.FC = () => {
             <Route path="/checkout" element={<CheckoutPage user={user} logout={handleLogout} />} />
             <Route path="/contact" element={<ContactPage user={user} logout={handleLogout} />} />
             <Route path="/track-order" element={<OrderTrackingPage user={user} logout={handleLogout} />} />
-            
-            {/* Auth */}
             <Route path="/login" element={!user ? <LoginPage onAuthSuccess={handleAuthSuccess} /> : <Navigate to="/" />} />
             <Route path="/register" element={!user ? <RegisterPage onAuthSuccess={handleAuthSuccess} /> : <Navigate to="/" />} />
-            
-            {/* Private Dashboards */}
             <Route path="/dashboard" element={user ? <UserDashboardPage user={user} logout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/app/*" element={user?.isAdmin ? <AdminDashboardPage user={user} logout={handleLogout} /> : <Navigate to="/login" />} />
-            
-            {/* Catch All */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
       </Suspense>
