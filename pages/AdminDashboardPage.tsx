@@ -11,7 +11,6 @@ import OrderList from '../components/admin/OrderList';
 import Analytics from '../components/admin/Analytics';
 import Customers from '../components/admin/Customers';
 import TrackingSettings from '../components/admin/TrackingSettings';
-import CollectionSettings from '../components/admin/CollectionSettings';
 import MediaLibrary from '../components/admin/MediaLibrary';
 import PDPBuilder from '../components/admin/PDPBuilder';
 import HeaderSettingsComponent from '../components/admin/HeaderSettings';
@@ -20,7 +19,6 @@ import AdminSettingsModal from '../components/admin/AdminSettingsModal';
 import HomePageSEOSettings from '../components/admin/HomePageSEOSettings';
 import Reviews from '../components/admin/Reviews';
 import { User, AdminView, Product } from '../types';
-import { useSiteData } from '../contexts/SiteDataContext';
 import { SidebarProvider, SidebarInset } from '../components/ui/sidebar';
 import { getApiUrl } from '../utils/apiHelper';
 
@@ -117,7 +115,7 @@ const ProductEditWrapper = ({ id, token, onComplete }: any) => {
         }
     }, [id, token]);
 
-    if (!product) return <div className="p-20 text-center animate-pulse font-black uppercase text-zinc-300">Retrieving Master Record...</div>;
+    if (!product) return <div className="p-20 text-center animate-pulse font-black uppercase text-zinc-300 italic tracking-[0.3em]">Syncing Master Record...</div>;
     return <ProductForm product={product} onSave={async (data) => {
         await fetch(getApiUrl(`/api/products/${id}`), {
             method: 'PUT',

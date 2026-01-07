@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import * as ReactRouterDom from 'react-router-dom';
 const { useNavigate } = ReactRouterDom as any;
@@ -101,7 +100,6 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentView, setCurrentView
                         <NavItem icon={Activity} label="Analytics" view="analytics" path="/app/analytics" />
                         <NavItem icon={ShoppingCart} label="Orders" view="orders" path="/app/orders" />
 
-                        {/* PRODUCTS SUBMENU */}
                         <SubMenuTrigger icon={Package} label="Products" subKey="products" />
                         {openSubmenus['products'] && (
                             <div className="space-y-0.5 mb-2">
@@ -115,7 +113,6 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentView, setCurrentView
 
                         <NavItem icon={Users} label="Customers" view="customers" path="/app/customers" />
 
-                        {/* CONTENT SUBMENU */}
                         <SubMenuTrigger icon={LayoutTemplate} label="Content" subKey="content" />
                         {openSubmenus['content'] && (
                             <div className="space-y-0.5 mb-2">
@@ -125,15 +122,12 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentView, setCurrentView
                             </div>
                         )}
 
-                        {/* STORE BUILDER SUBMENU */}
                         <SubMenuTrigger icon={Wand2} label="Store Builder" subKey="store-builder" />
                         {openSubmenus['store-builder'] && (
                             <div className="space-y-0.5 mb-2">
                                 <NavItem label="Home Page Builder" view="cms" path="/app/content/builder" isSubItem />
-                                {/* Level 3 Nested Visual Simulation */}
                                 <NavItem label="• Home Page SEO" view="homepage-seo" path="/app/settings" isSubItem />
                                 <NavItem label="• Shop Videos" view="shop-videos" path="/app/content/videos" isSubItem />
-                                
                                 <NavItem label="Product Designer" view="pdp-builder" path="/app/products/design" isSubItem />
                             </div>
                         )}
