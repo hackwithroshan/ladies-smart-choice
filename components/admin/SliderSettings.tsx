@@ -28,7 +28,7 @@ const SliderSettings: React.FC<{ token: string | null }> = ({ token }) => {
     const fetchSlides = async () => {
         try {
             setLoading(true);
-            const response = await fetch(getApiUrl('/api/slides'));
+            const response = await fetch(getApiUrl('slides'));
             if (!response.ok) throw new Error('Failed to fetch slides');
             const data = await response.json();
             setSlides(data);
@@ -65,7 +65,7 @@ const SliderSettings: React.FC<{ token: string | null }> = ({ token }) => {
         }
 
         const isEditing = '_id' in editingSlide;
-        const url = isEditing ? getApiUrl(`/api/slides/${editingSlide._id}`) : getApiUrl('/api/slides');
+        const url = isEditing ? getApiUrl(`slides/${(editingSlide as any)._id}`) : getApiUrl('slides');
         const method = isEditing ? 'PUT' : 'POST';
 
         try {
@@ -92,7 +92,7 @@ const SliderSettings: React.FC<{ token: string | null }> = ({ token }) => {
         if (!window.confirm('Are you sure you want to delete this slide?')) return;
         
         try {
-            const response = await fetch(getApiUrl(`/api/slides/${slideId}`), {
+            const response = await fetch(getApiUrl(`slides/${slideId}`), {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });

@@ -257,6 +257,7 @@ export interface ShoppableVideo {
         id: string;
         name: string;
     }[];
+    sortOrder?: number;
 }
 
 export interface Testimonial {
@@ -467,12 +468,20 @@ export interface Campaign {
 
 export interface Discount {
     id: string;
+    _id?: string;
     code: string;
     type: 'Percentage' | 'Flat' | 'Free Shipping';
     value: number;
     usageCount: number;
     maxUsage: number;
     expiry: string;
+    isActive?: boolean;
+    startDate?: string | Date;
+    endDate?: string | Date;
+    scope?: 'Cart' | 'Product' | 'Category';
+    scopeIds?: string[];
+    minOrderValue?: number;
+    usageLimitPerUser?: number;
 }
 
 export interface ShippingProvider {

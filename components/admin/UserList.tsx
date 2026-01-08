@@ -16,7 +16,8 @@ const UserList: React.FC<{token: string | null}> = ({token}) => {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch(getApiUrl('/api/users'), {
+      // Corrected: getApiUrl('users') becomes /api/users
+      const response = await fetch(getApiUrl('users'), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) setUsers(await response.json());
@@ -32,7 +33,8 @@ const UserList: React.FC<{token: string | null}> = ({token}) => {
   const handleDeleteUser = async (id: string) => {
       if(!window.confirm("Are you sure you want to delete this user? This action cannot be undone.")) return;
       try {
-          const res = await fetch(getApiUrl(`/api/users/${id}`), {
+          // Corrected: getApiUrl(`users/${id}`)
+          const res = await fetch(getApiUrl(`users/${id}`), {
               method: 'DELETE',
               headers: { 'Authorization': `Bearer ${token}` }
           });

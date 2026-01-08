@@ -25,7 +25,7 @@ export const Drawer = ({ children, isOpen, onClose, direction = "right", title }
       <div className={cn("absolute bg-white shadow-2xl flex flex-col", dirClasses[direction])}>
         <div className="flex items-center justify-between p-6 border-b">
           <h2 className="text-lg font-black uppercase tracking-tighter italic">{title || "Details"}</h2>
-          <button onClick={onClose} className="p-2 hover:bg-zinc-100 rounded-full transition-colors">
+          <button onClick={onClose} className="p-2 rounded-full hover:bg-zinc-100 rounded-full transition-colors">
             <X className="h-5 w-5 text-zinc-500" />
           </button>
         </div>
@@ -37,23 +37,27 @@ export const Drawer = ({ children, isOpen, onClose, direction = "right", title }
   )
 }
 
-// Fixed: Added optional children to Drawer sub-component props
+// Added optional children and className to Drawer sub-component props
 export const DrawerHeader = ({ children, className }: { children?: React.ReactNode, className?: string }) => (
   <div className={cn("px-6 py-4 space-y-1", className)}>{children}</div>
 )
 
-export const DrawerTitle = ({ children }: { children?: React.ReactNode }) => (
-  <h3 className="text-xl font-black italic tracking-tighter text-zinc-900 uppercase">{children}</h3>
+// Added className support for DrawerTitle
+export const DrawerTitle = ({ children, className }: { children?: React.ReactNode, className?: string }) => (
+  <h3 className={cn("text-xl font-black italic tracking-tighter text-zinc-900 uppercase", className)}>{children}</h3>
 )
 
-export const DrawerDescription = ({ children }: { children?: React.ReactNode }) => (
-  <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">{children}</p>
+// Added className support for DrawerDescription
+export const DrawerDescription = ({ children, className }: { children?: React.ReactNode, className?: string }) => (
+  <p className={cn("text-xs font-bold text-zinc-400 uppercase tracking-widest", className)}>{children}</p>
 )
 
-export const DrawerFooter = ({ children }: { children?: React.ReactNode }) => (
-  <div className="p-6 border-t bg-zinc-50/50 flex gap-3 justify-end">{children}</div>
+// Added className support for DrawerFooter to fix "Property 'className' does not exist" errors in usage
+export const DrawerFooter = ({ children, className }: { children?: React.ReactNode, className?: string }) => (
+  <div className={cn("p-6 border-t bg-zinc-50/50 flex gap-3 justify-end", className)}>{children}</div>
 )
 
-export const DrawerContent = ({ children }: { children?: React.ReactNode }) => (
-  <div className="p-6 space-y-6">{children}</div>
+// Added className support for DrawerContent
+export const DrawerContent = ({ children, className }: { children?: React.ReactNode, className?: string }) => (
+  <div className={cn("p-6 space-y-6", className)}>{children}</div>
 )

@@ -51,11 +51,11 @@ const Header: React.FC<HeaderProps> = ({ user, logout }) => {
     setIsSearchFocused(false);
   }, [location]);
 
-  // Fetch Latest Products for empty search focus
   useEffect(() => {
     const fetchLatest = async () => {
         try {
-            const res = await fetch(getApiUrl('/api/products/search?q='));
+            // Corrected: Removed /api prefix
+            const res = await fetch(getApiUrl('products/search?q='));
             if (res.ok) setLatestProducts(await res.json());
         } catch (e) { console.error(e); }
     };
@@ -67,7 +67,8 @@ const Header: React.FC<HeaderProps> = ({ user, logout }) => {
       setIsSearching(true);
       const timer = setTimeout(async () => {
         try {
-          const res = await fetch(getApiUrl(`/api/products/search?q=${encodeURIComponent(searchTerm)}`));
+          // Corrected: Removed /api prefix
+          const res = await fetch(getApiUrl(`products/search?q=${encodeURIComponent(searchTerm)}`));
           if (res.ok) {
             const data = await res.json();
             setRecommendations(data);
@@ -195,12 +196,18 @@ const Header: React.FC<HeaderProps> = ({ user, logout }) => {
                                             </div>
                                         </div>
                                     </div>
-                                ) : recommendations.length > 0 ? recommendations.map(prod => (
-                                    <div key={prod.id} onClick={() => handleRecommendationClick(prod.slug || '')} className="flex items-center gap-4 p-4 hover:bg-brand-accent/5 cursor-pointer transition-colors border-b border-gray-50 last:border-0">
-                                        <img src={prod.imageUrl} className="w-14 h-14 rounded-lg object-cover flex-shrink-0 border" />
-                                        <div className="flex-1 min-w-0"><h5 className="text-sm font-bold text-gray-900 truncate uppercase tracking-tight">{prod.name}</h5><p className="text-xs text-brand-primary font-black">₹{prod.price.toLocaleString()}</p></div>
-                                    </div>
-                                )) : <div className="p-10 text-center text-gray-400 italic text-sm">No products found for "{searchTerm}".</div>}
+                                ) : (
+                                  recommendations.length > 0 ? (
+                                    recommendations.map(prod => (
+                                      <div key={prod.id} onClick={() => handleRecommendationClick(prod.slug || '')} className="flex items-center gap-4 p-4 hover:bg-brand-accent/5 cursor-pointer transition-colors border-b border-gray-50 last:border-0">
+                                          <img src={prod.imageUrl} className="w-14 h-14 rounded-lg object-cover flex-shrink-0 border" />
+                                          <div className="flex-1 min-w-0"><h5 className="text-sm font-bold text-gray-900 truncate uppercase tracking-tight">{prod.name}</h5><p className="text-xs text-brand-primary font-black">₹{prod.price.toLocaleString()}</p></div>
+                                      </div>
+                                    ))
+                                  ) : (
+                                    <div className="p-10 text-center text-gray-400 italic text-sm uppercase tracking-widest font-black">No matching records found.</div>
+                                  )
+                                )}
                             </div>
                         </div>
                     </div>
@@ -220,7 +227,7 @@ const Header: React.FC<HeaderProps> = ({ user, logout }) => {
                     {user && isProfileMenuOpen && (
                         <div className="absolute right-0 mt-3 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-50 animate-fade-in-up">
                             <div className="px-4 py-3 border-b bg-gray-50 rounded-t-xl"><p className="text-[10px] text-gray-500 uppercase tracking-widest">Account</p><p className="text-sm font-bold text-brand-primary truncate">{user.name}</p></div>
-                            <Link to={user.isAdmin ? '/admin' : '/dashboard'} className="block px-4 py-2 text-sm text-gray-700 hover:bg-brand-accent/10 font-medium">Dashboard</Link>
+                            <Link to={user.isAdmin ? '/app/dashboard' : '/dashboard'} className="block px-4 py-2 text-sm text-gray-700 hover:bg-brand-accent/10 font-medium">Dashboard</Link>
                             <button onClick={logout} className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium">Logout</button>
                         </div>
                     )}
@@ -228,7 +235,6 @@ const Header: React.FC<HeaderProps> = ({ user, logout }) => {
             </div>
         </div>
 
-        {/* Mobile Search Overlay */}
         {isMobileSearchOpen && (
             <div className="fixed inset-0 bg-white z-[100] flex flex-col animate-fade-in">
                 <div className="p-4 flex items-center gap-3 border-b">
@@ -315,7 +321,7 @@ const Header: React.FC<HeaderProps> = ({ user, logout }) => {
                                 <svg className="w-5 h-5 text-brand-primary mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                                 <span className="text-[9px] font-black uppercase tracking-wider text-gray-700">Track Order</span>
                             </Link>
-                            <Link to={user ? (user.isAdmin ? '/admin' : '/dashboard') : '/login'} className="flex flex-col items-center justify-center p-4 bg-gray-50 rounded-2xl border border-transparent hover:border-brand-accent/20 transition-all">
+                            <Link to={user ? (user.isAdmin ? '/app/dashboard' : '/dashboard') : '/login'} className="flex flex-col items-center justify-center p-4 bg-gray-50 rounded-2xl border border-transparent hover:border-brand-accent/20 transition-all">
                                 <svg className="w-5 h-5 text-brand-primary mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                                 <span className="text-[9px] font-black uppercase tracking-wider text-gray-700">{user ? 'My Profile' : 'Sign In'}</span>
                             </Link>

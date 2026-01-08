@@ -23,7 +23,8 @@ const Customers: React.FC<{token: string | null}> = ({token}) => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const res = await fetch(getApiUrl('/api/users'), { headers: { 'Authorization': `Bearer ${token}` } });
+      // Corrected: Removed /api prefix
+      const res = await fetch(getApiUrl('users'), { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) setUsers(await res.json());
     } catch (error) { console.error(error); } finally { setLoading(false); }
   };
@@ -33,7 +34,7 @@ const Customers: React.FC<{token: string | null}> = ({token}) => {
   const handleDeleteUser = async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this customer? This action is permanent.")) return;
     try {
-        const res = await fetch(getApiUrl(`/api/users/${id}`), {
+        const res = await fetch(getApiUrl(`users/${id}`), {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -44,14 +45,6 @@ const Customers: React.FC<{token: string | null}> = ({token}) => {
             alert(data.message || "Delete failed");
         }
     } catch (e) { alert("Delete failed."); }
-  };
-
-  const handleResetPassword = async (id: string) => {
-    if (!window.confirm("Send a password reset link to this customer?")) return;
-    try {
-        // Logic for triggering server-side reset
-        alert("Password reset request initialized for user " + id);
-    } catch (e) { alert("Reset failed."); }
   };
 
   const columns: ColumnDef<AdminUser>[] = useMemo(() => [
@@ -111,12 +104,6 @@ const Customers: React.FC<{token: string | null}> = ({token}) => {
               <DropdownMenuItem onClick={() => setSelectedUser(user)}>
                 <Eye className="mr-2 h-3.5 w-3.5" /> View Profile
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => alert("Editor functionality coming soon")}>
-                <EditPencil className="mr-2 h-3.5 w-3.5" /> Edit Identity
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleResetPassword(user.id)}>
-                <Lock className="mr-2 h-3.5 w-3.5" /> Reset Password
-              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => handleDeleteUser(user.id)} variant="destructive">
                 <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete User
@@ -171,13 +158,6 @@ const Customers: React.FC<{token: string | null}> = ({token}) => {
                             <div className="space-y-2">
                                 <div className="p-4 bg-zinc-50 rounded-2xl border border-zinc-100 flex justify-between items-center"><div className="flex items-center gap-3"><Activity className="h-4 w-4 text-zinc-400" /><p className="text-xs font-bold">Last Active</p></div><p className="text-[10px] font-black uppercase text-zinc-500">2 Days Ago</p></div>
                                 <div className="p-4 bg-zinc-50 rounded-2xl border border-zinc-100 flex justify-between items-center"><div className="flex items-center gap-3"><HeartIcon className="h-4 w-4 text-zinc-400" /><p className="text-xs font-bold">Wishlist Items</p></div><p className="text-[10px] font-black uppercase text-zinc-500">12 Products</p></div>
-                            </div>
-                        </div>
-
-                        <div className="space-y-4 pt-4">
-                            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Campaign Affinity</h4>
-                            <div className="flex flex-wrap gap-2">
-                                {['Email Opened', 'SMS Click', 'High Retention'].map(t => <Badge key={t} variant="secondary" className="bg-zinc-100 text-zinc-600 text-[9px] font-black uppercase px-2">{t}</Badge>)}
                             </div>
                         </div>
                     </div>

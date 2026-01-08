@@ -199,11 +199,12 @@ const FooterSettingsComponent: React.FC<{ token: string | null }> = ({ token }) 
         const fetchData = async () => {
             setLoading(true);
             try {
+                // Corrected API paths to avoid double prefix
                 const [settingsRes, productsRes, blogsRes, pagesRes] = await Promise.all([
-                    fetch(getApiUrl('/api/settings/footer')),
-                    fetch(getApiUrl('/api/products')),
-                    fetch(getApiUrl('/api/blogs'), { headers: { 'Authorization': `Bearer ${token}` } }),
-                    fetch(getApiUrl('/api/pages'), { headers: { 'Authorization': `Bearer ${token}` } })
+                    fetch(getApiUrl('settings/footer')),
+                    fetch(getApiUrl('products')),
+                    fetch(getApiUrl('blogs'), { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch(getApiUrl('pages'), { headers: { 'Authorization': `Bearer ${token}` } })
                 ]);
 
                 if (settingsRes.ok) {
@@ -235,7 +236,7 @@ const FooterSettingsComponent: React.FC<{ token: string | null }> = ({ token }) 
         setError(null);
         setSuccess(null);
         try {
-            const response = await fetch(getApiUrl('/api/settings/footer'), {
+            const response = await fetch(getApiUrl('settings/footer'), {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(settings)

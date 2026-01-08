@@ -19,8 +19,12 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const res = await fetch(getApiUrl('/api/orders'), { headers: { 'Authorization': `Bearer ${token}` } });
-      if (res.ok) setOrders(await res.json());
+      // Fixed: Removed redundant /api prefix
+      const res = await fetch(getApiUrl('orders'), { headers: { 'Authorization': `Bearer ${token}` } });
+      if (res.ok) {
+          const data = await res.json();
+          setOrders(data);
+      }
     } catch (error) { console.error(error); } finally { setLoading(false); }
   };
 
@@ -28,7 +32,7 @@ const OrderList: React.FC<{token: string | null}> = ({token}) => {
 
   const handleUpdateStatus = async (id: string, status: string) => {
     try {
-        const res = await fetch(getApiUrl(`/api/orders/${id}/status`), {
+        const res = await fetch(getApiUrl(`orders/${id}/status`), {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ status })

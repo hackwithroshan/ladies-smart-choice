@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Product, HomeSection } from '../types';
 import * as ReactRouterDom from 'react-router-dom';
@@ -21,7 +22,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClick, conf
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
 
-  // Safety check to ensure we have a product object
   if (!product || typeof product !== 'object' || !product.name) return null;
 
   const images = [product.imageUrl, ...(product.galleryImages || [])].filter(Boolean);
@@ -60,13 +60,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClick, conf
   const hasDiscount = product.mrp && product.mrp > product.price;
   const discountPercentage = hasDiscount ? Math.round(((product.mrp! - product.price) / product.mrp!) * 100) : 0;
 
-  // Visual Builder Configuration mapping
   const isFlatMode = config?.itemStyle === 'ImageOnly';
   const wishlistPos = config?.wishlistPosition || 'bottom-right-overlay';
   
   const cardStyles: React.CSSProperties = {
       backgroundColor: isFlatMode ? 'transparent' : (config?.itemBgColor || 'transparent'),
-      borderRadius: isFlatMode ? '0px' : `${config?.itemBorderRadius ?? 12}px`,
+      borderRadius: isFlatMode ? '0px' : `${config?.itemBorderRadius ?? 0}px`,
       padding: isFlatMode ? '0px' : `${config?.itemPadding ?? 0}px`,
       border: !isFlatMode && config?.itemBorder ? `1px solid ${config?.itemBorderColor || '#f3f4f6'}` : 'none',
       boxShadow: !isFlatMode && config?.itemShadow && isHovered ? '0 10px 15px -3px rgb(0 0 0 / 0.08)' : 'none',
@@ -79,7 +78,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClick, conf
   const imageContainerStyles: React.CSSProperties = {
       height: config?.itemHeight && config?.itemHeight !== 'auto' ? config.itemHeight : 'auto',
       aspectRatio: config?.itemHeight && config?.itemHeight !== 'auto' ? 'unset' : '3/4',
-      borderRadius: isFlatMode ? '0px' : `${config?.itemBorderRadius ?? 12}px`,
+      borderRadius: isFlatMode ? '0px' : `${config?.itemBorderRadius ?? 0}px`,
   };
 
   return (
@@ -91,7 +90,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClick, conf
         style={cardStyles}
     >
       <div 
-        className="relative w-full overflow-hidden bg-gray-50 shadow-sm shrink-0"
+        className="relative w-full overflow-hidden bg-gray-50 shrink-0"
         style={imageContainerStyles}
       >
         <img 
@@ -101,7 +100,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClick, conf
             loading="lazy" 
         />
         
-        {/* NEW Badge */}
         {(config?.showBadge !== false) && (
             <div className="absolute top-2.5 left-0 z-20">
                 <span className="bg-[#FCE7F3] text-gray-800 text-[10px] font-black py-1.5 px-4 uppercase tracking-[0.2em] shadow-lg">
@@ -110,7 +108,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClick, conf
             </div>
         )}
 
-        {/* Wishlist Heart */}
         {(config?.showWishlist !== false) && (
             <button 
                 onClick={handleWishlistClick} 
@@ -129,7 +126,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClick, conf
         )}
       </div>
 
-      {/* Information Layer: Now ALWAYS Visible */}
       <div className="mt-4 flex flex-col items-start text-left px-1 space-y-1.5 w-full pb-4">
         <h3 
             className="line-clamp-1 text-gray-800 leading-tight font-bold uppercase tracking-tight w-full opacity-90 group-hover:opacity-100 transition-opacity"
@@ -157,7 +153,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClick, conf
             )}
         </div>
 
-        {/* Display Variant Sizes if available */}
         {(config?.showVariants !== false) && product.hasVariants && product.variants && product.variants.length > 0 && (
             <div className="pt-1.5 flex flex-wrap gap-x-3 gap-y-1.5 overflow-hidden">
                 {product.variants[0].options.map((opt, i) => (

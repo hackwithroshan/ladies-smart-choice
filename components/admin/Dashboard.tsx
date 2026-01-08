@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
 import { TrendingUp, TrendingDown } from '../Icons';
@@ -5,19 +6,6 @@ import { getApiUrl } from '../../utils/apiHelper';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '../ui/chart';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
-import { ToggleGroup, ToggleGroupItem } from '../ui/toggle-group';
-import { useIsMobile } from '../../hooks/use-mobile';
-
-// Mock data based on the provided pattern
-const chartData = [
-  { date: "2024-04-01", desktop: 222, mobile: 150 },
-  { date: "2024-04-02", desktop: 97, mobile: 180 },
-  { date: "2024-05-01", desktop: 165, mobile: 220 },
-  { date: "2024-05-15", desktop: 473, mobile: 380 },
-  { date: "2024-06-01", desktop: 178, mobile: 200 },
-  { date: "2024-06-30", desktop: 446, mobile: 400 },
-];
 
 const chartConfig = {
   visitors: { label: "Visitors" },
@@ -27,40 +15,34 @@ const chartConfig = {
 
 interface DashboardStats {
     kpis: {
-        totalRevenue: { value: number; growth: number };
-        totalOrders: { value: number; growth: number };
-        newCustomers: { value: number; growth: number };
-        avgOrderValue: { value: number; growth: number };
+        sales: number;
+        visitors: number;
+        orders: number;
+        conversionRate: number;
     };
+    timeSeries: any[];
 }
 
 const DashboardOverview: React.FC<{ token: string | null }> = ({ token }) => {
     const [stats, setStats] = useState<DashboardStats | null>(null);
     const [loading, setLoading] = useState(true);
-    const [timeRange, setTimeRange] = useState("90d");
-    const isMobile = useIsMobile();
-
-    useEffect(() => {
-        if (isMobile) setTimeRange("7d");
-    }, [isMobile]);
 
     useEffect(() => {
         const fetchDashboardData = async () => {
             try {
-                const res = await fetch(getApiUrl('/api/analytics/dashboard-summary'), {
+                // Corrected: getApiUrl('analytics/summary') returns /api/analytics/summary
+                const res = await fetch(getApiUrl('analytics/summary'), {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-                if (res.ok) setStats(await res.json());
+                if (res.ok) {
+                    const data = await res.json();
+                    setStats(data);
+                }
             } catch (e) { console.error(e); }
             finally { setLoading(false); }
         };
         fetchDashboardData();
     }, [token]);
-
-    const revenueGrowth = stats?.kpis.totalRevenue.growth ?? 0;
-    const ordersGrowth = stats?.kpis.totalOrders.growth ?? 0;
-    const customersGrowth = stats?.kpis.newCustomers.growth ?? 0;
-    const aovGrowth = stats?.kpis.avgOrderValue.growth ?? 0;
 
     if (loading) {
         return (
@@ -73,206 +55,98 @@ const DashboardOverview: React.FC<{ token: string | null }> = ({ token }) => {
     return (
         <div className="flex flex-col gap-6 bg-background text-foreground min-h-screen -m-6 p-6 animate-in fade-in duration-500">
             <div className="flex flex-col gap-2">
-                <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
-                    Store performance
+                <h1 className="text-xl font-black italic uppercase tracking-tighter sm:text-2xl text-zinc-900">
+                    Command Center
                 </h1>
-                <p className="text-sm text-muted-foreground">
-                    High-level overview of your revenue, orders and customer growth.
+                <p className="text-sm text-muted-foreground font-medium uppercase tracking-widest text-[10px]">
+                    Real-time store vitals and lifecycle metrics.
                 </p>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
+                <Card className="shadow-sm border-zinc-100 rounded-3xl overflow-hidden group">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                        <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                            Total revenue
-                        </span>
-                        {/* Fix: changed variant to 'outline' to match available types */}
-                        <Badge
-                            variant="outline"
-                            className={`flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold ${
-                                revenueGrowth >= 0
-                                    ? "border-emerald-100 bg-emerald-50 text-emerald-700"
-                                    : "border-rose-100 bg-rose-50 text-rose-700"
-                            }`}
-                        >
-                            {revenueGrowth >= 0 ? (
-                                <TrendingUp className="h-3 w-3" />
-                            ) : (
-                                <TrendingDown className="h-3 w-3" />
-                            )}
-                            {revenueGrowth >= 0 ? "+" : ""}
-                            {Math.abs(revenueGrowth).toFixed(1)}%
-                        </Badge>
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Gross Revenue</span>
+                        <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-100 text-[9px] font-black uppercase">Live</Badge>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-3xl font-semibold tracking-tight">
-                            ₹{stats?.kpis.totalRevenue.value.toLocaleString("en-IN")}
+                        <div className="text-3xl font-black italic tracking-tighter text-zinc-900">
+                            ₹{stats?.kpis.sales.toLocaleString("en-IN") || 0}
                         </div>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                            Based on the selected time range.
-                        </p>
+                        <p className="mt-2 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">30 Day Cycle</p>
                     </CardContent>
                 </Card>
 
-                <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
+                <Card className="shadow-sm border-zinc-100 rounded-3xl overflow-hidden">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                        <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                            Total orders
-                        </span>
-                        {/* Fix: changed variant to 'outline' */}
-                        <Badge
-                            variant="outline"
-                            className={`flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold ${
-                                ordersGrowth >= 0
-                                    ? "border-emerald-100 bg-emerald-50 text-emerald-700"
-                                    : "border-rose-100 bg-rose-50 text-rose-700"
-                            }`}
-                        >
-                            {ordersGrowth >= 0 ? (
-                                <TrendingUp className="h-3 w-3" />
-                            ) : (
-                                <TrendingDown className="h-3 w-3" />
-                            )}
-                            {ordersGrowth >= 0 ? "+" : ""}
-                            {Math.abs(ordersGrowth).toFixed(1)}%
-                        </Badge>
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Total Manifests</span>
+                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-100 text-[9px] font-black uppercase">Sync</Badge>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-3xl font-semibold tracking-tight">
-                            {stats?.kpis.totalOrders.value.toLocaleString("en-IN")}
+                        <div className="text-3xl font-black italic tracking-tighter text-zinc-900">
+                            {stats?.kpis.orders || 0}
                         </div>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                            Orders completed in the selected range.
-                        </p>
+                        <p className="mt-2 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Successful Shipments</p>
                     </CardContent>
                 </Card>
 
-                <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
+                <Card className="shadow-sm border-zinc-100 rounded-3xl overflow-hidden">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                        <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                            New customers
-                        </span>
-                        {/* Fix: changed variant to 'outline' */}
-                        <Badge
-                            variant="outline"
-                            className={`flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold ${
-                                customersGrowth >= 0
-                                    ? "border-emerald-100 bg-emerald-50 text-emerald-700"
-                                    : "border-rose-100 bg-rose-50 text-rose-700"
-                            }`}
-                        >
-                            {customersGrowth >= 0 ? (
-                                <TrendingUp className="h-3 w-3" />
-                            ) : (
-                                <TrendingDown className="h-3 w-3" />
-                            )}
-                            {customersGrowth >= 0 ? "+" : ""}
-                            {Math.abs(customersGrowth).toFixed(1)}%
-                        </Badge>
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Store Traffic</span>
+                        <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-100 text-[9px] font-black uppercase">Nodes</Badge>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-3xl font-semibold tracking-tight">
-                            {stats?.kpis.newCustomers.value.toLocaleString("en-IN")}
+                        <div className="text-3xl font-black italic tracking-tighter text-zinc-900">
+                            {stats?.kpis.visitors || 0}
                         </div>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                            First-time customers acquired.
-                        </p>
+                        <p className="mt-2 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Unique Impressions</p>
                     </CardContent>
                 </Card>
 
-                <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
+                <Card className="shadow-sm border-zinc-100 rounded-3xl overflow-hidden">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                        <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                            Avg. order value
-                        </span>
-                        {/* Fix: changed variant to 'outline' */}
-                        <Badge
-                            variant="outline"
-                            className={`flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold ${
-                                aovGrowth >= 0
-                                    ? "border-emerald-100 bg-emerald-50 text-emerald-700"
-                                    : "border-rose-100 bg-rose-50 text-rose-700"
-                            }`}
-                        >
-                            {aovGrowth >= 0 ? (
-                                <TrendingUp className="h-3 w-3" />
-                            ) : (
-                                <TrendingDown className="h-3 w-3" />
-                            )}
-                            {aovGrowth >= 0 ? "+" : ""}
-                            {Math.abs(aovGrowth).toFixed(1)}%
-                        </Badge>
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">CVR Rate</span>
+                        <Badge variant="outline" className="bg-zinc-100 text-zinc-500 border-zinc-200 text-[9px] font-black uppercase">Logic</Badge>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-3xl font-semibold tracking-tight">
-                            ₹{stats?.kpis.avgOrderValue.value.toLocaleString("en-IN")}
+                        <div className="text-3xl font-black italic tracking-tighter text-zinc-900">
+                            {stats?.kpis.conversionRate || 0}%
                         </div>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                            Average revenue per successful order.
-                        </p>
+                        <p className="mt-2 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Visitor to Lead Ratio</p>
                     </CardContent>
                 </Card>
             </div>
 
-            <Card className="shadow-sm rounded-2xl overflow-hidden border border-border/60 bg-card">
-                <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-8 border-b border-zinc-800/50">
+            <Card className="shadow-xl rounded-[2.5rem] overflow-hidden border border-zinc-100 bg-white">
+                <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-10 border-b border-zinc-50 bg-zinc-50/30">
                     <div className="space-y-1">
-                        <CardTitle className="text-lg font-semibold">
-                            Traffic overview
+                        <CardTitle className="text-xl font-black italic uppercase tracking-tighter">
+                            Market Penetration
                         </CardTitle>
-                        <CardDescription className="text-[11px] font-medium uppercase tracking-[0.18em]">
-                            Interactive performance metrics
+                        <CardDescription className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">
+                            Historical Revenue Matrix
                         </CardDescription>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <ToggleGroup
-                            type="single"
-                            value={timeRange}
-                            onValueChange={(v) => v && setTimeRange(v)}
-                            className="hidden md:flex bg-zinc-100 border-zinc-200 p-1 rounded-xl"
-                        >
-                            <ToggleGroupItem value="90d">90 Days</ToggleGroupItem>
-                            <ToggleGroupItem value="30d">30 Days</ToggleGroupItem>
-                            <ToggleGroupItem value="7d">7 Days</ToggleGroupItem>
-                        </ToggleGroup>
-                        <div className="md:hidden w-40">
-                             <Select value={timeRange} onValueChange={setTimeRange}>
-                                <SelectTrigger className="bg-zinc-100 border-zinc-200 text-zinc-600 font-bold">
-                                    <SelectValue placeholder="Select Range" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-white border-zinc-200">
-                                    <SelectItem value="90d">90 Days</SelectItem>
-                                    <SelectItem value="30d">30 Days</SelectItem>
-                                    <SelectItem value="7d">7 Days</SelectItem>
-                                </SelectContent>
-                             </Select>
-                        </div>
-                    </div>
                 </CardHeader>
-                <CardContent className="px-2 pt-8 sm:px-6">
+                <CardContent className="p-10">
                     <ChartContainer
                       config={chartConfig}
                       className="aspect-auto h-[350px] w-full"
                     >
-                      <AreaChart data={chartData}>
+                      <AreaChart data={stats?.timeSeries || []}>
                         <defs>
                           <linearGradient id="fillDesktop" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="var(--color-desktop)" stopOpacity={0.8}/>
-                            <stop offset="95%" stopColor="var(--color-desktop)" stopOpacity={0}/>
-                          </linearGradient>
-                          <linearGradient id="fillMobile" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="var(--color-mobile)" stopOpacity={0.8}/>
-                            <stop offset="95%" stopColor="var(--color-mobile)" stopOpacity={0}/>
+                            <stop offset="5%" stopColor="#16423C" stopOpacity={0.8}/>
+                            <stop offset="95%" stopColor="#16423C" stopOpacity={0}/>
                           </linearGradient>
                         </defs>
-                        <CartesianGrid vertical={false} stroke="#e4e4e7" strokeDasharray="3 3" />
+                        <CartesianGrid vertical={false} stroke="#f1f1f1" strokeDasharray="3 3" />
                         <XAxis
-                          dataKey="date"
+                          dataKey="_id"
                           tickLine={false}
                           axisLine={false}
                           tickMargin={8}
-                          tick={{fill: '#71717a', fontSize: 10, fontWeight: 'bold'}}
+                          tick={{fill: '#a1a1aa', fontSize: 10, fontWeight: '800'}}
                           tickFormatter={(value) => {
                             const date = new Date(value)
                             return date.toLocaleDateString("en-US", { month: "short", day: "numeric" })
@@ -283,19 +157,11 @@ const DashboardOverview: React.FC<{ token: string | null }> = ({ token }) => {
                           content={<ChartTooltipContent indicator="dot" />}
                         />
                         <Area
-                          dataKey="mobile"
-                          type="natural"
-                          fill="url(#fillMobile)"
-                          stroke="var(--color-mobile)"
-                          strokeWidth={2}
-                          stackId="a"
-                        />
-                        <Area
-                          dataKey="desktop"
+                          dataKey="sales"
                           type="natural"
                           fill="url(#fillDesktop)"
-                          stroke="var(--color-desktop)"
-                          strokeWidth={2}
+                          stroke="#16423C"
+                          strokeWidth={4}
                           stackId="a"
                         />
                       </AreaChart>

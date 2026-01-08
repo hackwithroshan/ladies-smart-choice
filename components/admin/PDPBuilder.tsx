@@ -175,12 +175,12 @@ const PDPBuilder: React.FC<{ token: string | null; productId: string }> = ({ tok
         const fetchDesignerData = async () => {
             setLoading(true);
             try {
-                const lRes = await fetch(getApiUrl(`/api/settings/pdp-layout/${productId}`));
+                const lRes = await fetch(getApiUrl(`settings/pdp-layout/${productId}`));
                 if (lRes.ok) {
                     const data = await lRes.json();
                     if (data && data.sections) setLayout(prev => ({ ...prev, ...data }));
                 }
-                const pRes = await fetch(getApiUrl(productId !== 'global' ? `/api/products/${productId}` : '/api/products/featured'));
+                const pRes = await fetch(getApiUrl(productId !== 'global' ? `products/${productId}` : 'products/featured'));
                 if (pRes.ok) {
                     const pData = await pRes.json();
                     setPreviewProduct(Array.isArray(pData) ? pData[0] : pData);
@@ -194,7 +194,7 @@ const PDPBuilder: React.FC<{ token: string | null; productId: string }> = ({ tok
     const handleSave = async () => {
         setSaving(true);
         try {
-            await fetch(getApiUrl(`/api/settings/pdp-layout/${productId}`), {
+            await fetch(getApiUrl(`settings/pdp-layout/${productId}`), {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(layout)
@@ -214,7 +214,7 @@ const PDPBuilder: React.FC<{ token: string | null; productId: string }> = ({ tok
                 paddingTop: 40, paddingBottom: 80, 
                 backgroundColor: '#FFFFFF', textColor: '#000000', 
                 radius: 0, 
-                containerMaxWidth: '1920px', // DEFAULT 1920px as requested
+                containerMaxWidth: '1920px',
                 minHeight: 'auto'
             }
         };
@@ -238,7 +238,6 @@ const PDPBuilder: React.FC<{ token: string | null; productId: string }> = ({ tok
 
     return (
         <div className="flex h-[calc(100vh-120px)] bg-zinc-50 -m-6 md:-m-8 overflow-hidden border-t">
-            {/* CANVAS LAYERS */}
             <div className="w-[300px] bg-white border-r flex flex-col shrink-0 shadow-xl relative z-20">
                 <div className="p-6 border-b space-y-5 bg-zinc-50/50">
                     <h4 className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Page Layers</h4>
@@ -268,7 +267,6 @@ const PDPBuilder: React.FC<{ token: string | null; productId: string }> = ({ tok
                 </div>
             </div>
 
-            {/* DESIGN PREVIEW AREA */}
             <div className="flex-1 overflow-y-auto p-12 admin-scroll bg-zinc-200/40">
                 <div className="w-full bg-white shadow-2xl rounded-sm min-h-screen mx-auto relative overflow-hidden border">
                     <div className="text-center p-2 bg-zinc-100 text-[10px] font-bold text-zinc-400 uppercase tracking-widest border-b">1920px Canvas Simulator</div>
@@ -310,7 +308,6 @@ const PDPBuilder: React.FC<{ token: string | null; productId: string }> = ({ tok
                 </div>
             </div>
 
-            {/* STYLE PROPERTIES BAR */}
             <div className="w-[380px] bg-white border-l flex flex-col shrink-0 shadow-2xl z-30">
                 {activeSection ? (
                     <div className="flex flex-col h-full">

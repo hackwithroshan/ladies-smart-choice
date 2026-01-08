@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Product, Collection } from '../../types';
 import { getApiUrl } from '../../utils/apiHelper';
@@ -23,8 +24,12 @@ const CollectionSettings: React.FC<{ token: string | null }> = ({ token }) => {
         setLoading(true);
         try {
             const [collRes, prodRes] = await Promise.all([
-                fetch(getApiUrl('/api/collections/admin/all')),
-                fetch(getApiUrl('/api/products/all'), { headers: { 'Authorization': `Bearer ${token}` } })
+                fetch(getApiUrl('collections/admin/all'), {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }),
+                fetch(getApiUrl('products/all'), { 
+                    headers: { 'Authorization': `Bearer ${token}` } 
+                })
             ]);
 
             if (collRes.ok) setCollections(await collRes.json());
@@ -46,9 +51,8 @@ const CollectionSettings: React.FC<{ token: string | null }> = ({ token }) => {
         const id = selectedCollection.id || (selectedCollection as any)._id;
         
         const method = isEditing ? 'PUT' : 'POST';
-        const url = isEditing ? getApiUrl(`/api/collections/${id}`) : getApiUrl('/api/collections');
+        const url = isEditing ? getApiUrl(`collections/${id}`) : getApiUrl('collections');
         
-        // Extract only IDs for the products array
         const productIds = selectedCollection.products?.map(p => 
             typeof p === 'string' ? p : (p.id || (p as any)._id)
         ) || [];
@@ -85,7 +89,7 @@ const CollectionSettings: React.FC<{ token: string | null }> = ({ token }) => {
     const handleDelete = async (id: string) => {
         if (!window.confirm("Permanent delete? This collection will be removed from all navigation and homepage blocks.")) return;
         try {
-            const res = await fetch(getApiUrl(`/api/collections/${id}`), { 
+            const res = await fetch(getApiUrl(`collections/${id}`), { 
                 method: 'DELETE', 
                 headers: { 'Authorization': `Bearer ${token}` } 
             });

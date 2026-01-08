@@ -21,8 +21,8 @@ const TrackingSettings: React.FC<{ token: string | null }> = ({ token }) => {
     const fetchMasterData = async () => {
         try {
             const [sRes, lRes] = await Promise.all([
-                fetch(getApiUrl('/api/settings/site')),
-                fetch(getApiUrl('/api/catalog/sync-logs'), { headers: { 'Authorization': `Bearer ${token}` } })
+                fetch(getApiUrl('settings/site')),
+                fetch(getApiUrl('catalog/sync-logs'), { headers: { 'Authorization': `Bearer ${token}` } })
             ]);
             if (sRes.ok) setSettings(await sRes.json());
             if (lRes.ok) setLogs(await lRes.json());
@@ -37,7 +37,7 @@ const TrackingSettings: React.FC<{ token: string | null }> = ({ token }) => {
     const handleSave = async () => {
         setSaving(true);
         try {
-            const res = await fetch(getApiUrl('/api/settings/site'), {
+            const res = await fetch(getApiUrl('settings/site'), {
                 method: 'PUT',
                 headers: { 
                     'Content-Type': 'application/json', 
@@ -63,7 +63,7 @@ const TrackingSettings: React.FC<{ token: string | null }> = ({ token }) => {
         }
         setSyncing(true);
         try {
-            const res = await fetch(getApiUrl('/api/catalog/sync'), {
+            const res = await fetch(getApiUrl('catalog/sync'), {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -87,7 +87,7 @@ const TrackingSettings: React.FC<{ token: string | null }> = ({ token }) => {
         setTestLoading(true);
         setTestResult(null);
         try {
-            const res = await fetch(getApiUrl('/api/analytics/track'), {
+            const res = await fetch(getApiUrl('analytics/track'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

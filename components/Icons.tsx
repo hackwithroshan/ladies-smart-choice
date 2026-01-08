@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 // Define common props for all icons to satisfy TypeScript
@@ -225,4 +226,18 @@ export const Store = (props: IconProps) => (
 
 export const Calendar = (props: IconProps) => (
   <BaseIcon {...props}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></BaseIcon>
+);
+
+// Fix: Missing icons for Analytics component
+export const MousePointer2 = (props: IconProps) => (
+    <BaseIcon {...props}><path d="m3 3 7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="m13 13 6 6"/></BaseIcon>
+);
+
+export const Zap = (props: IconProps) => (
+    <BaseIcon {...props}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></BaseIcon>
+);
+
+// Fixed: Added missing Plus icon
+export const Plus = (props: IconProps) => (
+  <BaseIcon {...props}><path d="M12 5v14M5 12h14" /></BaseIcon>
 );

@@ -1,11 +1,16 @@
+
 import * as React from "react"
 import { cn } from "../../utils/utils"
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
+  // Explicitly add className to resolve TypeScript errors where it is reported missing from BadgeProps
+  className?: string;
   variant?: "default" | "secondary" | "destructive" | "outline" | null
 }
 
-function Badge({ className, variant = "default", ...props }: BadgeProps) {
+// Fixed: Changed from a plain function to React.FC to properly support standard props like 'key' and 'className'
+// and to ensure the TypeScript compiler correctly identifies it as a functional component.
+const Badge: React.FC<BadgeProps> = ({ className, variant = "default", ...props }) => {
   const variants = {
     default: "border-transparent bg-[#16423C] text-white hover:bg-[#16423C]/80",
     secondary: "border-transparent bg-zinc-100 text-zinc-900 hover:bg-zinc-200",

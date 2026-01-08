@@ -10,7 +10,8 @@ import {
     ShoppableVideo,
     Testimonial,
     SiteSettings,
-    HomePageSettings
+    HomePageSettings,
+    HomepageLayout
 } from '../types';
 import { getApiUrl } from '../utils/apiHelper';
 
@@ -25,6 +26,7 @@ interface SiteDataContextType {
     testimonials: Testimonial[];
     siteSettings: SiteSettings | null;
     homePageSettings: HomePageSettings | null;
+    homepageLayout: HomepageLayout | null;
     loading: boolean;
     refreshSiteData: () => Promise<void>;
 }
@@ -62,6 +64,7 @@ const SiteDataContext = createContext<SiteDataContextType>({
     testimonials: [],
     siteSettings: null,
     homePageSettings: null,
+    homepageLayout: null,
     loading: true,
     refreshSiteData: async () => {},
 });
@@ -77,12 +80,13 @@ export const SiteDataProvider: React.FC<{ children: ReactNode }> = ({ children }
     const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
     const [siteSettings, setSiteSettings] = useState<SiteSettings | null>(null);
     const [homePageSettings, setHomePageSettings] = useState<HomePageSettings | null>(null);
+    const [homepageLayout, setHomepageLayout] = useState<HomepageLayout | null>(null);
     const [loading, setLoading] = useState(true);
 
     const fetchSiteData = useCallback(async () => {
         try {
-            const response = await fetch(getApiUrl('/app-data'));
-            if (!response.ok) throw new Error('Network response was not ok');
+            const response = await fetch(getApiUrl('app-data'));
+            if (!response.ok) throw new Error('Store data fetch failed');
             const data = await response.json();
 
             setHeaderSettings(data.headerSettings || initialHeaderSettings);
@@ -95,6 +99,13 @@ export const SiteDataProvider: React.FC<{ children: ReactNode }> = ({ children }
             setTestimonials(data.testimonials || []);
             setSiteSettings(data.siteSettings || null);
             setHomePageSettings(data.homePageSettings || null);
+            
+            // CRITICAL: Extract layout from app-data
+            if (data.homepageLayout) {
+                setHomepageLayout(data.homepageLayout);
+            } else {
+                setHomepageLayout({ sections: [] });
+            }
 
             if (data.siteSettings) {
                 const root = document.documentElement;
@@ -102,7 +113,7 @@ export const SiteDataProvider: React.FC<{ children: ReactNode }> = ({ children }
                 root.style.setProperty('--brand-accent', data.siteSettings.accentColor || '#6A9C89');
             }
         } catch (error) {
-            console.error("Failed to fetch site data:", error);
+            console.error("Critical: Failed to sync with database:", error);
         } finally {
             setLoading(false);
         }
@@ -111,36 +122,6 @@ export const SiteDataProvider: React.FC<{ children: ReactNode }> = ({ children }
     useEffect(() => {
         fetchSiteData();
     }, [fetchSiteData]);
-
-    useEffect(() => {
-        if (siteSettings?.fontFamily) {
-            const fontName = siteSettings.fontFamily;
-            const linkId = 'dynamic-font-link';
-            const styleId = 'dynamic-font-style';
-
-            document.getElementById(linkId)?.remove();
-            document.getElementById(styleId)?.remove();
-
-            const link = document.createElement('link');
-            link.id = linkId;
-            link.rel = 'stylesheet';
-            link.href = `https://fonts.googleapis.com/css2?family=${fontName.replace(/ /g, '+')}:wght@300;400;500;600;700;800&display=swap`;
-            document.head.appendChild(link);
-
-            const style = document.createElement('style');
-            style.id = styleId;
-            style.innerHTML = `
-                body { font-family: 'Inter', sans-serif; }
-                h1, h2, h3, h4, .font-brand { font-family: '${fontName}', serif !important; }
-                .bg-brand-primary { background-color: var(--brand-primary) !important; }
-                .text-brand-primary { color: var(--brand-primary) !important; }
-                .bg-brand-accent { background-color: var(--brand-accent) !important; }
-                .text-brand-accent { color: var(--brand-accent) !important; }
-                .border-brand-accent { border-color: var(--brand-accent) !important; }
-            `;
-            document.head.appendChild(style);
-        }
-    }, [siteSettings?.fontFamily]);
 
     return (
         <SiteDataContext.Provider value={{ 
@@ -154,6 +135,7 @@ export const SiteDataProvider: React.FC<{ children: ReactNode }> = ({ children }
             testimonials, 
             siteSettings, 
             homePageSettings, 
+            homepageLayout,
             loading,
             refreshSiteData: fetchSiteData 
         }}>

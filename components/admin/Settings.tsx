@@ -1,24 +1,23 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import HomePageSEOSettings from './HomePageSEOSettings';
 import GeneralSettings from './GeneralSettings';
 import TaxSettings from './TaxSettings';
 import ShippingSettings from './ShippingSettings';
 import BrandingSettings from './BrandingSettings';
-import { SiteSettings, SyncLog } from '../../types';
-import { getApiUrl } from '../../utils/apiHelper';
 
-// Removed 'pixels' from SettingsTab
-type SettingsTab = 'homepage-seo' | 'site' | 'tax' | 'shipping' | 'branding';
+type SettingsTab = 'branding' | 'site' | 'homepage-seo' | 'shipping' | 'tax';
 
 const Settings: React.FC<{token: string | null}> = ({token}) => {
     const [activeTab, setActiveTab] = useState<SettingsTab>('branding');
     
-    const TabButton: React.FC<{ id: SettingsTab; label: string }> = ({ id, label }) => (
-        <button onClick={() => setActiveTab(id)} className={`px-4 py-2 text-sm font-bold rounded-md transition-all whitespace-nowrap ${activeTab === id ? 'bg-[#16423C] text-white shadow-md' : 'text-gray-600 hover:bg-gray-200'}`}>
-            {label}
-        </button>
-    );
+    const tabs: { id: SettingsTab; label: string }[] = [
+        { id: 'branding', label: 'Rebranding' },
+        { id: 'site', label: 'General' },
+        { id: 'homepage-seo', label: 'SEO Strategy' },
+        { id: 'shipping', label: 'Logistics' },
+        { id: 'tax', label: 'Taxes' },
+    ];
 
     const renderContent = () => {
         switch (activeTab) {
@@ -32,17 +31,28 @@ const Settings: React.FC<{token: string | null}> = ({token}) => {
     };
 
     return (
-        <div className="space-y-6">
-             <h2 className="text-2xl font-bold text-gray-800">System Settings</h2>
-             <div className="flex space-x-2 bg-gray-100 p-1.5 rounded-xl w-fit overflow-x-auto border">
-                <TabButton id="branding" label="Rebranding" />
-                <TabButton id="site" label="General" />
-                <TabButton id="homepage-seo" label="SEO" />
-                <TabButton id="shipping" label="Shipping" />
-                <TabButton id="tax" label="Tax" />
+        <div className="space-y-8 animate-in fade-in duration-500">
+             <div className="flex flex-col">
+                <h2 className="text-3xl font-black text-zinc-900 italic uppercase tracking-tighter">System Console</h2>
+                <p className="text-[10px] font-bold uppercase text-zinc-400 tracking-[0.3em] mt-1">Configure global parameters and design tokens</p>
              </div>
+
+             <div className="flex space-x-2 bg-white p-2 rounded-2xl w-fit overflow-x-auto border border-zinc-100 shadow-sm">
+                {tabs.map(tab => (
+                    <button 
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id)} 
+                        className={`px-6 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap ${activeTab === tab.id ? 'bg-[#16423C] text-white shadow-lg' : 'text-zinc-400 hover:bg-zinc-50 hover:text-zinc-600'}`}
+                    >
+                        {tab.label}
+                    </button>
+                ))}
+             </div>
+
              <div className="pt-4">
-                 {renderContent()}
+                 <div className="bg-white rounded-[2.5rem] p-10 border border-zinc-100 shadow-sm">
+                    {renderContent()}
+                 </div>
              </div>
         </div>
     );

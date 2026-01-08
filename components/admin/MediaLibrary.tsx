@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { MediaItem } from '../../types';
 import { COLORS, CLOUDINARY } from '../../constants';
 import { getApiUrl } from '../../utils/apiHelper';
+// Add missing Trash2 import
+import { Trash2 } from '../Icons';
 
 const MediaLibrary: React.FC<{ token: string | null }> = ({ token }) => {
     const [media, setMedia] = useState<MediaItem[]>([]);
@@ -13,7 +15,8 @@ const MediaLibrary: React.FC<{ token: string | null }> = ({ token }) => {
 
     const fetchMedia = async () => {
         try {
-            const res = await fetch(getApiUrl('/api/media'), {
+            // Corrected: Removed redundant /api prefix
+            const res = await fetch(getApiUrl('media'), {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
@@ -40,7 +43,6 @@ const MediaLibrary: React.FC<{ token: string | null }> = ({ token }) => {
             formData.append('api_key', CLOUDINARY.API_KEY);
 
             try {
-                // 1. Upload to Cloudinary
                 const res = await fetch(CLOUDINARY.UPLOAD_URL, {
                     method: 'POST',
                     body: formData
@@ -48,15 +50,15 @@ const MediaLibrary: React.FC<{ token: string | null }> = ({ token }) => {
                 const data = await res.json();
 
                 if (data.secure_url) {
-                    // 2. Save to Backend
                     const mediaData = {
                         url: data.secure_url,
                         public_id: data.public_id,
                         format: data.format,
-                        type: data.resource_type // 'image' or 'video'
+                        type: data.resource_type 
                     };
 
-                    await fetch(getApiUrl('/api/media'), {
+                    // Corrected: Removed redundant /api prefix
+                    await fetch(getApiUrl('media'), {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -64,9 +66,6 @@ const MediaLibrary: React.FC<{ token: string | null }> = ({ token }) => {
                         },
                         body: JSON.stringify(mediaData)
                     });
-                } else {
-                    console.error("Cloudinary upload error:", data);
-                    alert(`Upload failed: ${data.error?.message || "Unknown error"}`);
                 }
             } catch (error) {
                 console.error("Upload failed for file", file.name, error);
@@ -78,33 +77,11 @@ const MediaLibrary: React.FC<{ token: string | null }> = ({ token }) => {
         fetchMedia();
     };
 
-    const handleDrag = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (e.type === "dragenter" || e.type === "dragover") {
-            setDragActive(true);
-        } else if (e.type === "dragleave") {
-            setDragActive(false);
-        }
-    };
-
-    const handleDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setDragActive(false);
-        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            handleUpload(e.dataTransfer.files);
-        }
-    };
-
-    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        handleUpload(e.target.files);
-    };
-
     const deleteMedia = async (id: string) => {
         if (!window.confirm("Delete this file from library?")) return;
         try {
-            await fetch(getApiUrl(`/api/media/${id}`), {
+            // Corrected: Removed redundant /api prefix
+            await fetch(getApiUrl(`media/${id}`), {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -120,96 +97,85 @@ const MediaLibrary: React.FC<{ token: string | null }> = ({ token }) => {
         setTimeout(() => setCopyFeedback(null), 2000);
     };
 
-    if (loading) return <div>Loading Library...</div>;
+    if (loading) return <div className="p-20 text-center font-black uppercase text-zinc-300 italic tracking-widest">Indexing Assets...</div>;
 
     return (
-        <div className="h-full flex flex-col">
-            <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-800">Media Library</h2>
+        <div className="h-full flex flex-col space-y-8">
+            <div className="flex justify-between items-center bg-white p-6 rounded-3xl border border-zinc-100 shadow-sm">
+                <div className="flex flex-col">
+                    <h2 className="text-xl font-black italic uppercase tracking-tighter text-zinc-900">Cloud Media Matrix</h2>
+                    <p className="text-[10px] font-bold uppercase text-zinc-400 tracking-widest mt-1">Manage global image and video assets for the storefront</p>
+                </div>
                 <div className="relative">
                     <input 
                         type="file" 
                         multiple 
-                        onChange={handleFileSelect} 
+                        onChange={(e) => handleUpload(e.target.files)} 
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                         accept="image/*,video/*"
                     />
-                    <button className="px-6 py-2 bg-rose-600 text-white font-bold rounded-md hover:bg-rose-700 transition-colors shadow-sm flex items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                        </svg>
-                        Upload Files
+                    <button className="px-8 py-3 bg-[#16423C] text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:brightness-110 active:scale-95 transition-all">
+                        + Inject Assets
                     </button>
                 </div>
             </div>
 
-            {/* Drag Drop Area */}
             <div 
-                className={`relative border-2 border-dashed rounded-xl p-8 mb-8 transition-all flex flex-col items-center justify-center text-center ${dragActive ? 'border-rose-500 bg-rose-50 scale-[1.01]' : 'border-gray-300 bg-gray-50'}`}
-                onDragEnter={handleDrag} 
-                onDragLeave={handleDrag} 
-                onDragOver={handleDrag} 
-                onDrop={handleDrop}
+                className={`relative border-2 border-dashed rounded-[2.5rem] p-12 transition-all flex flex-col items-center justify-center text-center ${dragActive ? 'border-[#16423C] bg-emerald-50 scale-[1.01]' : 'border-zinc-200 bg-white'}`}
+                onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+                onDragLeave={() => setDragActive(false)}
+                onDrop={(e) => { e.preventDefault(); setDragActive(false); handleUpload(e.dataTransfer.files); }}
             >
                 {uploading ? (
-                    <div className="flex flex-col items-center animate-pulse">
-                        <div className="w-12 h-12 border-4 border-rose-200 border-t-rose-600 rounded-full animate-spin mb-3"></div>
-                        <p className="text-rose-600 font-medium">Uploading to Cloudinary...</p>
+                    <div className="flex flex-col items-center gap-4">
+                        <div className="w-12 h-12 border-4 border-emerald-100 border-t-[#16423C] rounded-full animate-spin"></div>
+                        <p className="text-[10px] font-black uppercase text-[#16423C] tracking-widest animate-pulse">Syncing with Cloudinary...</p>
                     </div>
                 ) : (
                     <>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-zinc-200 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                         </svg>
-                        <p className="text-gray-600 font-medium">Drag & Drop images or videos here</p>
-                        <p className="text-gray-400 text-xs mt-1">Supports JPG, PNG, MP4</p>
+                        <p className="text-xs font-black text-zinc-400 uppercase tracking-widest">Relay media nodes here for injection</p>
                     </>
                 )}
             </div>
 
-            {/* Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6 pb-10">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6 pb-20">
                 {media.map((item) => (
-                    <div key={item.id} className="group relative bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden aspect-square hover:shadow-md transition-shadow">
+                    <div key={item.id} className="group relative bg-white rounded-3xl shadow-sm border border-zinc-100 overflow-hidden aspect-square hover:shadow-2xl transition-all">
                         {item.type === 'video' ? (
-                            <div className="w-full h-full bg-gray-900 flex items-center justify-center relative">
+                            <div className="w-full h-full bg-zinc-900 flex items-center justify-center relative">
                                 <video src={item.url} className="w-full h-full object-cover opacity-80" muted />
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white absolute" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-                                </svg>
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center">
+                                        <svg className="w-4 h-4 text-white fill-current" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"/></svg>
+                                    </div>
+                                </div>
                             </div>
                         ) : (
-                            <img src={item.url} alt="Uploaded" className="w-full h-full object-cover bg-gray-50" />
+                            <img src={item.url} alt="" className="w-full h-full object-cover bg-zinc-50" />
                         )}
                         
-                        {/* Overlay Actions */}
-                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all flex flex-col justify-end p-3 opacity-0 group-hover:opacity-100">
-                            <div className="flex space-x-2">
+                        <div className="absolute inset-0 bg-black/40 flex flex-col justify-end p-4 opacity-0 group-hover:opacity-100 transition-all transform translate-y-4 group-hover:translate-y-0">
+                            <div className="flex gap-2">
                                 <button 
                                     onClick={() => copyToClipboard(item.url)}
-                                    className="flex-1 bg-white text-gray-800 py-1.5 rounded text-xs font-bold hover:bg-gray-100"
+                                    className="flex-1 bg-white text-zinc-900 h-9 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-50 transition-colors"
                                 >
-                                    {copyFeedback === item.url ? 'Copied!' : 'Copy URL'}
+                                    {copyFeedback === item.url ? 'Copied' : 'Link'}
                                 </button>
                                 <button 
                                     onClick={() => deleteMedia(item.id)}
-                                    className="bg-red-600 text-white p-1.5 rounded hover:bg-red-700"
+                                    className="bg-rose-500 text-white w-9 h-9 rounded-xl flex items-center justify-center hover:bg-rose-600 transition-colors"
                                 >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
+                                    <Trash2 className="w-4 h-4" />
                                 </button>
                             </div>
                         </div>
                     </div>
                 ))}
             </div>
-            
-            {media.length === 0 && !uploading && (
-                <div className="flex flex-col items-center justify-center h-64 text-gray-400">
-                    <p>No files uploaded yet.</p>
-                </div>
-            )}
         </div>
     );
 };

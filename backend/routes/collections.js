@@ -4,7 +4,7 @@ const router = express.Router();
 const Collection = require('../models/Collection');
 const { protect, admin } = require('../middleware/authMiddleware');
 
-// Get all active collections with products
+// 1. Get all active collections with products (Public)
 router.get('/', async (req, res) => {
     try {
         const collections = await Collection.find({ isActive: true }).populate('products');
@@ -15,7 +15,7 @@ router.get('/', async (req, res) => {
     }
 });
 
-// ADMIN: Get all collections (renamed from /admin to avoid conflict with /:id)
+// 2. ADMIN: Get all collections (PRIORITIZED BEFORE /:id)
 router.get('/admin/all', protect, admin, async (req, res) => {
     try {
         const collections = await Collection.find({}).populate('products');
@@ -26,7 +26,7 @@ router.get('/admin/all', protect, admin, async (req, res) => {
     }
 });
 
-// Get a single collection by ID/slug with products
+// 3. Get a single collection by ID/slug with products
 router.get('/:id', async (req, res) => {
     try {
         // Check if ID is a valid ObjectId, otherwise treat as slug
@@ -44,7 +44,6 @@ router.get('/:id', async (req, res) => {
         res.status(500).json({ message: "Server error while fetching collection" });
     }
 });
-
 
 // ADMIN: Create new collection
 router.post('/', protect, admin, async (req, res) => {

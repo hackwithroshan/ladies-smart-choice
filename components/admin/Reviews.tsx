@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Product, Review } from '../../types';
 import { getApiUrl } from '../../utils/apiHelper';
@@ -24,8 +25,8 @@ const Reviews: React.FC<{ token: string | null }> = ({ token }) => {
     const fetchReviews = async () => {
         setLoading(true);
         try {
-            // We fetch all products and extract their nested reviews to create a master list
-            const res = await fetch(getApiUrl('/api/products/all'), {
+            // Corrected: Removed redundant /api prefix
+            const res = await fetch(getApiUrl('products/all'), {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
@@ -45,7 +46,6 @@ const Reviews: React.FC<{ token: string | null }> = ({ token }) => {
                     }
                 });
                 
-                // Sort by date descending
                 allReviews.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
                 setReviews(allReviews);
             }
@@ -61,9 +61,8 @@ const Reviews: React.FC<{ token: string | null }> = ({ token }) => {
     const handleDelete = async (productId: string, reviewId: string) => {
         if (!window.confirm("Permanently remove this customer review?")) return;
         try {
-            // Note: In a production app, there would be a specific /api/reviews endpoint
-            // Here we assume the backend handles review deletion via the product update route
-            const res = await fetch(getApiUrl(`/api/products/${productId}/reviews/${reviewId}`), { 
+            // Corrected: Removed redundant /api prefix
+            const res = await fetch(getApiUrl(`products/${productId}/reviews/${reviewId}`), { 
                 method: 'DELETE', 
                 headers: { 'Authorization': `Bearer ${token}` } 
             });

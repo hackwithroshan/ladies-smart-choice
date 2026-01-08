@@ -36,7 +36,8 @@ const LoginPage: React.FC<LoginProps> = ({ onAuthSuccess }) => {
     setLoading(true);
 
     try {
-      const response = await fetch(getApiUrl('/api/auth/login'), {
+      // Corrected: getApiUrl('auth/login') becomes /api/auth/login
+      const response = await fetch(getApiUrl('auth/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -58,7 +59,8 @@ const LoginPage: React.FC<LoginProps> = ({ onAuthSuccess }) => {
       setForgotLoading(true);
       setForgotError(null);
       try {
-          const res = await fetch(getApiUrl('/api/auth/forgot-password'), {
+          // Corrected: getApiUrl('auth/forgot-password')
+          const res = await fetch(getApiUrl('auth/forgot-password'), {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ email: forgotEmail }) 

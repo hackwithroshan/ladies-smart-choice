@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import * as ReactRouterDom from 'react-router-dom';
 const { useNavigate } = ReactRouterDom as any;
@@ -126,6 +127,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentView, setCurrentView
                         {openSubmenus['store-builder'] && (
                             <div className="space-y-0.5 mb-2">
                                 <NavItem label="Home Page Builder" view="cms" path="/app/content/builder" isSubItem />
+                                <NavItem label="• Hero Banners" view="slider" path="/app/content/slider" isSubItem />
                                 <NavItem label="• Home Page SEO" view="homepage-seo" path="/app/settings" isSubItem />
                                 <NavItem label="• Shop Videos" view="shop-videos" path="/app/content/videos" isSubItem />
                                 <NavItem label="Product Designer" view="pdp-builder" path="/app/products/design" isSubItem />

@@ -1,6 +1,5 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-// Fix: Use namespace import and cast to any to resolve "no exported member" errors
 import * as ReactRouterDom from 'react-router-dom';
 const { Link, useNavigate } = ReactRouterDom as any;
 import { Product } from '../types';
@@ -20,44 +19,44 @@ const MegaMenu: React.FC = () => {
 
   const [featuredProduct, setFeaturedProduct] = useState<Product | null>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const featuredProductFetched = useRef(false); // Ref to prevent re-fetching
+  const featuredProductFetched = useRef(false);
 
   useEffect(() => {
-    // Fetch featured product only when the menu is opened for the first time
     if (isOpen && !featuredProductFetched.current) {
       const fetchFeatured = async () => {
         try {
-          const res = await fetch(getApiUrl('/api/products/featured')); // Fixed API path
+          // Corrected: Removed /api prefix
+          const res = await fetch(getApiUrl('products/featured'));
           if (res.ok) {
             const data = await res.json();
-            setFeaturedProduct(data[0] || null); // API now returns an array, take the first item
-            featuredProductFetched.current = true; // Mark as fetched
+            setFeaturedProduct(data[0] || null);
+            featuredProductFetched.current = true;
           }
         } catch (error) {
           console.error("Failed to fetch featured product:", error);
         }
       };
-      
       fetchFeatured();
     }
-  }, [isOpen]); // Depend on isOpen to trigger the fetch
+  }, [isOpen]);
 
   const handleAddToCart = (e: React.MouseEvent) => {
       e.preventDefault();
       if (!featuredProduct) return;
       addToCart(featuredProduct, 1);
       showToast(`${featuredProduct.name} added to cart!`, 'success');
-      navigate('/checkout'); // Redirect to Checkout
+      navigate('/checkout');
   };
 
   const handleWishlist = (e: React.MouseEvent) => {
       e.preventDefault();
       if (!featuredProduct) return;
-      if (isInWishlist(featuredProduct.id)) {
-          removeFromWishlist(featuredProduct.id);
+      const id = featuredProduct.id || (featuredProduct as any)._id;
+      if (isInWishlist(id)) {
+          removeFromWishlist(id);
           showToast('Removed from wishlist', 'info');
       } else {
-          addToWishlist(featuredProduct.id);
+          addToWishlist(id);
           showToast('Added to wishlist', 'success');
       }
   };
@@ -81,13 +80,13 @@ const MegaMenu: React.FC = () => {
             <div className="absolute left-0 mt-2 w-screen max-w-4xl z-50 animate-fade-in-up">
               <div className="rounded-lg shadow-lg ring-1 ring-black ring-opacity-5 overflow-hidden">
                 <div className="relative grid gap-6 bg-white px-5 py-6 sm:gap-8 sm:p-8 lg:grid-cols-3">
-                  {categories.slice(0, 2).map((category) => ( // Show first 2 columns for categories
+                  {categories.slice(0, 2).map((category) => (
                     <div key={category.id}>
                       <h3 className="text-sm tracking-wide font-semibold uppercase text-blue-600">{category.name}</h3>
                       <ul className="mt-4 space-y-2">
                         {category.subcategories.map((sub) => (
                           <li key={sub.id}>
-                            <Link to={`/search?category=${encodeURIComponent(category.name)}&q=${encodeURIComponent(sub.name)}`} className="text-base font-medium text-gray-900 hover:text-gray-700 transition duration-150 ease-in-out">{sub.name}</Link>
+                            <Link to={`/collections/${sub.id}`} className="text-base font-medium text-gray-900 hover:text-gray-700 transition duration-150 ease-in-out">{sub.name}</Link>
                           </li>
                         ))}
                       </ul>
@@ -98,9 +97,8 @@ const MegaMenu: React.FC = () => {
                       <Link to={`/product/${featuredProduct.slug}`} className="block">
                           <div className="flex justify-between items-start">
                               <h3 className="text-sm tracking-wide font-semibold uppercase text-gray-500">Featured Product</h3>
-                              {/* Wishlist Icon */}
                               <button onClick={handleWishlist} className="text-gray-400 hover:text-rose-600 transition-colors">
-                                  {isInWishlist(featuredProduct.id) ? (
+                                  {isInWishlist(featuredProduct.id || (featuredProduct as any)._id) ? (
                                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-rose-600 fill-current" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" /></svg>
                                   ) : (
                                       <HeartIcon />
@@ -121,7 +119,7 @@ const MegaMenu: React.FC = () => {
                     </div>
                   ) : (
                      <div className="lg:col-span-1 bg-gray-50 rounded-lg p-4 flex items-center justify-center">
-                        <p className="text-gray-400 text-sm">Loading feature...</p>
+                        <p className="text-gray-400 text-sm italic font-black uppercase tracking-widest">Indexing Assets...</p>
                      </div>
                   )}
                 </div>

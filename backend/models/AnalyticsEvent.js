@@ -2,16 +2,27 @@
 const mongoose = require('mongoose');
 
 const AnalyticsEventSchema = new mongoose.Schema({
-    eventType: { type: String, required: true },
-    path: String,
-    source: String,
-    utm: {
-        source: String,
-        medium: String,
-        campaign: String,
+    eventType: { 
+        type: String, 
+        required: true, 
+        enum: ['PageView', 'AddToCart', 'InitiateCheckout', 'Purchase', 'TestEvent'] 
     },
-    data: mongoose.Schema.Types.Mixed,
+    path: String,
+    source: String, // meta, google, direct, organic
+    domain: String,
+    eventId: String,
+    data: {
+        value: Number,
+        currency: String,
+        items: Array,
+        productId: String,
+        email: String
+    },
+    timestamp: { type: Date, default: Date.now }
 }, { timestamps: true });
 
-const AnalyticsEvent = mongoose.model('AnalyticsEvent', AnalyticsEventSchema);
-module.exports = AnalyticsEvent;
+// Indexing for performance
+AnalyticsEventSchema.index({ eventType: 1, createdAt: -1 });
+AnalyticsEventSchema.index({ source: 1 });
+
+module.exports = mongoose.model('AnalyticsEvent', AnalyticsEventSchema);

@@ -22,8 +22,12 @@ const ProductList: React.FC<{token: string | null}> = ({token}) => {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const res = await fetch(getApiUrl('/api/products/all'), { headers: { 'Authorization': `Bearer ${token}` } });
-      if (res.ok) setProducts(await res.json());
+      // Corrected: getApiUrl handles the /api/ prefix automatically.
+      const res = await fetch(getApiUrl('products/all'), { headers: { 'Authorization': `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        setProducts(data);
+      }
     } catch (error) { console.error(error); } finally { setLoading(false); }
   };
 
@@ -32,7 +36,7 @@ const ProductList: React.FC<{token: string | null}> = ({token}) => {
   const handleDeleteProduct = async (id: string) => {
     if (!window.confirm("Permanent delete? This action is irreversible.")) return;
     try {
-        const res = await fetch(getApiUrl(`/api/products/${id}`), {
+        const res = await fetch(getApiUrl(`products/${id}`), {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });

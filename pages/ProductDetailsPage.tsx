@@ -40,7 +40,7 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
         const fetchAllData = async () => {
             setLoading(true);
             try {
-                const pRes = await fetch(getApiUrl(`/api/products/slug/${slug}`));
+                const pRes = await fetch(getApiUrl(`products/slug/${slug}`));
                 if (!pRes.ok) throw new Error("Product not found");
                 const p = await pRes.json();
                 setProduct(p);
@@ -55,8 +55,8 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
                 
                 const pId = p.id || p._id;
                 const [lRes, rRes] = await Promise.all([
-                    fetch(getApiUrl(`/api/settings/pdp-layout/${pId}`)),
-                    fetch(getApiUrl(`/api/products/${pId}/related`))
+                    fetch(getApiUrl(`settings/pdp-layout/${pId}`)),
+                    fetch(getApiUrl(`products/${pId}/related`))
                 ]);
                 
                 if (lRes.ok) setLayout(await lRes.json());
@@ -274,7 +274,7 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
                                         </div>
                                     )}
 
-                                    {/* OTHER SECTIONS ... */}
+                                    {/* FAQ SECTIONS */}
                                     {sec.type === 'FAQ' && (
                                         <div className="max-w-4xl mx-auto py-12">
                                             <h2 className="text-2xl font-bold uppercase mb-10 tracking-widest text-center italic">Product Inquiries</h2>
