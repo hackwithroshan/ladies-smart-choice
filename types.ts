@@ -169,6 +169,7 @@ export interface HomeSection {
         alignment?: 'left' | 'center' | 'right';
         subtitle?: string;
         backgroundColor?: string;
+        textColor?: string;
         paddingTop?: number;
         paddingBottom?: number;
         paddingLeft?: number;
@@ -177,16 +178,23 @@ export interface HomeSection {
         marginBottom?: number;
         desktopWidth?: string;
         mobileWidth?: string;
-        desktopHeight?: string;
-        mobileHeight?: string;
-        itemStyle?: 'Rectangle' | 'Square' | 'Circle' | 'ImageOnly';
-        wishlistPosition?: 'bottom-right-overlay' | 'top-right-circle';
-        itemBgColor?: string;
+        textAlign?: string;
+        // Typography Settings
+        titleSize?: number;
+        titleWeight?: number;
+        titleItalic?: boolean;
+        subtitleSize?: number;
+        subtitleWeight?: number;
+        subtitleItalic?: boolean;
+        // Item specific settings used by ProductCard.tsx
         itemBorderRadius?: number;
+        itemShadow?: boolean;
+        itemStyle?: 'Rectangle' | 'Square' | 'Circle' | 'ImageOnly';
+        wishlistPosition?: 'top-right' | 'bottom-right-overlay';
+        itemBgColor?: string;
         itemPadding?: number;
         itemBorder?: boolean;
         itemBorderColor?: string;
-        itemShadow?: boolean;
         itemHeight?: string;
         showBadge?: boolean;
         badgeText?: string;
@@ -196,18 +204,6 @@ export interface HomeSection {
         itemPriceSize?: number;
         itemPriceColor?: string;
         showVariants?: boolean;
-        desktopColumns?: number;
-        mobileColumns?: number;
-        titleItalic?: boolean;
-        titleSize?: number;
-        titleWeight?: number;
-        subtitleItalic?: boolean;
-        subtitleSize?: number;
-        subtitleWeight?: number;
-        itemGap?: number;
-        itemWidth?: string;
-        textAlign?: string;
-        textColor?: string;
     };
     code?: string;
     settingsJson?: string;

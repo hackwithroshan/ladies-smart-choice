@@ -62,22 +62,15 @@ const HomePage: React.FC<{ user: any; logout: () => void }> = ({ user, logout })
       }
   }, [slides.length]);
 
-  const handleVideoShop = (link?: string) => {
-      if (!link) return;
-      const target = link.startsWith('/') ? link : `/product/${link}`;
-      navigate(target);
-      setSelectedVideo(null);
-  };
-
   const renderSection = (section: HomeSection) => {
     if (!section.isActive) return null;
 
     const s = section.settings || {};
     
-    // BUILD DYNAMIC STYLES
+    // BUILD DYNAMIC STYLES FROM BUILDER
     const sectionStyles: React.CSSProperties = {
-        paddingTop: `${s.paddingTop ?? 80}px`,
-        paddingBottom: `${s.paddingBottom ?? 80}px`,
+        paddingTop: `${s.paddingTop ?? 60}px`,
+        paddingBottom: `${s.paddingBottom ?? 60}px`,
         paddingLeft: `${s.paddingLeft ?? 20}px`,
         paddingRight: `${s.paddingRight ?? 20}px`,
         marginTop: `${s.marginTop ?? 0}px`,
@@ -91,7 +84,6 @@ const HomePage: React.FC<{ user: any; logout: () => void }> = ({ user, logout })
         margin: '0 auto',
     };
 
-    // Header Block Component to reuse logic
     const HeaderBlock = () => (section.title || s.subtitle) ? (
         <div className={cn("mb-12", 
             s.alignment === 'center' ? 'text-center items-center flex flex-col' : 
@@ -101,7 +93,7 @@ const HomePage: React.FC<{ user: any; logout: () => void }> = ({ user, logout })
             <h2 
                 className={cn("font-brand leading-none uppercase tracking-tighter", s.titleItalic && "italic")}
                 style={{ 
-                    fontSize: s.titleSize ? `${isMobile ? Math.max(s.titleSize * 0.7, 24) : s.titleSize}px` : '40px',
+                    fontSize: s.titleSize ? (isMobile ? `${Math.max(s.titleSize * 0.7, 24)}px` : `${s.titleSize}px`) : '32px',
                     fontWeight: s.titleWeight || 900
                 }}
             >
@@ -111,8 +103,8 @@ const HomePage: React.FC<{ user: any; logout: () => void }> = ({ user, logout })
                 <p 
                     className={cn("mt-4 tracking-widest uppercase leading-relaxed max-w-2xl", s.subtitleItalic && "italic")}
                     style={{
-                        fontSize: s.subtitleSize ? `${s.subtitleSize}px` : '11px',
-                        fontWeight: s.subtitleWeight || 800,
+                        fontSize: s.subtitleSize ? `${s.subtitleSize}px` : '14px',
+                        fontWeight: s.subtitleWeight || 500,
                         opacity: 0.7
                     }}
                 >
@@ -223,9 +215,14 @@ const HomePage: React.FC<{ user: any; logout: () => void }> = ({ user, logout })
       case 'Newsletter':
         return (
             <section key={section.id} style={sectionStyles} className="w-full">
-                <div style={containerStyles} className="bg-zinc-900 p-8 md:p-16 text-center text-white shadow-2xl relative overflow-hidden group">
+                <div style={containerStyles} className="bg-zinc-900 p-8 md:p-16 text-center text-white shadow-2xl relative overflow-hidden group rounded-[2rem]">
                     <div className="relative z-10 space-y-6 max-w-2xl mx-auto">
-                        <h2 className="text-3xl md:text-5xl font-brand font-black italic tracking-tighter uppercase leading-none">{section.title}</h2>
+                        <h2 
+                            className={cn("font-brand font-black italic tracking-tighter uppercase leading-none", s.titleItalic && "italic")}
+                            style={{ fontSize: s.titleSize ? `${s.titleSize}px` : '40px', color: '#FFFFFF' }}
+                        >
+                            {section.title}
+                        </h2>
                         <p className="text-zinc-400 font-bold uppercase tracking-[0.2em] text-[9px] md:text-xs leading-relaxed opacity-80">{s.subtitle}</p>
                         <form className="flex flex-col sm:flex-row gap-4 pt-4" onSubmit={(e) => e.preventDefault()}>
                             <input type="email" placeholder="EMAIL ADDRESS" className="flex-1 bg-white/5 border border-white/10 rounded-xl px-6 py-4 text-white font-bold outline-none focus:bg-white/10 focus:border-emerald-500/50 transition-all tracking-widest text-xs" />
@@ -286,7 +283,7 @@ const HomePage: React.FC<{ user: any; logout: () => void }> = ({ user, logout })
                   </button>
                   <div className="absolute bottom-0 left-0 right-0 p-10 bg-gradient-to-t from-black via-black/40 to-transparent">
                       <h3 className="text-white font-black text-2xl mb-6 italic uppercase tracking-tighter leading-tight">{selectedVideo.title}</h3>
-                      <button onClick={() => handleVideoShop(selectedVideo.productLink)} className="w-full bg-white text-zinc-900 font-black py-5 rounded-2xl uppercase text-[10px] tracking-[0.2em] shadow-2xl hover:bg-[#16423C] hover:text-white transition-all transform active:scale-95">Shop This Ritual</button>
+                      <button onClick={() => navigate(`/product/${selectedVideo.productLink}`)} className="w-full bg-white text-zinc-900 font-black py-5 rounded-2xl uppercase text-[10px] tracking-[0.2em] shadow-2xl hover:bg-[#16423C] hover:text-white transition-all transform active:scale-95">Shop This Ritual</button>
                   </div>
               </div>
           </div>

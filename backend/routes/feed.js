@@ -7,47 +7,41 @@ const SyncLog = require('../models/SyncLog');
 const { protect, admin } = require('../middleware/authMiddleware');
 const fetch = require('node-fetch');
 
-// Meta Catalog Sync API - Standard Fix for Error #100
+// Meta Catalog Sync API - Fixed Error #100
 router.post('/sync', protect, admin, async (req, res) => {
     const log = new SyncLog({ service: 'meta-catalog', status: 'in_progress' });
     await log.save();
 
     try {
-        // 1. Fetch fresh credentials from DB
         const settings = await SiteSettings.findOne();
         if (!settings || !settings.metaAccessToken || !settings.metaCatalogId) {
             throw new Error('CONFIGURATION_MISSING: Dashboard mein Catalog ID aur Token save karein.');
         }
 
-        // 2. Fetch Active Products
         const products = await Product.find({ status: 'Active' });
         if (products.length === 0) throw new Error('DATA_EMPTY: Koi active product sync ke liye nahi mila.');
 
         const frontendUrl = process.env.FRONTEND_URL || 'https://ayushreeayurveda.in';
 
-        /**
-         * 3. Meta Batch Request Payload (Strict Standard Fix)
-         * Meta requires exact keys: title, link, image_link, and item_type.
-         */
+        // Meta Batch Request Payload - Added item_type: PRODUCT_ITEM
         const requests = products.map(p => ({
             method: 'UPDATE',
-            retailer_id: p.sku || p._id.toString(), // Must be unique for each product
+            retailer_id: p.sku || p._id.toString(),
             data: {
-                title: p.name, // Meta uses 'title', not 'name'
+                title: p.name,
                 description: (p.shortDescription || p.description || p.name).substring(0, 4900),
-                link: `${frontendUrl}/product/${p.slug}`, // Meta uses 'link', not 'url'
-                image_link: p.imageUrl, // Meta uses 'image_link', not 'image_url'
+                link: `${frontendUrl}/product/${p.slug}`,
+                image_link: p.imageUrl,
                 brand: p.brand || settings.storeName || 'Ayushree Ayurveda',
                 inventory: Math.max(0, p.stock),
                 condition: 'new',
                 price: Math.round(p.price),
                 currency: 'INR',
                 availability: p.stock > 0 ? 'in stock' : 'out of stock',
-                item_type: 'PRODUCT_ITEM' // CRITICAL FIX: Mandatory field required by Meta
+                item_type: 'PRODUCT_ITEM' // CRITICAL FIX: Mandatory field for Meta
             }
         }));
 
-        // 4. Dispatch to Meta Graph API v19.0
         const response = await fetch(`https://graph.facebook.com/v19.0/${settings.metaCatalogId}/items_batch`, {
             method: 'POST',
             headers: {
@@ -67,7 +61,6 @@ router.post('/sync', protect, admin, async (req, res) => {
             throw new Error(errorMsg);
         }
 
-        // Success Update
         log.status = 'success';
         log.processedCount = products.length;
         await log.save();
