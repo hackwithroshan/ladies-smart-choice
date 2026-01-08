@@ -21,9 +21,9 @@ router.post('/sync', protect, admin, async (req, res) => {
         const products = await Product.find({ status: 'Active' });
         if (products.length === 0) throw new Error('DATA_EMPTY: Koi active product sync ke liye nahi mila.');
 
-        const frontendUrl = process.env.FRONTEND_URL || 'https://ayushreeayurveda.in';
+        const frontendUrl = process.env.FRONTEND_URL || 'https://ladiessmartchoice.com';
 
-        // Meta Batch Request Payload - Added item_type: PRODUCT_ITEM
+        // Meta Batch Request Payload - Fixed with item_type
         const requests = products.map(p => ({
             method: 'UPDATE',
             retailer_id: p.sku || p._id.toString(),
@@ -32,16 +32,17 @@ router.post('/sync', protect, admin, async (req, res) => {
                 description: (p.shortDescription || p.description || p.name).substring(0, 4900),
                 link: `${frontendUrl}/product/${p.slug}`,
                 image_link: p.imageUrl,
-                brand: p.brand || settings.storeName || 'Ayushree Ayurveda',
+                brand: p.brand || settings.storeName || 'Ladies Smart Choice',
                 inventory: Math.max(0, p.stock),
                 condition: 'new',
                 price: Math.round(p.price),
                 currency: 'INR',
                 availability: p.stock > 0 ? 'in stock' : 'out of stock',
-                item_type: 'PRODUCT_ITEM' // CRITICAL FIX: Mandatory field for Meta
+                item_type: 'PRODUCT_ITEM' // CRITICAL FIX: Required by Meta for Catalog Items
             }
         }));
 
+        // Push to Meta Graph API
         const response = await fetch(`https://graph.facebook.com/v19.0/${settings.metaCatalogId}/items_batch`, {
             method: 'POST',
             headers: {
@@ -67,7 +68,7 @@ router.post('/sync', protect, admin, async (req, res) => {
 
         res.json({ 
             success: true, 
-            message: `SUCCESS: ${products.length} products successfully mapped to Meta Catalog.`,
+            message: `SUCCESS: ${products.length} products successfully pushed to Meta Catalog.`,
             meta_handle: result.handles?.[0]
         });
 
