@@ -19,28 +19,24 @@ const generateFeedFiles = async () => {
         const root = create({ version: '1.0', encoding: 'UTF-8' })
             .ele('rss', { version: '2.0', 'xmlns:g': 'http://base.google.com/ns/1.0' })
                 .ele('channel')
-                    .ele('title').txt('Ladies Smart Choice Catalog').up()
+                    .ele('title').txt('Ladies Smart Choice Master Catalog').up()
                     .ele('link').txt(baseUrl).up()
-                    .ele('description').txt('Premium Collection').up();
+                    .ele('description').txt('Premium Women Fashion Feed').up();
 
         products.forEach(p => {
+            const retailerId = p.sku || p._id.toString();
             const item = root.ele('item');
-            item.ele('g:id').txt(p.sku || p._id.toString()).up();
+            item.ele('g:id').txt(retailerId).up();
             item.ele('g:title').txt(p.name).up();
             item.ele('g:description').dat((p.shortDescription || p.description || p.name).replace(/<[^>]*>?/gm, '').substring(0, 4900)).up();
             item.ele('g:link').txt(`${baseUrl}/product/${p.slug}`).up();
             item.ele('g:image_link').txt(p.imageUrl).up();
             item.ele('g:condition').txt('new').up();
             item.ele('g:availability').txt(p.stock > 0 ? 'in stock' : 'out of stock').up();
-            item.ele('g:price').txt(`${Math.round(p.mrp || p.price)} INR`).up();
-            
-            if (p.mrp && p.mrp > p.price) {
-                item.ele('g:sale_price').txt(`${Math.round(p.price)} INR`).up();
-            }
-
+            item.ele('g:price').txt(`${Math.round(p.price)} INR`).up();
             item.ele('g:brand').txt(p.brand || 'Ladies Smart Choice').up();
-            item.ele('g:google_product_category').txt('Health & Beauty').up();
-            item.ele('g:item_type').txt('PRODUCT_ITEM').up(); // Fixed for Meta
+            item.ele('g:google_product_category').txt('Apparel & Accessories > Clothing').up();
+            item.ele('g:item_type').txt('PRODUCT_ITEM').up(); // 🔥 REQUIRED FOR FEED SYNC
             item.ele('g:status').txt('active').up();
         });
 
@@ -55,7 +51,6 @@ const generateFeedFiles = async () => {
         log.processedCount = products.length;
         await log.save();
         
-        console.log(`RSS Feed generated: ${products.length} products.`);
     } catch (error) {
         console.error("Feed generation failed:", error);
         log.status = 'failed';

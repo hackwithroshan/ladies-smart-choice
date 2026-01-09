@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const SiteSettings = require('../models/SiteSettings');
 
 /**
- * Meta User Data Privacy (SHA-256 Hashing)
+ * SHA-256 Hashing for Meta User Data Privacy (GDPR/PII)
  */
 function hash(data) {
     if (!data) return undefined;
@@ -12,14 +12,13 @@ function hash(data) {
 }
 
 /**
- * Meta Conversion API (CAPI) - Server-Side Link
+ * Meta Conversion API (CAPI) - Server-Side Tracking Bridge
  */
 const sendCapiEvent = async ({ eventName, eventUrl, eventId, userData, customData = {} }) => {
     try {
         const settings = await SiteSettings.findOne();
         if (!settings || !settings.metaPixelId || !settings.metaAccessToken) return;
 
-        // User data normalization
         const user_data = {
             client_ip_address: userData.ip,
             client_user_agent: userData.userAgent,
@@ -40,16 +39,16 @@ const sendCapiEvent = async ({ eventName, eventUrl, eventId, userData, customDat
                 custom_data: {
                     currency: customData.currency || 'INR',
                     value: Number(customData.value || 0),
+                    // IMPORTANT: content_ids must match retailer_id in Catalog Sync exactly
                     content_ids: customData.content_ids || (customData.productId ? [String(customData.productId)] : []),
                     content_name: customData.content_name,
                     content_category: customData.category,
-                    content_type: 'product', // Fixed for catalog matching
+                    content_type: 'product',
                     num_items: Number(customData.num_items || 1)
                 },
             }]
         };
 
-        // For testing via Meta Events Manager
         if (customData.test_event_code) {
             eventPayload.test_event_code = customData.test_event_code;
         }
@@ -64,7 +63,9 @@ const sendCapiEvent = async ({ eventName, eventUrl, eventId, userData, customDat
         });
 
         const result = await response.json();
-        if (!response.ok) console.error(`[Meta-CAPI-Error]`, JSON.stringify(result.error));
+        if (!response.ok) {
+            console.error(`[Meta-CAPI-Error]`, result.error?.message);
+        }
 
     } catch (error) {
         console.error(`[Meta-CAPI-Fatal]`, error.message);
