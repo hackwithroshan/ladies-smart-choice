@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const SiteSettings = require('../models/SiteSettings');
 
 /**
- * SHA-256 Hashing for Meta User Data Privacy (GDPR/PII)
+ * Meta User Data Privacy (SHA-256 Hashing)
  */
 function hash(data) {
     if (!data) return undefined;
@@ -12,17 +12,14 @@ function hash(data) {
 }
 
 /**
- * Meta Conversion API (CAPI) - Server Side Tracking
- * Vital for iOS14+ and AdBlocker bypass
+ * Meta Conversion API (CAPI) - Server-Side Link
  */
 const sendCapiEvent = async ({ eventName, eventUrl, eventId, userData, customData = {} }) => {
     try {
         const settings = await SiteSettings.findOne();
-        if (!settings || !settings.metaPixelId || !settings.metaAccessToken) {
-            return; // Exit silently if not configured
-        }
+        if (!settings || !settings.metaPixelId || !settings.metaAccessToken) return;
 
-        // Prepare User Data (Normalized and Hashed)
+        // User data normalization
         const user_data = {
             client_ip_address: userData.ip,
             client_user_agent: userData.userAgent,
@@ -32,7 +29,6 @@ const sendCapiEvent = async ({ eventName, eventUrl, eventId, userData, customDat
             ph: userData.phone ? [hash(userData.phone)] : undefined,
         };
 
-        // Map standard events to Meta requirements
         const eventPayload = {
             data: [{
                 event_name: eventName,
@@ -43,18 +39,17 @@ const sendCapiEvent = async ({ eventName, eventUrl, eventId, userData, customDat
                 user_data: user_data,
                 custom_data: {
                     currency: customData.currency || 'INR',
-                    value: customData.value || 0,
-                    // content_ids MUST match retailer_id in Catalog Sync
-                    content_ids: customData.content_ids || (customData.productId ? [customData.productId] : []),
+                    value: Number(customData.value || 0),
+                    content_ids: customData.content_ids || (customData.productId ? [String(customData.productId)] : []),
                     content_name: customData.content_name,
                     content_category: customData.category,
-                    content_type: 'product',
-                    num_items: customData.num_items || 1
+                    content_type: 'product', // Fixed for catalog matching
+                    num_items: Number(customData.num_items || 1)
                 },
             }]
         };
 
-        // For Testing via Events Manager
+        // For testing via Meta Events Manager
         if (customData.test_event_code) {
             eventPayload.test_event_code = customData.test_event_code;
         }
@@ -69,9 +64,7 @@ const sendCapiEvent = async ({ eventName, eventUrl, eventId, userData, customDat
         });
 
         const result = await response.json();
-        if (!response.ok) {
-            console.error(`[Meta-CAPI-Error]`, result.error?.message);
-        }
+        if (!response.ok) console.error(`[Meta-CAPI-Error]`, JSON.stringify(result.error));
 
     } catch (error) {
         console.error(`[Meta-CAPI-Fatal]`, error.message);

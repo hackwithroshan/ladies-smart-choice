@@ -7,7 +7,6 @@ const SyncLog = require('../models/SyncLog');
 
 /**
  * Generates Meta/Google RSS 2.0 Feed
- * Includes all required fields for Meta Commerce
  */
 const generateFeedFiles = async () => {
     const log = new SyncLog({ service: 'feed-generation', status: 'in_progress' });
@@ -22,7 +21,7 @@ const generateFeedFiles = async () => {
                 .ele('channel')
                     .ele('title').txt('Ladies Smart Choice Catalog').up()
                     .ele('link').txt(baseUrl).up()
-                    .ele('description').txt('Premium Ayurvedic Selection').up();
+                    .ele('description').txt('Premium Collection').up();
 
         products.forEach(p => {
             const item = root.ele('item');
@@ -41,7 +40,7 @@ const generateFeedFiles = async () => {
 
             item.ele('g:brand').txt(p.brand || 'Ladies Smart Choice').up();
             item.ele('g:google_product_category').txt('Health & Beauty').up();
-            item.ele('g:item_type').txt('PRODUCT_ITEM').up(); // MANDATORY
+            item.ele('g:item_type').txt('PRODUCT_ITEM').up(); // Fixed for Meta
             item.ele('g:status').txt('active').up();
         });
 
@@ -56,7 +55,7 @@ const generateFeedFiles = async () => {
         log.processedCount = products.length;
         await log.save();
         
-        console.log(`✅ RSS Feed generated: ${products.length} products.`);
+        console.log(`RSS Feed generated: ${products.length} products.`);
     } catch (error) {
         console.error("Feed generation failed:", error);
         log.status = 'failed';

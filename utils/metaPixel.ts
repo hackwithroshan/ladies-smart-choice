@@ -9,7 +9,6 @@ declare global {
 const AUTHORIZED_DOMAINS = [
     'ladiessmartchoice.com',
     'www.ladiessmartchoice.com',
-    'ayushreeayurveda.in',
     'localhost'
 ];
 
@@ -35,7 +34,7 @@ export const initFacebookPixel = (pixelId: string) => {
   /* eslint-enable */
 
   window.fbq('init', pixelId);
-  console.log(`✅ Meta Pixel Loaded: ${pixelId}`);
+  console.log(`✅ Meta Pixel Initialized: ${pixelId}`);
 };
 
 export const trackEvent = (event: string, data?: any) => {
