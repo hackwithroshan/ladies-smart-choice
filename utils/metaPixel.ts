@@ -1,6 +1,4 @@
 
-import { trackUserEvent } from "./analytics";
-
 declare global {
   interface Window {
     fbq: any;
@@ -8,7 +6,6 @@ declare global {
   }
 }
 
-// List of authorized domains for this Pixel
 const AUTHORIZED_DOMAINS = [
     'ladiessmartchoice.com',
     'www.ladiessmartchoice.com',
@@ -19,14 +16,12 @@ const AUTHORIZED_DOMAINS = [
 export const initFacebookPixel = (pixelId: string) => {
   const currentDomain = window.location.hostname;
   
-  // FIX for Image 2: Only initialize if domain is authorized
-  if (!AUTHORIZED_DOMAINS.includes(currentDomain)) {
-    console.warn(`⚠️ Meta Pixel blocked for unauthorized domain: ${currentDomain}`);
+  if (!AUTHORIZED_DOMAINS.some(d => currentDomain.includes(d))) {
+    console.warn(`⚠️ Meta Pixel blocked for domain: ${currentDomain}`);
     return;
   }
 
-  if (!pixelId) return;
-  if (window.fbq) return;
+  if (!pixelId || window.fbq) return;
 
   /* eslint-disable */
   (function(f:any,b:any,e:any,v:any,n?:any,t?:any,s?:any)
@@ -40,13 +35,20 @@ export const initFacebookPixel = (pixelId: string) => {
   /* eslint-enable */
 
   window.fbq('init', pixelId);
-  console.log(`✅ Meta Pixel Active on ${currentDomain}`);
+  console.log(`✅ Meta Pixel Loaded: ${pixelId}`);
 };
 
 export const trackEvent = (event: string, data?: any) => {
-  const currentDomain = window.location.hostname;
-  if (!window.fbq || !AUTHORIZED_DOMAINS.includes(currentDomain)) return;
+  if (!window.fbq) return;
 
   const { event_id, ...params } = data || {};
-  window.fbq('track', event, params, { event_id });
+  
+  // Mapping for Standard Events
+  const standardEvents = ['PageView', 'ViewContent', 'AddToCart', 'InitiateCheckout', 'Purchase', 'Search', 'Contact'];
+  
+  if (standardEvents.includes(event)) {
+      window.fbq('track', event, params, { event_id });
+  } else {
+      window.fbq('trackCustom', event, params, { event_id });
+  }
 };

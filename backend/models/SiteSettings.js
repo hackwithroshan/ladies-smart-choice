@@ -10,7 +10,7 @@ const SiteSettingsSchema = new mongoose.Schema({
     // Design System
     primaryColor: { type: String, default: '#16423C' },
     accentColor: { type: String, default: '#6A9C89' },
-    fontFamily: { type: String, default: 'Playfair Display' },
+    fontFamily: { type: String, default: 'Inter' },
     
     // STRICT CHECKOUT MODE
     checkoutMode: { 
@@ -33,6 +33,11 @@ const SiteSettingsSchema = new mongoose.Schema({
     metaPixelId: { type: String, default: '' }, 
     metaCatalogId: { type: String, default: '' },
     metaAccessToken: { type: String, default: '' },
+    
+    // TRACKING FLAGS
+    trackPageView: { type: Boolean, default: true },
+    trackAddToCart: { type: Boolean, default: true },
+    trackPurchase: { type: Boolean, default: true },
 
     isMaintenanceMode: { type: Boolean, default: false }
 }, { timestamps: true });

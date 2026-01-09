@@ -2,11 +2,6 @@
 import { trackEvent as trackPixelEvent } from './metaPixel';
 import { getApiUrl } from './apiHelper';
 
-/**
- * Advanced Unified Tracker
- * Syncs behavior to both Meta Pixel (Browser) and Internal Analytics (Server-side)
- */
-
 const getCookie = (name: string): string => {
     if (typeof document === 'undefined') return '';
     const value = `; ${document.cookie}`;
@@ -20,16 +15,15 @@ export const masterTracker = (
     pixelData: Record<string, any> = {},
     internalData: Record<string, any> = {}
 ) => {
-    // 1. Generate a Unique Global Event ID for Deduplication
     const eventId = `${eventName.toLowerCase()}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
-    // 2. Real-time Browser Pixel
+    // Real-time Browser Pixel
     trackPixelEvent(eventName, {
         ...pixelData,
         event_id: eventId,
     });
 
-    // 3. Persistent Server-Side Tracking
+    // Persistent Server-Side Tracking (CAPI Bridge)
     const payload = {
         eventType: eventName,
         path: window.location.pathname,
@@ -38,15 +32,16 @@ export const masterTracker = (
         source: new URLSearchParams(window.location.search).get('utm_source') || 'direct',
         data: {
             ...internalData,
+            ...pixelData,
             fbp: getCookie('_fbp'),
             fbc: getCookie('_fbc')
         }
     };
 
-    fetch(getApiUrl('/api/analytics/track'), {
+    fetch(getApiUrl('analytics/track'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
         keepalive: true
-    }).catch(() => {}); // Fire and forget
+    }).catch(() => {});
 };
