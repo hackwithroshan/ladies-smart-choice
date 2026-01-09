@@ -29,15 +29,10 @@ const SiteSettingsSchema = new mongoose.Schema({
     whatsappNumber: { type: String, default: '919876543210' },
     whatsappMessage: { type: String, default: 'Namaste! I have a question about Ayushree products.' },
 
-    // META INTEGRATION (Deeply verified for persistence)
+    // META INTEGRATION
     metaPixelId: { type: String, default: '' }, 
     metaCatalogId: { type: String, default: '' },
     metaAccessToken: { type: String, default: '' },
-
-    // Tracking Toggles
-    trackPageView: { type: Boolean, default: true },
-    trackAddToCart: { type: Boolean, default: true },
-    trackPurchase: { type: Boolean, default: true },
 
     isMaintenanceMode: { type: Boolean, default: false }
 }, { timestamps: true });

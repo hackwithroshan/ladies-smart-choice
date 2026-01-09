@@ -22,11 +22,12 @@ import { cn } from '../utils/utils';
 const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user, logout }) => {
     const { slug } = useParams();
     const navigate = useNavigate();
-    const { siteSettings } = useSiteData();
+    const { siteSettings, loading: siteLoading } = useSiteData();
     const [product, setProduct] = useState<Product | null>(null);
     const [layout, setLayout] = useState<ProductPageLayout | null>(null);
     const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
+    const [processing, setProcessing] = useState(false);
     
     const [selectedVariants, setSelectedVariants] = useState<{ [key: string]: string }>({});
     const [quantity, setQuantity] = useState(1);
@@ -87,19 +88,78 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
         setSelectedVariants(prev => ({ ...prev, [vName]: oValue }));
     };
 
-    const handleAddToCart = (buyNow = false) => {
+    const handleMagicCheckout = async (targetProduct: Product) => {
+        setProcessing(true);
+        try {
+            const amount = targetProduct.price * quantity;
+            const orderRes = await fetch(getApiUrl('orders/create-standard-order'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ total: amount })
+            });
+            
+            if (!orderRes.ok) throw new Error("Failed to create Razorpay order");
+            const rzpOrder = await orderRes.json();
+
+            const keyRes = await fetch(getApiUrl('orders/key'));
+            const { key } = await keyRes.json();
+
+            const options = {
+                key,
+                amount: rzpOrder.amount,
+                order_id: rzpOrder.id,
+                name: siteSettings?.storeName || "Ayushree Ayurveda",
+                description: `Purchase ${targetProduct.name}`,
+                prefill: { contact: user?.phone || '', email: user?.email || '' },
+                theme: { color: siteSettings?.primaryColor || "#16423C" },
+                handler: async (response: any) => {
+                    const verifyRes = await fetch(getApiUrl('orders/verify-magic'), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            razorpay_payment_id: response.razorpay_payment_id,
+                            orderDetails: { 
+                                items: [{ ...targetProduct, quantity }], 
+                                total: amount 
+                            }
+                        })
+                    });
+                    if (verifyRes.ok) {
+                        showToast("Order placed successfully!", "success");
+                        navigate("/dashboard?status=success");
+                    }
+                },
+                modal: { ondismiss: () => setProcessing(false) }
+            };
+            const rzp = new (window as any).Razorpay(options);
+            rzp.open();
+        } catch (e) {
+            console.error(e);
+            showToast("Magic checkout failed to initialize", "error");
+            setProcessing(false);
+        }
+    };
+
+    const handleAction = (isBuyNow = true) => {
         if (!product) return;
+        
+        // Internal add to cart
         const variantStr = Object.values(selectedVariants).join(' / ');
         const productWithVariant = {
             ...product,
             name: variantStr ? `${product.name} (${variantStr})` : product.name
         };
         addToCart(productWithVariant, quantity);
-        showToast(`${product.name} added to bag!`, 'success');
-        if (buyNow) navigate('/checkout');
+
+        // Redirect flow
+        if (siteSettings?.checkoutMode === 'magic') {
+            handleMagicCheckout(product);
+        } else {
+            navigate('/checkout');
+        }
     };
 
-    if (loading) return <div className="h-screen flex items-center justify-center bg-white"><div className="w-10 h-10 border-4 border-zinc-900 border-t-transparent rounded-full animate-spin"></div></div>;
+    if (loading || siteLoading) return <div className="h-screen flex items-center justify-center bg-white"><div className="w-10 h-10 border-4 border-zinc-900 border-t-transparent rounded-full animate-spin"></div></div>;
     if (!product) return <div className="h-screen flex items-center justify-center font-bold uppercase text-zinc-300 tracking-widest">Product Not Found</div>;
 
     const discountPercentage = product.mrp ? Math.round(((product.mrp - product.price) / product.mrp) * 100) : 0;
@@ -241,10 +301,11 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
 
                                                 <div className="pt-6 border-t border-zinc-100">
                                                     <button 
-                                                        onClick={() => handleAddToCart(false)}
-                                                        className="w-full bg-[#16423C] text-white h-14 font-bold uppercase tracking-[0.15em] text-[13px] shadow-xl hover:brightness-110 active:scale-[0.98] transition-all"
+                                                        onClick={() => handleAction(true)}
+                                                        disabled={processing}
+                                                        className="w-full bg-[#16423C] text-white h-14 font-bold uppercase tracking-[0.15em] text-[13px] shadow-xl hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50"
                                                     >
-                                                        ADD TO BAG
+                                                        {processing ? 'OPENING SECURE GATEWAY...' : siteSettings?.checkoutMode === 'magic' ? '✨ MAGIC BUY NOW' : 'SECURE CHECKOUT'}
                                                     </button>
                                                 </div>
                                                 
@@ -338,8 +399,8 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
                 product={product}
                 selectedVariants={selectedVariants}
                 onVariantChange={handleVariantSelect}
-                onAddToCart={() => handleAddToCart(false)}
-                onBuyNow={() => handleAddToCart(true)}
+                onAddToCart={() => handleAction(false)}
+                onBuyNow={() => handleAction(true)}
                 quantity={quantity}
                 onQuantityChange={setQuantity}
             />

@@ -9,24 +9,36 @@ const HeaderSetting = require('../models/HeaderSetting');
 const FooterSetting = require('../models/FooterSetting');
 const { protect, admin } = require('../middleware/authMiddleware');
 
-// --- 1. SITE BRANDING SETTINGS ---
+// --- 1. SITE BRANDING & GLOBAL CONFIG ---
 router.get('/site', async (req, res) => {
     try {
         let s = await SiteSettings.findOne();
-        if (!s) s = await SiteSettings.create({
-            storeName: 'Ayushree Ayurveda',
-            primaryColor: '#16423C',
-            accentColor: '#6A9C89'
-        });
+        if (!s) {
+            s = await SiteSettings.create({
+                storeName: 'Ayushree Ayurveda',
+                primaryColor: '#16423C',
+                accentColor: '#6A9C89',
+                checkoutMode: 'standard'
+            });
+        }
         res.json(s);
-    } catch (e) { res.status(500).json({ message: 'Error fetching settings' }); }
+    } catch (e) { 
+        res.status(500).json({ message: 'Error fetching global settings' }); 
+    }
 });
 
 router.put('/site', protect, admin, async (req, res) => {
     try {
+        // Validation for checkout mode
+        if (req.body.checkoutMode && !['standard', 'magic'].includes(req.body.checkoutMode)) {
+            return res.status(400).json({ message: 'Invalid checkout strategy' });
+        }
+        
         const s = await SiteSettings.findOneAndUpdate({}, { $set: req.body }, { new: true, upsert: true });
         res.json(s);
-    } catch (e) { res.status(500).json({ message: 'Failed to update configuration' }); }
+    } catch (e) { 
+        res.status(500).json({ message: 'Failed to update system configuration' }); 
+    }
 });
 
 // --- 2. HOMEPAGE SEO SETTINGS ---
@@ -45,7 +57,7 @@ router.put('/homepage', protect, admin, async (req, res) => {
     } catch (e) { res.status(500).json({ message: 'Failed to update SEO settings' }); }
 });
 
-// --- 3. HEADER SETTINGS ---
+// Other settings remains same...
 router.get('/header', async (req, res) => {
     try {
         let h = await HeaderSetting.findOne();
@@ -61,7 +73,6 @@ router.put('/header', protect, admin, async (req, res) => {
     } catch (e) { res.status(500).json({ message: 'Failed to update header settings' }); }
 });
 
-// --- 4. FOOTER SETTINGS ---
 router.get('/footer', async (req, res) => {
     try {
         let f = await FooterSetting.findOne();
@@ -77,36 +88,21 @@ router.put('/footer', protect, admin, async (req, res) => {
     } catch (e) { res.status(500).json({ message: 'Failed to update footer settings' }); }
 });
 
-// --- 5. HOMEPAGE BUILDER (LAYOUT) ---
 router.get('/layout', async (req, res) => {
     try {
         let l = await HomepageLayout.findOne();
-        if (!l) {
-            // Return empty sections instead of null
-            return res.json({ sections: [] });
-        }
+        if (!l) return res.json({ sections: [] });
         res.json(l);
-    } catch (e) { 
-        res.status(500).json({ sections: [] }); 
-    }
+    } catch (e) { res.status(500).json({ sections: [] }); }
 });
 
 router.put('/layout', protect, admin, async (req, res) => {
     try {
-        // We use upsert:true and empty filter {} to ensure we only ever have ONE layout document.
-        const l = await HomepageLayout.findOneAndUpdate(
-            {}, 
-            { $set: { sections: req.body.sections } }, 
-            { new: true, upsert: true }
-        );
+        const l = await HomepageLayout.findOneAndUpdate({}, { $set: { sections: req.body.sections } }, { new: true, upsert: true });
         res.json(l);
-    } catch (e) { 
-        console.error("Layout Save Error:", e);
-        res.status(500).json({ message: 'Failed to publish layout' }); 
-    }
+    } catch (e) { res.status(500).json({ message: 'Failed to publish layout' }); }
 });
 
-// --- 6. PRODUCT DESIGNER (PDP LAYOUT) ---
 router.get('/pdp-layout/:productId', async (req, res) => {
     try {
         const productId = req.params.productId;

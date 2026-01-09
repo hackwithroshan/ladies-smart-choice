@@ -23,7 +23,7 @@ router.post('/sync', protect, admin, async (req, res) => {
 
         const frontendUrl = process.env.FRONTEND_URL || 'https://ladiessmartchoice.com';
 
-        // Meta Batch Request Payload - Fixed with item_type
+        // Meta Batch Request Payload - Advanced Mapping
         const requests = products.map(p => ({
             method: 'UPDATE',
             retailer_id: p.sku || p._id.toString(),
@@ -38,11 +38,11 @@ router.post('/sync', protect, admin, async (req, res) => {
                 price: Math.round(p.price),
                 currency: 'INR',
                 availability: p.stock > 0 ? 'in stock' : 'out of stock',
-                item_type: 'PRODUCT_ITEM' // CRITICAL FIX: Required by Meta for Catalog Items
+                item_type: 'PRODUCT_ITEM' // CRITICAL FIX: Mandatory field for Meta Catalog
             }
         }));
 
-        // Push to Meta Graph API
+        // Push to Meta Graph API v19.0
         const response = await fetch(`https://graph.facebook.com/v19.0/${settings.metaCatalogId}/items_batch`, {
             method: 'POST',
             headers: {
