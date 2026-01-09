@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const SiteSettings = require('../models/SiteSettings');
 
 /**
- * SHA-256 Hashing for Meta User Data Privacy (GDPR/PII)
+ * SHA-256 Hashing (Required for Meta User Data Privacy)
  */
 function hash(data) {
     if (!data) return undefined;
@@ -12,13 +12,15 @@ function hash(data) {
 }
 
 /**
- * Meta Conversion API (CAPI) - Server-Side Tracking Bridge
+ * META CONVERSIONS API (CAPI) BRIDGE
+ * Synchronizes server-side events with Browser Pixel for 100% visibility
  */
 const sendCapiEvent = async ({ eventName, eventUrl, eventId, userData, customData = {} }) => {
     try {
         const settings = await SiteSettings.findOne();
         if (!settings || !settings.metaPixelId || !settings.metaAccessToken) return;
 
+        // User Data Transformation (Matched with Meta requirements)
         const user_data = {
             client_ip_address: userData.ip,
             client_user_agent: userData.userAgent,
@@ -27,6 +29,12 @@ const sendCapiEvent = async ({ eventName, eventUrl, eventId, userData, customDat
             em: userData.email ? [hash(userData.email)] : undefined,
             ph: userData.phone ? [hash(userData.phone)] : undefined,
         };
+
+        // Aligning content_ids with Catalog ID format (SKU or MongoDB ID)
+        // This is critical for Retargeting Ads (DABA/DPA)
+        const contentIds = customData.items 
+            ? customData.items.map(i => String(i.sku || i.productId || i.id || i._id))
+            : (customData.productId ? [String(customData.productId)] : []);
 
         const eventPayload = {
             data: [{
@@ -39,8 +47,7 @@ const sendCapiEvent = async ({ eventName, eventUrl, eventId, userData, customDat
                 custom_data: {
                     currency: customData.currency || 'INR',
                     value: Number(customData.value || 0),
-                    // IMPORTANT: content_ids must match retailer_id in Catalog Sync exactly
-                    content_ids: customData.content_ids || (customData.productId ? [String(customData.productId)] : []),
+                    content_ids: contentIds,
                     content_name: customData.content_name,
                     content_category: customData.category,
                     content_type: 'product',
@@ -53,7 +60,7 @@ const sendCapiEvent = async ({ eventName, eventUrl, eventId, userData, customDat
             eventPayload.test_event_code = customData.test_event_code;
         }
 
-        const response = await fetch(`https://graph.facebook.com/v19.0/${settings.metaPixelId}/events`, {
+        const response = await fetch(`https://graph.facebook.com/v21.0/${settings.metaPixelId}/events`, {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
@@ -64,11 +71,11 @@ const sendCapiEvent = async ({ eventName, eventUrl, eventId, userData, customDat
 
         const result = await response.json();
         if (!response.ok) {
-            console.error(`[Meta-CAPI-Error]`, result.error?.message);
+            console.error(`[Meta-CAPI-Error] ${eventName}:`, result.error?.message);
         }
 
     } catch (error) {
-        console.error(`[Meta-CAPI-Fatal]`, error.message);
+        console.error(`[Meta-CAPI-Fatal] Connection refused:`, error.message);
     }
 };
 
