@@ -61,7 +61,7 @@ const ThankYouPage: React.FC<{ user: any; logout: () => void; onAuthSuccess: (da
           <div className="inline-flex items-center justify-center w-20 h-20 bg-emerald-100 rounded-full mb-4">
              <svg className="w-10 h-10 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}><path d="M5 13l4 4L19 7" /></svg>
           </div>
-          <h1 className="text-4xl font-black italic uppercase tracking-tighter">Order Success!</h1>
+          <h1 className="text-4xl font-black italic uppercase tracking-tighter text-zinc-900">Order Success!</h1>
           <Card className="border-none shadow-2xl rounded-[2.5rem] overflow-hidden bg-white text-left">
             <CardHeader className="bg-zinc-900 text-white p-8 text-center">
               <CardTitle className="text-xl font-black uppercase italic">Dashboard Access</CardTitle>
@@ -73,7 +73,7 @@ const ThankYouPage: React.FC<{ user: any; logout: () => void; onAuthSuccess: (da
                   {isLoggingIn ? "Synchronizing your profile..." : "Order details sent to your email. You can use your phone number as a password to login later."}
                 </p>
               </div>
-              <Button onClick={() => navigate('/dashboard')} className="w-full h-14 bg-zinc-900 rounded-2xl font-black uppercase text-[11px] tracking-widest">
+              <Button onClick={() => navigate('/dashboard')} className="w-full h-14 bg-zinc-900 rounded-2xl font-black uppercase text-[11px] tracking-widest text-white">
                 Go to Dashboard <NavArrowIcon className="ml-2 w-4 h-4" />
               </Button>
             </CardContent>
