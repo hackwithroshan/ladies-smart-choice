@@ -1,271 +1,3 @@
-
-export type AdminView = 
-    | 'dashboard' 
-    | 'analytics' 
-    | 'products' 
-    | 'create-product'
-    | 'edit-product'
-    | 'pdp-builder' 
-    | 'inventory' 
-    | 'categories' 
-    | 'orders' 
-    | 'abandoned-checkouts' 
-    | 'create-order' 
-    | 'customers' 
-    | 'marketing' 
-    | 'discounts' 
-    | 'settings' 
-    | 'cms' 
-    | 'shop-videos' 
-    | 'slider' 
-    | 'media' 
-    | 'blogs' 
-    | 'pages' 
-    | 'contact-messages' 
-    | 'admin-profile' 
-    | 'shipping-integrations' 
-    | 'magic-setup'
-    | 'header-settings'
-    | 'footer'
-    | 'reviews'
-    | 'homepage-seo';
-
-export type HomeSectionType = 
-    | 'Hero' 
-    | 'Collections' 
-    | 'NewArrivals' 
-    | 'BestSellers' 
-    | 'Videos' 
-    | 'Testimonials' 
-    | 'Newsletter' 
-    | 'CustomCode';
-
-export interface User {
-    id: string;
-    name: string;
-    email: string;
-    role: 'Super Admin' | 'Manager' | 'Editor' | 'Staff' | 'User';
-    joinDate: string;
-    avatarUrl?: string;
-    isAdmin?: boolean;
-    segment?: string;
-    totalOrders?: number;
-    totalSpent?: number;
-}
-
-export interface Review {
-    id?: string;
-    userId?: string;
-    name: string;
-    rating: number;
-    comment: string;
-    date: string;
-}
-
-export interface ProductVariantOption {
-    value: string;
-    price: number;
-    stock: number;
-    image?: string;
-}
-
-export interface ProductVariant {
-    name: string;
-    options: ProductVariantOption[];
-}
-
-export interface Product {
-    id: string;
-    _id?: string;
-    name: string;
-    slug: string;
-    description: string;
-    shortDescription?: string;
-    brand?: string;
-    sku?: string;
-    barcode?: string;
-    category: string;
-    subCategory?: string;
-    tags?: string[];
-    status: 'Active' | 'Draft' | 'Archived';
-    price: number;
-    mrp?: number;
-    costPrice?: number;
-    taxRate?: number;
-    stock: number;
-    lowStockThreshold?: number;
-    allowBackorders?: boolean;
-    imageUrl: string;
-    galleryImages?: string[];
-    videoUrl?: string;
-    weight?: number;
-    dimensions?: {
-        length: number;
-        width: number;
-        height: number;
-    };
-    seoTitle?: string;
-    seoDescription?: string;
-    seoKeywords?: string[];
-    hasVariants?: boolean;
-    variants?: ProductVariant[];
-    reviews?: Review[];
-    createdAt?: string;
-    updatedAt?: string;
-}
-
-export interface Category {
-    id: string;
-    name: string;
-    subcategories: { id: string; name: string }[];
-}
-
-export interface CartItem extends Product {
-    quantity: number;
-}
-
-export interface Order {
-    id: string;
-    _id?: string;
-    orderNumber?: number;
-    customerName: string;
-    customerEmail: string;
-    customerPhone: string;
-    checkoutType?: string;
-    items: CartItem[];
-    total: number;
-    status: string;
-    date: string;
-    paymentId?: string;
-    shippingAddress: {
-        address: string;
-        city: string;
-        postalCode: string;
-        country: string;
-    };
-    trackingInfo?: {
-        carrier: string;
-        trackingNumber: string;
-        estimatedDelivery?: string;
-    };
-    trackingHistory?: {
-        date: string;
-        status: string;
-        location?: string;
-        message?: string;
-    }[];
-    notes?: string;
-}
-
-export interface HomeSection {
-    id: string;
-    type: HomeSectionType;
-    title?: string;
-    isActive: boolean;
-    settings?: {
-        limit?: number;
-        collectionId?: string;
-        isSlider?: boolean;
-        alignment?: 'left' | 'center' | 'right';
-        subtitle?: string;
-        backgroundColor?: string;
-        textColor?: string;
-        paddingTop?: number;
-        paddingBottom?: number;
-        paddingLeft?: number;
-        paddingRight?: number;
-        marginTop?: number;
-        marginBottom?: number;
-        desktopWidth?: string;
-        mobileWidth?: string;
-        textAlign?: string;
-        // Typography Settings
-        titleSize?: number;
-        titleWeight?: number;
-        titleItalic?: boolean;
-        subtitleSize?: number;
-        subtitleWeight?: number;
-        subtitleItalic?: boolean;
-        // Item specific settings used by ProductCard.tsx
-        itemBorderRadius?: number;
-        itemShadow?: boolean;
-        itemStyle?: 'Rectangle' | 'Square' | 'Circle' | 'ImageOnly';
-        wishlistPosition?: 'top-right' | 'bottom-right-overlay';
-        itemBgColor?: string;
-        itemPadding?: number;
-        itemBorder?: boolean;
-        itemBorderColor?: string;
-        itemHeight?: string;
-        showBadge?: boolean;
-        badgeText?: string;
-        showWishlist?: boolean;
-        itemTitleSize?: number;
-        itemTitleColor?: string;
-        itemPriceSize?: number;
-        itemPriceColor?: string;
-        showVariants?: boolean;
-    };
-    code?: string;
-    settingsJson?: string;
-}
-
-export interface HomepageLayout {
-    sections: HomeSection[];
-}
-
-export interface Slide {
-    id?: string;
-    _id?: string;
-    imageUrl: string;
-    mobileImageUrl?: string;
-    title?: string;
-    subtitle?: string;
-    buttonText?: string;
-    imageFit?: 'cover' | 'contain' | 'fill';
-    desktopHeight?: string;
-    mobileHeight?: string;
-    desktopWidth?: string;
-    mobileWidth?: string;
-}
-
-export interface Collection {
-    id: string;
-    _id?: string;
-    title: string;
-    slug: string;
-    description?: string;
-    imageUrl?: string;
-    products?: (string | Product)[];
-    isActive: boolean;
-    displayStyle?: 'Rectangle' | 'Square' | 'Circle' | 'ImageOnly';
-}
-
-export interface ShoppableVideo {
-    id: string;
-    _id?: string;
-    title: string;
-    videoUrl: string;
-    thumbnailUrl?: string;
-    price?: string;
-    productLink?: string;
-    targets?: {
-        type: 'product' | 'category' | 'custom';
-        id: string;
-        name: string;
-    }[];
-    sortOrder?: number;
-}
-
-export interface Testimonial {
-    id?: string;
-    _id?: string;
-    name: string;
-    comment: string;
-    rating: number;
-    imageUrl?: string;
-    role?: string;
-}
-
 export interface SiteSettings {
     storeName: string;
     logoUrl?: string;
@@ -274,6 +6,8 @@ export interface SiteSettings {
     accentColor: string;
     fontFamily: string;
     checkoutMode: 'standard' | 'magic';
+    showSmartPopup?: boolean;
+    popupDelay?: number;
     currency: string;
     taxRate: number;
     shippingCharge: number;
@@ -291,10 +25,241 @@ export interface SiteSettings {
     isMaintenanceMode?: boolean;
 }
 
-export interface HomePageSettings {
-    seoTitle: string;
-    seoDescription: string;
-    seoKeywords: string[];
+export type AdminView = 
+    | 'dashboard' 
+    | 'analytics' 
+    | 'products' 
+    | 'categories' 
+    | 'inventory' 
+    | 'orders' 
+    | 'customers' 
+    | 'discounts' 
+    | 'marketing' 
+    | 'settings' 
+    | 'header-settings' 
+    | 'footer' 
+    | 'media' 
+    | 'cms' 
+    | 'slider' 
+    | 'shop-videos' 
+    | 'reviews' 
+    | 'admin-profile' 
+    | 'create-product' 
+    | 'edit-product' 
+    | 'pdp-builder' 
+    | 'homepage-seo';
+
+export interface User {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    joinDate: string;
+    avatarUrl?: string;
+    totalSpent?: number;
+    totalOrders?: number;
+    segment?: string;
+}
+
+export interface Product {
+    id: string;
+    _id?: string;
+    name: string;
+    slug: string;
+    description: string;
+    shortDescription?: string;
+    category: string;
+    price: number;
+    mrp?: number;
+    stock: number;
+    imageUrl: string;
+    galleryImages?: string[];
+    sku?: string;
+    barcode?: string;
+    status?: 'Active' | 'Draft' | 'Archived';
+    hasVariants?: boolean;
+    variants?: ProductVariant[];
+    reviews?: Review[];
+    lowStockThreshold?: number;
+    dimensions?: { length: number; width: number; height: number };
+    brand?: string;
+}
+
+export interface ProductVariant {
+    name: string;
+    options: {
+        value: string;
+        price: number;
+        stock: number;
+        image?: string;
+    }[];
+}
+
+export interface Review {
+    id: string;
+    _id?: string;
+    name: string;
+    rating: number;
+    comment: string;
+    date: string;
+}
+
+export interface CartItem extends Product {
+    quantity: number;
+}
+
+export interface Order {
+    id: string;
+    orderNumber?: number;
+    date: string;
+    status: string;
+    customerName: string;
+    customerEmail: string;
+    customerPhone?: string;
+    total: number;
+    items: {
+        name: string;
+        quantity: number;
+        price: number;
+        imageUrl?: string;
+    }[];
+    shippingAddress: {
+        address: string;
+        city: string;
+        postalCode: string;
+        country: string;
+    };
+    checkoutType?: 'standard' | 'magic';
+    // Fix: Added missing properties used in admin order view
+    trackingInfo?: {
+        carrier?: string;
+        trackingNumber?: string;
+        estimatedDelivery?: string;
+    };
+    notes?: string;
+}
+
+export interface HomeSection {
+    id: string;
+    type: 'Hero' | 'Collections' | 'NewArrivals' | 'BestSellers' | 'Videos' | 'Newsletter' | 'CustomCode';
+    isActive: boolean;
+    title?: string;
+    code?: string;
+    settingsJson?: string;
+    settings?: {
+        subtitle?: string;
+        limit?: number;
+        isSlider?: boolean;
+        paddingTop?: number;
+        paddingBottom?: number;
+        paddingLeft?: number;
+        paddingRight?: number;
+        marginTop?: number;
+        marginBottom?: number;
+        backgroundColor?: string;
+        textColor?: string;
+        titleSize?: number;
+        titleWeight?: number;
+        titleItalic?: boolean;
+        subtitleSize?: number;
+        subtitleWeight?: number;
+        subtitleItalic?: boolean;
+        alignment?: 'left' | 'center' | 'right';
+        itemStyle?: 'Default' | 'ImageOnly';
+        itemBgColor?: string;
+        itemBorder?: boolean;
+        itemBorderColor?: string;
+        itemBorderRadius?: number;
+        itemPadding?: number;
+        itemShadow?: boolean;
+        itemHeight?: string;
+        showBadge?: boolean;
+        badgeText?: string;
+        showWishlist?: boolean;
+        wishlistPosition?: string;
+        itemTitleSize?: number;
+        itemTitleColor?: string;
+        itemPriceSize?: number;
+        itemPriceColor?: string;
+        showVariants?: boolean;
+        desktopWidth?: string;
+    };
+}
+
+export interface HomepageLayout {
+    sections: HomeSection[];
+}
+
+export interface Category {
+    id: string;
+    name: string;
+    subcategories: { id: string; name: string }[];
+}
+
+export interface Slide {
+    _id?: string;
+    imageUrl: string;
+    mobileImageUrl?: string;
+    title: string;
+    subtitle: string;
+    buttonText?: string;
+    imageFit?: 'cover' | 'contain' | 'fill';
+    desktopHeight?: string;
+    mobileHeight?: string;
+    desktopWidth?: string;
+    mobileWidth?: string;
+}
+
+export interface Collection {
+    id: string;
+    _id?: string;
+    title: string;
+    slug: string;
+    imageUrl?: string;
+    products?: Product[];
+    isActive?: boolean;
+    displayStyle?: 'Rectangle' | 'Square' | 'Circle' | 'ImageOnly';
+}
+
+export interface ShoppableVideo {
+    id: string;
+    _id?: string;
+    title: string;
+    videoUrl: string;
+    thumbnailUrl?: string;
+    price?: string;
+    productLink?: string;
+    targets?: { type: string; id: string; name: string }[];
+    sortOrder?: number;
+}
+
+export interface Testimonial {
+    id: string;
+    name: string;
+    comment: string;
+    rating: number;
+}
+
+export interface HeaderSettings {
+    logoText: string;
+    logoUrl?: string;
+    brandColor?: string;
+    phoneNumber?: string;
+    announcementMessage?: string;
+    announcementMessages?: string[];
+    announcementBgColor?: string;
+    announcementTextColor?: string;
+    topBarLinks: HeaderLink[];
+    mainNavLinks: HeaderLink[];
+}
+
+export interface HeaderLink {
+    text: string;
+    url: string;
+    isSpecial?: boolean;
+    isMegaMenu?: boolean;
+    subLinks?: SubLink[];
+    megaColumns?: MegaMenuColumn[];
 }
 
 export interface SubLink {
@@ -307,31 +272,23 @@ export interface MegaMenuColumn {
     links: SubLink[];
 }
 
-export interface HeaderLink {
-    text: string;
-    url: string;
-    isSpecial?: boolean;
-    isMegaMenu?: boolean;
-    subLinks?: SubLink[];
-    megaColumns?: MegaMenuColumn[];
-}
-
-export interface HeaderSettings {
-    logoText: string;
-    logoUrl: string;
-    brandColor: string;
-    phoneNumber?: string;
-    announcementMessage?: string;
-    announcementMessages?: string[];
-    announcementBgColor?: string;
-    announcementTextColor?: string;
-    topBarLinks: HeaderLink[];
-    mainNavLinks: HeaderLink[];
-}
-
-export interface FooterLink {
-    text: string;
-    url: string;
+export interface FooterSettings {
+    logoUrl?: string;
+    brandDescription?: string;
+    copyrightText?: string;
+    socialLinks: SocialLink[];
+    columns: FooterColumn[];
+    backgroundColor?: string;
+    backgroundImage?: string;
+    overlayColor?: string;
+    overlayOpacity?: number;
+    textColor?: string;
+    headingColor?: string;
+    linkColor?: string;
+    showNewsletter?: boolean;
+    newsletterTitle?: string;
+    newsletterSubtitle?: string;
+    newsletterPlacement?: 'Top' | 'InColumn';
 }
 
 export interface FooterColumn {
@@ -339,28 +296,73 @@ export interface FooterColumn {
     links: FooterLink[];
 }
 
+export interface FooterLink {
+    text: string;
+    url: string;
+}
+
 export interface SocialLink {
     platform: string;
     url: string;
 }
 
-export interface FooterSettings {
-    logoUrl?: string;
-    brandDescription: string;
-    copyrightText: string;
-    socialLinks: SocialLink[];
-    columns: FooterColumn[];
-    backgroundColor: string;
-    backgroundImage?: string;
-    overlayColor?: string;
-    overlayOpacity?: number;
-    textColor: string;
-    headingColor: string;
-    linkColor: string;
-    showNewsletter: boolean;
-    newsletterTitle?: string;
-    newsletterSubtitle?: string;
-    newsletterPlacement: 'Top' | 'InColumn';
+export interface BlogPost {
+    id: string;
+    title: string;
+    slug: string;
+    content: string;
+    excerpt?: string;
+    imageUrl?: string;
+    createdAt: string;
+    status: 'Published' | 'Draft';
+}
+
+export interface ContentPage {
+    id: string;
+    title: string;
+    slug: string;
+    content: string;
+    updatedAt: string;
+    status: 'Published' | 'Hidden';
+}
+
+export interface MediaItem {
+    id: string;
+    url: string;
+    type: 'image' | 'video';
+    public_id?: string;
+    format?: string;
+}
+
+export interface Campaign {
+    id: string;
+    name: string;
+    type: string;
+    status: string;
+    openRate?: number;
+    clickRate?: number;
+}
+
+export interface Discount {
+    id: string;
+    code: string;
+    type: 'Percentage' | 'Flat';
+    value: number;
+    scope: 'Cart' | 'Product' | 'Category';
+    scopeIds?: string[];
+    usageCount: number;
+    maxUsage?: number;
+    isActive: boolean;
+    endDate?: string;
+    startDate?: string;
+    minOrderValue?: number;
+    usageLimitPerUser?: number;
+}
+
+export interface SyncLog {
+    service: string;
+    timestamp: string;
+    status: string;
 }
 
 export type PDPSectionType = 'Hero' | 'A+Content' | 'FAQ' | 'Reviews' | 'RelatedProducts' | 'CustomCode';
@@ -369,48 +371,9 @@ export interface PDPSection {
     id: string;
     type: PDPSectionType;
     isActive: boolean;
-    content?: {
-        shippingPolicy?: string;
-        blocks?: { title: string; text: string; img: string }[];
-        faqs?: { q: string; a: string }[];
-        customHtml?: string;
-    };
-    settings?: any;
-    style?: {
-        paddingTop?: number;
-        paddingBottom?: number;
-        paddingLeft?: number;
-        paddingRight?: number;
-        marginTop?: number;
-        marginBottom?: number;
-        marginLeft?: number;
-        marginRight?: number;
-        minHeight?: string;
-        backgroundColor?: string;
-        textColor?: string;
-        titleFontSize?: number;
-        titleFontWeight?: number;
-        titleFontStyle?: 'normal' | 'italic';
-        priceFontSize?: number;
-        priceFontWeight?: number;
-        priceFontStyle?: 'normal' | 'italic';
-        shortDescFontSize?: number;
-        shortDescFontWeight?: number;
-        shortDescFontStyle?: 'normal' | 'italic';
-        imageWidth?: string;
-        imageHeight?: string;
-        imageAlign?: string;
-        containerMaxWidth?: string;
-        mobileMaxWidth?: string;
-        imageBorderRadius?: number;
-        imageBorderWidth?: number;
-        imageBorderColor?: string;
-        imageShadow?: string;
-        radius?: number;
-        textAlign?: string;
-        customClasses?: string;
-    };
+    content?: any;
     code?: string;
+    style?: any;
     settingsJson?: string;
 }
 
@@ -421,83 +384,17 @@ export interface ProductPageLayout {
     stickyAtcEnabled?: boolean;
 }
 
-export interface BlogPost {
-    id: string;
-    title: string;
-    slug: string;
-    content: string;
-    excerpt?: string;
-    imageUrl?: string;
-    author?: string;
-    status: 'Published' | 'Draft';
-    createdAt: string;
-    updatedAt: string;
-}
-
-export interface ContentPage {
-    id: string;
-    title: string;
-    slug: string;
-    content: string;
-    status: 'Published' | 'Hidden';
-    createdAt: string;
-    updatedAt: string;
-}
-
-export interface MediaItem {
-    id: string;
-    url: string;
-    public_id: string;
-    format?: string;
-    type: 'image' | 'video';
-}
-
-export interface Campaign {
-    id: string;
-    name: string;
-    type: 'Email' | 'SMS' | 'WhatsApp' | 'Push';
-    status: 'Draft' | 'Scheduled' | 'Sent';
-    sentCount: number;
-    openRate: number;
-    clickRate: number;
-}
-
-export interface Discount {
-    id: string;
-    _id?: string;
-    code: string;
-    type: 'Percentage' | 'Flat' | 'Free Shipping';
-    value: number;
-    usageCount: number;
-    maxUsage: number;
-    expiry: string;
-    isActive?: boolean;
-    startDate?: string | Date;
-    endDate?: string | Date;
-    scope?: 'Cart' | 'Product' | 'Category';
-    scopeIds?: string[];
-    minOrderValue?: number;
-    usageLimitPerUser?: number;
+export interface HomePageSettings {
+    seoTitle: string;
+    seoDescription?: string;
+    seoKeywords?: string[];
 }
 
 export interface ShippingProvider {
     slug: string;
     name: string;
-    logoUrl?: string;
     isEnabled: boolean;
+    credentials?: any;
+    settings?: any;
     isTestMode?: boolean;
-    credentials: Record<string, string>;
-    settings?: {
-        autoShip?: boolean;
-        defaultPickupLocation?: string;
-    };
-}
-
-export interface SyncLog {
-    id: string;
-    service: string;
-    status: 'success' | 'failed' | 'in_progress';
-    processedCount: number;
-    error?: string;
-    timestamp: string;
 }

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Product, ProductVariant, Category } from '../../types';
 import { CLOUDINARY } from '../../constants';
@@ -22,24 +21,15 @@ const initialFormData: Omit<Product, 'id'> = {
   sku: '',
   barcode: '',
   category: '',
-  subCategory: '',
-  tags: [],
+  // Fix: Removed 'tags' property as it is not defined in the Product interface in types.ts
   status: 'Active',
   price: 0,
   mrp: 0,
-  costPrice: 0,
-  taxRate: 12,
   stock: 0,
   lowStockThreshold: 5,
-  allowBackorders: false,
   imageUrl: '',
   galleryImages: [],
-  videoUrl: '',
-  weight: 0,
   dimensions: { length: 0, width: 0, height: 0 },
-  seoTitle: '',
-  seoDescription: '',
-  seoKeywords: [],
   hasVariants: false,
   variants: [],
 };

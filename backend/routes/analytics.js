@@ -43,12 +43,11 @@ router.post('/track', async (req, res) => {
 // @desc    Get Comprehensive Summary
 router.get('/summary', protect, admin, async (req, res) => {
     try {
-        const today = new Date();
-        today.setHours(0,0,0,0);
-
-        // 1. KPI Aggregation
-        const orders = await Order.find({ status: { $ne: 'Cancelled' } });
-        const events = await AnalyticsEvent.find({});
+        // Fetch kpis with robust queries
+        const [orders, events] = await Promise.all([
+            Order.find({ status: { $ne: 'Cancelled' } }).lean(),
+            AnalyticsEvent.find({}).limit(5000).lean() // Limit for performance
+        ]);
 
         const totalRevenue = orders.reduce((acc, curr) => acc + curr.total, 0);
         const totalOrders = orders.length;
@@ -82,11 +81,12 @@ router.get('/summary', protect, admin, async (req, res) => {
                 { $group: { _id: "$path", views: { $sum: 1 } } },
                 { $sort: { views: -1 } },
                 { $limit: 5 }
-            ]).then(res => res.map(r => ({ path: r._id, views: r.views })))
+            ]).then(aggRes => aggRes.map(r => ({ path: r._id, views: r.views })))
         };
 
         res.json(summary);
     } catch (err) {
+        console.error("Summary error:", err);
         res.status(500).json({ message: err.message });
     }
 });

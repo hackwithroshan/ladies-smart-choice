@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { SiteSettings, SyncLog } from '../../types';
 import { getApiUrl } from '../../utils/apiHelper';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { Megaphone, Activity, Package, ArrowUpDown, Wand2, Store, SearchIcon } from '../Icons';
+import { Megaphone, Activity, Store, SearchIcon, IndianRupee, ShoppingCart, Zap, Eye } from '../Icons';
 import { cn } from '../../utils/utils';
 
 const TrackingSettings: React.FC<{ token: string | null }> = ({ token }) => {
@@ -34,6 +33,10 @@ const TrackingSettings: React.FC<{ token: string | null }> = ({ token }) => {
         fetchMasterData();
     }, [token]);
 
+    const handleToggle = (key: keyof SiteSettings) => {
+        setSettings(prev => ({ ...prev, [key]: !prev[key] }));
+    };
+
     const handleSave = async () => {
         setSaving(true);
         try {
@@ -46,11 +49,8 @@ const TrackingSettings: React.FC<{ token: string | null }> = ({ token }) => {
                 body: JSON.stringify(settings)
             });
             if(res.ok) {
-                alert('Success: Meta credentials saved to database.');
+                alert('Success: Tracking configuration updated.');
                 await fetchMasterData();
-            } else {
-                const err = await res.json();
-                alert(`Save Failed: ${err.message}`);
             }
         } catch (err) { alert('Network connection failed.'); }
         finally { setSaving(false); }
@@ -58,7 +58,7 @@ const TrackingSettings: React.FC<{ token: string | null }> = ({ token }) => {
 
     const handleSyncNow = async () => {
         if (!settings.metaAccessToken || !settings.metaCatalogId) {
-            alert("Configuration Error: Please save your Catalog ID and Access Token before syncing.");
+            alert("Configuration Error: Please save your Catalog ID and Access Token first.");
             return;
         }
         setSyncing(true);
@@ -68,22 +68,15 @@ const TrackingSettings: React.FC<{ token: string | null }> = ({ token }) => {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
-            
-            if (res.ok && data.success) {
-                alert(`SYNC COMPLETE: ${data.message}`);
-            } else {
-                alert(`META ERROR: ${data.message || 'Verification failed. Check your ID and Permissions.'}`);
-            }
+            if (res.ok && data.success) alert(`SYNC COMPLETE: ${data.message}`);
+            else alert(`META ERROR: ${data.message}`);
             await fetchMasterData();
-        } catch (e) {
-            alert("Request failed. Is the server running?");
-        } finally {
-            setSyncing(false);
-        }
+        } catch (e) { alert("Request failed."); }
+        finally { setSyncing(false); }
     };
 
     const runServerTest = async () => {
-        if (!testCode) return alert("Please enter the test code from Meta Events Manager.");
+        if (!testCode) return alert("Enter test code from Events Manager.");
         setTestLoading(true);
         setTestResult(null);
         try {
@@ -97,130 +90,131 @@ const TrackingSettings: React.FC<{ token: string | null }> = ({ token }) => {
                     data: { test_event_code: testCode, note: 'Manual Admin Trigger' }
                 })
             });
-            if (res.ok) setTestResult({ status: 'success', message: 'Signal successfully dispatched to Meta. Check your Test Events tab.' });
-            else setTestResult({ status: 'error', message: 'Failed to send signal. Verify Pixel ID and Token.' });
-        } catch (e) { setTestResult({ status: 'error', message: 'Network failure during test signal.' }); }
+            if (res.ok) setTestResult({ status: 'success', message: 'Signal successfully dispatched to Meta.' });
+            else setTestResult({ status: 'error', message: 'Failed to send signal.' });
+        } catch (e) { setTestResult({ status: 'error', message: 'Network failure.' }); }
         finally { setTestLoading(false); }
     };
 
-    if (loading) return <div className="p-20 text-center animate-pulse font-black uppercase text-zinc-400 tracking-widest italic">Initializing Bridge...</div>;
+    if (loading) return <div className="p-20 text-center animate-pulse font-black uppercase text-zinc-400">Initializing...</div>;
+
+    const EventToggle = ({ label, icon: Icon, settingKey, description }: any) => (
+        <div className="flex items-center justify-between p-4 bg-zinc-50 rounded-2xl border border-zinc-100 group hover:border-zinc-200 transition-all">
+            <div className="flex items-center gap-4">
+                <div className={cn("p-2 rounded-lg transition-colors", settings[settingKey] ? "bg-white text-zinc-900 shadow-sm" : "bg-zinc-200/50 text-zinc-400")}>
+                    <Icon className="w-4 h-4" />
+                </div>
+                <div>
+                    <p className="text-[11px] font-black uppercase text-zinc-900 tracking-tight">{label}</p>
+                    <p className="text-[9px] font-medium text-zinc-400 uppercase tracking-widest">{description}</p>
+                </div>
+            </div>
+            <button
+                onClick={() => handleToggle(settingKey)}
+                className={cn(
+                    "relative inline-flex h-5 w-9 items-center rounded-full transition-all",
+                    settings[settingKey] ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]" : "bg-zinc-300"
+                )}
+            >
+                <span className={cn("inline-block h-3 w-3 transform rounded-full bg-white transition-transform", settings[settingKey] ? "translate-x-5" : "translate-x-1")} />
+            </button>
+        </div>
+    );
 
     return (
         <div className="space-y-8 animate-fade-in pb-20">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-zinc-100 pb-6">
-                <div>
-                    <h3 className="text-2xl font-black text-zinc-900 italic uppercase tracking-tighter leading-none">Meta Commerce Integration</h3>
-                    <p className="text-xs text-zinc-500 font-medium mt-2 tracking-wide uppercase">Connect with Facebook & Instagram Catalog + Pixel</p>
+                <div className="flex flex-col">
+                    <h3 className="text-2xl font-black text-zinc-900 italic uppercase tracking-tighter leading-none">Meta Performance Hub</h3>
+                    <p className="text-[10px] text-zinc-500 font-bold mt-2 tracking-[0.2em] uppercase">Browser Pixel + Server-Side CAPI + Catalog Sync</p>
                 </div>
                 <div className="flex gap-3">
-                    <Button onClick={handleSave} disabled={saving} variant="outline" className="font-black text-[10px] uppercase rounded-xl px-6 h-11 border-zinc-300">
-                        {saving ? 'Saving...' : 'Save Configuration'}
+                    <Button onClick={handleSave} disabled={saving} variant="outline" className="font-black text-[10px] uppercase rounded-xl h-11 px-6 border-zinc-200">
+                        {saving ? 'Syncing Config...' : 'Update Settings'}
                     </Button>
-                    <Button onClick={handleSyncNow} disabled={syncing} className="bg-[#16423C] text-white font-black text-[10px] uppercase rounded-xl shadow-xl px-8 h-11 border-none hover:brightness-110 active:scale-95 transition-all">
-                        {syncing ? 'Pushing Data...' : 'Sync Products Now'}
+                    <Button onClick={handleSyncNow} disabled={syncing} className="bg-[#16423C] text-white font-black text-[10px] uppercase rounded-xl shadow-xl px-8 h-11">
+                        {syncing ? 'Pushing Data...' : 'Sync Catalog Now'}
                     </Button>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="bg-white p-8 rounded-[2.5rem] border border-zinc-100 shadow-sm space-y-8">
-                    <div className="flex items-center gap-4 border-b border-zinc-50 pb-4">
-                        <div className="p-3 bg-emerald-50 text-emerald-700 rounded-2xl"><Megaphone className="w-5 h-5" /></div>
-                        <h4 className="font-black uppercase italic text-sm tracking-tight text-zinc-800">Connection Keys</h4>
-                    </div>
-                    
-                    <div className="space-y-6">
-                        <div className="group">
-                            <label className="text-[9px] font-black uppercase text-zinc-400 tracking-widest mb-1.5 block">Meta Pixel ID</label>
-                            <input type="text" value={settings.metaPixelId || ''} onChange={e => setSettings({...settings, metaPixelId: e.target.value})} className="w-full border border-zinc-200 rounded-xl p-3.5 text-sm font-bold focus:border-zinc-900 outline-none transition-all" placeholder="Enter Pixel ID" />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* SETTINGS COLUMN */}
+                <div className="lg:col-span-2 space-y-8">
+                    <div className="bg-white p-8 rounded-[2.5rem] border border-zinc-100 shadow-sm space-y-8">
+                        <div className="flex items-center gap-4 border-b border-zinc-50 pb-4">
+                            <div className="p-3 bg-emerald-50 text-emerald-700 rounded-2xl"><Megaphone className="w-5 h-5" /></div>
+                            <h4 className="font-black uppercase italic text-sm tracking-tight text-zinc-800">Connection Engine</h4>
                         </div>
                         
-                        <div className="group">
-                            <label className="text-[9px] font-black uppercase text-zinc-400 tracking-widest mb-1.5 block">Meta Catalog ID</label>
-                            <input type="text" value={settings.metaCatalogId || ''} onChange={e => setSettings({...settings, metaCatalogId: e.target.value})} className="w-full border border-zinc-200 rounded-xl p-3.5 text-sm font-black font-mono focus:border-zinc-900 outline-none transition-all bg-zinc-50/50" placeholder="Catalog ID from Commerce Manager" />
-                            <p className="text-[9px] text-zinc-400 mt-2 italic font-medium leading-relaxed uppercase tracking-tight">Required for product syncing. Ensure this matches your Commerce Manager ID.</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-1.5">
+                                <label className="text-[9px] font-black uppercase text-zinc-400 tracking-widest ml-1">Meta Pixel ID</label>
+                                <input type="text" value={settings.metaPixelId || ''} onChange={e => setSettings({...settings, metaPixelId: e.target.value})} className="w-full border border-zinc-200 rounded-xl p-3.5 text-sm font-bold focus:border-zinc-900 outline-none" placeholder="Pixel ID" />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[9px] font-black uppercase text-zinc-400 tracking-widest ml-1">Catalog ID</label>
+                                <input type="text" value={settings.metaCatalogId || ''} onChange={e => setSettings({...settings, metaCatalogId: e.target.value})} className="w-full border border-zinc-200 rounded-xl p-3.5 text-sm font-black font-mono focus:border-zinc-900 outline-none bg-zinc-50/50" placeholder="Catalog ID" />
+                            </div>
+                            <div className="md:col-span-2 space-y-1.5">
+                                <label className="text-[9px] font-black uppercase text-zinc-400 tracking-widest ml-1">Conversion API Access Token</label>
+                                <textarea value={settings.metaAccessToken || ''} onChange={e => setSettings({...settings, metaAccessToken: e.target.value})} className="w-full border border-zinc-200 rounded-xl p-3.5 text-xs font-mono focus:border-zinc-900 outline-none bg-zinc-50/50" rows={3} placeholder="EAAB..." />
+                            </div>
                         </div>
+                    </div>
 
-                        <div className="group">
-                            <label className="text-[9px] font-black uppercase text-zinc-400 tracking-widest mb-1.5 block">Permanent Access Token</label>
-                            <textarea value={settings.metaAccessToken || ''} onChange={e => setSettings({...settings, metaAccessToken: e.target.value})} className="w-full border border-zinc-200 rounded-xl p-3.5 text-xs font-mono focus:border-zinc-900 outline-none transition-all bg-zinc-50/50" rows={4} placeholder="EAAB..." />
-                            <p className="text-[9px] text-zinc-400 mt-2 italic font-medium leading-relaxed uppercase tracking-tight">Found in Meta Business Suite &gt; Data Sources &gt; Pixel Settings.</p>
+                    <div className="bg-white p-8 rounded-[2.5rem] border border-zinc-100 shadow-sm space-y-6">
+                        <div className="flex items-center gap-4 border-b border-zinc-50 pb-4">
+                            <div className="p-3 bg-zinc-900 text-white rounded-2xl"><Zap className="w-5 h-5" /></div>
+                            <h4 className="font-black uppercase italic text-sm tracking-tight text-zinc-800">Managed Active Signals</h4>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <EventToggle label="PageView" icon={Eye} settingKey="trackPageView" description="Universal Traffic" />
+                            <EventToggle label="ViewContent" icon={Zap} settingKey="trackViewContent" description="PDP Impressions" />
+                            <EventToggle label="AddToCart" icon={ShoppingCart} settingKey="trackAddToCart" description="Intent Signals" />
+                            <EventToggle label="InitiateCheckout" icon={ IndianRupee } settingKey="trackInitiateCheckout" description="Payment Starts" />
+                            {/* Fixed typo: changed indianRupee to IndianRupee */}
+                            <EventToggle label="Purchase" icon={IndianRupee} settingKey="trackPurchase" description="Successful Revenue" />
                         </div>
                     </div>
                 </div>
 
-                <div className="space-y-6">
-                    <div className="bg-zinc-900 p-8 rounded-[2.5rem] border border-zinc-800 shadow-2xl space-y-6 text-white overflow-hidden relative">
-                        <div className="flex items-center gap-4 border-b border-white/10 pb-4 relative z-10">
+                {/* DEBUGGER COLUMN */}
+                <div className="space-y-8">
+                    <div className="bg-zinc-900 p-8 rounded-[2.5rem] border border-zinc-800 shadow-2xl space-y-6 text-white">
+                        <div className="flex items-center gap-4 border-b border-white/10 pb-4">
                             <div className="p-3 bg-white text-zinc-900 rounded-2xl"><Activity className="w-5 h-5" /></div>
                             <h4 className="font-black uppercase italic text-sm tracking-tight">Signal Debugger</h4>
                         </div>
-                        
-                        <div className="space-y-6 relative z-10">
-                            <p className="text-[10px] text-zinc-400 font-bold uppercase leading-relaxed tracking-wide">
-                                Enter your Meta "Test Event Code" to verify the server-to-server CAPI connection.
-                            </p>
-                            <div className="flex gap-2">
-                                <input type="text" value={testCode} onChange={e => setTestCode(e.target.value.toUpperCase())} className="flex-1 border border-white/10 rounded-xl p-4 text-sm font-black bg-white/5 text-white outline-none tracking-widest uppercase" placeholder="e.g. TEST12345" />
-                                <Button onClick={runServerTest} disabled={testLoading || !testCode} className="bg-white text-zinc-900 font-black text-[10px] uppercase rounded-xl h-auto px-6 border-none hover:bg-zinc-200">
-                                    {testLoading ? 'Working...' : 'Test Signal'}
-                                </Button>
-                            </div>
+                        <div className="space-y-6">
+                            <input type="text" value={testCode} onChange={e => setTestCode(e.target.value.toUpperCase())} className="w-full border border-white/10 rounded-xl p-4 text-sm font-black bg-white/5 text-white outline-none tracking-widest uppercase" placeholder="TEST EVENT CODE" />
+                            <Button onClick={runServerTest} disabled={testLoading || !testCode} className="w-full bg-white text-zinc-900 font-black text-[10px] uppercase rounded-xl h-12 shadow-xl border-none">
+                                {testLoading ? 'Dispatched...' : 'Send Test Signal'}
+                            </Button>
                             {testResult && (
-                                <div className={cn("p-4 rounded-2xl border text-[9px] font-black uppercase tracking-widest animate-in fade-in", testResult.status === 'success' ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-rose-500/10 border-rose-500/20 text-rose-400")}>
+                                <div className={cn("p-4 rounded-2xl border text-[9px] font-black uppercase tracking-widest", testResult.status === 'success' ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-rose-500/10 border-rose-500/20 text-rose-400")}>
                                     {testResult.message}
                                 </div>
                             )}
                         </div>
                     </div>
 
-                    <div className="bg-blue-50 p-6 rounded-3xl border border-blue-100 flex gap-4">
-                        <div className="p-2 bg-blue-100 rounded-xl h-fit text-blue-600 shrink-0"><Store className="w-4 h-4" /></div>
-                        <div>
-                            <h5 className="text-[11px] font-black uppercase text-blue-900 italic mb-1 tracking-tight">Configuration Guide</h5>
-                            <p className="text-[9px] text-blue-800 leading-relaxed font-medium uppercase opacity-70">
-                                Your Access Token must belong to a "System User" with Admin permissions for the Catalog. If sync fails with "Object not found", check Catalog permissions in Business Suite.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div className="bg-white rounded-[2.5rem] border border-zinc-100 shadow-sm overflow-hidden">
-                <div className="px-8 py-6 border-b border-zinc-50 bg-zinc-50/30 flex justify-between items-center">
-                    <div className="flex items-center gap-3">
-                        <Activity className="w-4 h-4 text-zinc-400" />
-                        <h4 className="font-black uppercase italic text-xs text-zinc-900 tracking-widest">Catalog Sync Pulse</h4>
-                    </div>
-                    <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Last 5 Pushes</span>
-                </div>
-                <div className="divide-y divide-zinc-50">
-                    {logs.length > 0 ? logs.map((log, i) => (
-                        <div key={i} className="px-8 py-5 flex items-center justify-between group hover:bg-zinc-50/50 transition-colors">
-                            <div className="flex items-center gap-5">
-                                <div className={cn("w-3 h-3 rounded-full border-2", log.status === 'success' ? 'bg-emerald-500 border-emerald-100' : 'bg-rose-500 border-rose-100')} />
-                                <div>
-                                    <p className="text-xs font-black uppercase text-zinc-900 italic">Push Request: {log.processedCount} Assets</p>
-                                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">Status: {log.status} • {new Date(log.timestamp).toLocaleString()}</p>
-                                </div>
-                            </div>
-                            <div className="text-right">
-                                {log.status === 'success' ? (
-                                    <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-100 text-[9px] font-black uppercase px-2 py-0.5">Live Sync OK</Badge>
-                                ) : (
-                                    <div className="flex flex-col items-end gap-1">
-                                        <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-100 text-[9px] font-black uppercase px-2 py-0.5">Rejected</Badge>
-                                        <p className="text-[9px] font-black text-rose-500 uppercase italic max-w-[250px] truncate">{log.error}</p>
+                    <div className="bg-zinc-50 p-6 rounded-[2rem] border border-zinc-100">
+                        <h5 className="text-[10px] font-black uppercase text-zinc-900 mb-4 tracking-widest">Recent Activity Logs</h5>
+                        <div className="space-y-4">
+                            {logs.slice(0, 3).map((log, i) => (
+                                <div key={i} className="flex gap-3 items-start border-l-2 border-zinc-200 pl-4 py-1">
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase text-zinc-800">{log.service}</p>
+                                        <p className="text-[9px] font-bold text-zinc-400 mt-0.5">{new Date(log.timestamp).toLocaleTimeString()}</p>
                                     </div>
-                                )}
-                            </div>
+                                    <Badge variant="outline" className={cn("ml-auto text-[8px] font-black", log.status === 'success' ? "text-emerald-600 bg-emerald-50" : "text-rose-600 bg-rose-50")}>{log.status}</Badge>
+                                </div>
+                            ))}
+                            {logs.length === 0 && <p className="text-[9px] font-bold text-zinc-400 italic">No activity recorded.</p>}
                         </div>
-                    )) : (
-                        <div className="p-20 text-center flex flex-col items-center gap-3">
-                            <SearchIcon className="w-8 h-8 text-zinc-200" />
-                            <p className="text-[10px] font-black uppercase text-zinc-300 italic tracking-widest">No sync transactions recorded in history.</p>
-                        </div>
-                    )}
+                    </div>
                 </div>
             </div>
         </div>

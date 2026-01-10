@@ -270,8 +270,10 @@ const Discounts: React.FC<{ token: string | null }> = ({ token }) => {
                                         <label className="text-[9px] font-black text-zinc-400 uppercase block mb-1">Start Activation</label>
                                         <Input 
                                             type="datetime-local" 
+                                            // Corrected: Cast to string for Input value
                                             value={selectedDiscount.startDate ? new Date(selectedDiscount.startDate).toISOString().slice(0, 16) : ''}
-                                            onChange={e => setSelectedDiscount({...selectedDiscount, startDate: new Date(e.target.value)})}
+                                            // Corrected: Cast to string for property assignment
+                                            onChange={e => setSelectedDiscount({...selectedDiscount, startDate: new Date(e.target.value).toISOString()})}
                                             className="h-8 text-[10px] font-bold uppercase border-none bg-transparent p-0"
                                         />
                                     </div>
@@ -279,8 +281,10 @@ const Discounts: React.FC<{ token: string | null }> = ({ token }) => {
                                         <label className="text-[9px] font-black text-zinc-400 uppercase block mb-1">End Sunset</label>
                                         <Input 
                                             type="datetime-local" 
+                                            // Corrected: Cast to string for Input value
                                             value={selectedDiscount.endDate ? new Date(selectedDiscount.endDate).toISOString().slice(0, 16) : ''}
-                                            onChange={e => setSelectedDiscount({...selectedDiscount, endDate: new Date(e.target.value)})}
+                                            // Corrected: Cast to string for property assignment
+                                            onChange={e => setSelectedDiscount({...selectedDiscount, endDate: new Date(e.target.value).toISOString()})}
                                             className="h-8 text-[10px] font-bold uppercase border-none bg-transparent p-0"
                                         />
                                     </div>

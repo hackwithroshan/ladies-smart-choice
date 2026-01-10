@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 // Define common props for all icons to satisfy TypeScript
@@ -240,4 +239,24 @@ export const Zap = (props: IconProps) => (
 // Fixed: Added missing Plus icon
 export const Plus = (props: IconProps) => (
   <BaseIcon {...props}><path d="M12 5v14M5 12h14" /></BaseIcon>
+);
+
+// Fix: Added missing Download icon
+export const Download = (props: IconProps) => (
+    <BaseIcon {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></BaseIcon>
+);
+
+// Fix: Added missing FileDown icon
+export const FileDown = (props: IconProps) => (
+    <BaseIcon {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/></BaseIcon>
+);
+
+// Fix: Added missing Filter icon
+export const Filter = (props: IconProps) => (
+    <BaseIcon {...props}><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></BaseIcon>
+);
+
+// Fix: Added missing Save icon
+export const Save = (props: IconProps) => (
+  <BaseIcon {...props}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v13a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></BaseIcon>
 );

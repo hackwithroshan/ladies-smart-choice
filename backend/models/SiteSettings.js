@@ -19,10 +19,14 @@ const SiteSettingsSchema = new mongoose.Schema({
         default: 'standard' 
     },
     
+    // POPUP CONTROL
+    showSmartPopup: { type: Boolean, default: false },
+    popupDelay: { type: Number, default: 15 }, // seconds
+    
     // Commerce Settings
     currency: { type: String, default: 'INR' },
     taxRate: { type: Number, default: 0 },
-    shippingCharge: { type: Number, default: 0 },
+    shippingCharge: { type: Number, default: 40 },
     videoAutoplay: { type: Boolean, default: true },
     
     // WhatsApp Configuration
@@ -34,9 +38,11 @@ const SiteSettingsSchema = new mongoose.Schema({
     metaCatalogId: { type: String, default: '' },
     metaAccessToken: { type: String, default: '' },
     
-    // TRACKING FLAGS
+    // GRANULAR TRACKING FLAGS
     trackPageView: { type: Boolean, default: true },
+    trackViewContent: { type: Boolean, default: true },
     trackAddToCart: { type: Boolean, default: true },
+    trackInitiateCheckout: { type: Boolean, default: true },
     trackPurchase: { type: Boolean, default: true },
 
     isMaintenanceMode: { type: Boolean, default: false }

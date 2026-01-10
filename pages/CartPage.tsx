@@ -15,16 +15,32 @@ const CartPage: React.FC<{ user: any; logout: () => void }> = ({ user, logout })
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
+  const fireCheckoutEvent = async () => {
+    const payload = {
+        content_name: 'Cart Checkout',
+        content_category: 'E-commerce',
+        content_ids: cart.map(i => String(i.sku || i.id || (i as any)._id)),
+        contents: cart.map(i => ({ id: String(i.sku || i.id), quantity: i.quantity, item_price: i.price })),
+        value: cartTotal,
+        num_items: cartCount,
+        currency: 'INR',
+    };
+    // masterTracker is async, we await to ensure signal is sent
+    await masterTracker('InitiateCheckout', payload, payload);
+  };
+
   const handleMagicCheckout = async () => {
     setLoading(true);
     try {
-        const orderRes = await fetch(getApiUrl('/api/orders/create-standard-order'), {
+        await fireCheckoutEvent();
+        
+        const orderRes = await fetch(getApiUrl('orders/create-standard-order'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ total: cartTotal })
         });
         const rzpOrder = await orderRes.json();
-        const keyRes = await fetch(getApiUrl('/api/orders/key'));
+        const keyRes = await fetch(getApiUrl('orders/key'));
         const { key } = await keyRes.json();
 
         const options = {
@@ -35,7 +51,7 @@ const CartPage: React.FC<{ user: any; logout: () => void }> = ({ user, logout })
             prefill: { contact: user?.phone || '', email: user?.email || '' },
             theme: { color: siteSettings?.primaryColor || "#09090b" },
             handler: async (response: any) => {
-                const verifyRes = await fetch(getApiUrl('/api/orders/verify-magic'), {
+                const verifyRes = await fetch(getApiUrl('orders/verify-magic'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -44,24 +60,26 @@ const CartPage: React.FC<{ user: any; logout: () => void }> = ({ user, logout })
                     })
                 });
                 if (verifyRes.ok) {
+                    const verifyData = await verifyRes.json();
+                    
+                    // Purchase tracking is handled in backend or Thank You page
                     clearCart();
-                    window.location.href = "/dashboard?status=success";
+                    window.location.href = `/thank-you?status=success&orderId=${verifyData.orderId}&email=${encodeURIComponent(verifyData.email)}&phone=${encodeURIComponent(verifyData.phone)}`;
                 }
             },
             modal: { ondismiss: () => setLoading(false) }
         };
         const rzp = new (window as any).Razorpay(options);
         rzp.open();
-    } catch (e) { console.error(e); setLoading(false); }
+    } catch (e) { 
+        console.error(e); 
+        setLoading(false); 
+    }
   };
 
-  const handleProceed = () => {
-    const payload = {
-        contents: cart.map(i => ({ id: i.sku || i.id, quantity: i.quantity, price: i.price })),
-        value: cartTotal,
-        currency: 'INR',
-    };
-    masterTracker('InitiateCheckout', payload, payload);
+  const handleProceed = async () => {
+    setLoading(true);
+    await fireCheckoutEvent();
     
     if (siteSettings?.checkoutMode === 'magic') {
         handleMagicCheckout();
@@ -112,7 +130,7 @@ const CartPage: React.FC<{ user: any; logout: () => void }> = ({ user, logout })
                         </div>
                         <div className="pt-6 border-t border-dashed border-zinc-200 flex justify-between items-center"><span className="text-lg font-bold">Total</span><span className="text-2xl font-black italic">₹{cartTotal.toLocaleString()}</span></div>
                         <button onClick={handleProceed} disabled={loading} className={`w-full h-14 rounded-md font-bold text-xs uppercase tracking-[0.2em] shadow-lg transition-all active:scale-[0.98] ${siteSettings?.checkoutMode === 'magic' ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-zinc-900 text-white hover:bg-zinc-800'}`}>
-                            {loading ? 'Opening Razorpay...' : siteSettings?.checkoutMode === 'magic' ? '✨ Magic Checkout' : 'Proceed to Checkout'}
+                            {loading ? 'Processing...' : siteSettings?.checkoutMode === 'magic' ? '✨ Magic Checkout' : 'Proceed to Checkout'}
                         </button>
                     </div>
                 </div>

@@ -29,6 +29,7 @@ const CollectionPage: React.ComponentType<PageWithUserProps> = lazy(() => import
 const ContactPage: React.ComponentType<PageWithUserProps> = lazy(() => import('./pages/ContactPage'));
 const OrderTrackingPage: React.ComponentType<PageWithUserProps> = lazy(() => import('./pages/OrderTrackingPage'));
 const WishlistPage: React.ComponentType<PageWithUserProps> = lazy(() => import('./pages/WishlistPage'));
+const ThankYouPage: React.ComponentType<{ user: any; logout: () => void; onAuthSuccess: (data: any) => void }> = lazy(() => import('./pages/ThankYouPage'));
 
 // Tracking Component to handle every route change
 const RouteTracker: React.FC = () => {
@@ -97,6 +98,7 @@ const AppContent: React.FC = () => {
             <Route path="/cart" element={<CartPage user={user} logout={handleLogout} />} />
             <Route path="/wishlist" element={<WishlistPage user={user} logout={handleLogout} />} />
             <Route path="/checkout" element={<CheckoutPage user={user} logout={handleLogout} />} />
+            <Route path="/thank-you" element={<ThankYouPage user={user} logout={handleLogout} onAuthSuccess={handleAuthSuccess} />} />
             <Route path="/contact" element={<ContactPage user={user} logout={handleLogout} />} />
             <Route path="/track-order" element={<OrderTrackingPage user={user} logout={handleLogout} />} />
             <Route path="/login" element={!user ? <LoginPage onAuthSuccess={handleAuthSuccess} /> : <Navigate to="/" />} />

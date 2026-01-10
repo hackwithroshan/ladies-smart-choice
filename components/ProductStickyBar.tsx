@@ -112,13 +112,22 @@ const ProductStickyBar: React.FC<ProductStickyBarProps> = ({
                     <span className="w-8 text-center text-[10px] font-black">{quantity}</span>
                     <button onClick={() => onQuantityChange(quantity + 1)} className="w-8 h-8 flex items-center justify-center font-bold text-zinc-500 hover:text-zinc-900">+</button>
                 </div>
-                <button
-                    onClick={onAddToCart}
-                    disabled={product.stock <= 0}
-                    className="h-10 md:h-12 bg-zinc-900 text-white px-6 md:px-10 rounded-sm text-[10px] font-bold uppercase tracking-widest shadow-lg hover:brightness-110 transition-all active:scale-95 disabled:bg-zinc-200 disabled:text-zinc-400 whitespace-nowrap"
-                >
-                    {product.stock > 0 ? 'Add To Bag' : 'Sold Out'}
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={onAddToCart}
+                        disabled={product.stock <= 0}
+                        className="h-10 md:h-12 border border-zinc-200 text-zinc-900 px-4 md:px-6 rounded-sm text-[10px] font-bold uppercase tracking-widest hover:bg-zinc-50 transition-all active:scale-95 disabled:bg-zinc-200 disabled:text-zinc-400 whitespace-nowrap"
+                    >
+                        Add to Bag
+                    </button>
+                    <button
+                        onClick={onBuyNow}
+                        disabled={product.stock <= 0}
+                        className="h-10 md:h-12 bg-zinc-900 text-white px-6 md:px-10 rounded-sm text-[10px] font-bold uppercase tracking-widest shadow-lg hover:brightness-110 transition-all active:scale-95 disabled:bg-zinc-200 disabled:text-zinc-400 whitespace-nowrap"
+                    >
+                        {product.stock > 0 ? 'Buy Now' : 'Sold Out'}
+                    </button>
+                </div>
           </div>
 
         </div>

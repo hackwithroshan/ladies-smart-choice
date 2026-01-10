@@ -46,23 +46,12 @@ const connectDB = async () => {
         });
         console.log('✅ DATABASE CONNECTED: Connection to MongoDB Atlas Cluster established.');
     } catch (err) {
-        console.error('❌ DATABASE CONNECTION FAILED!');
-        console.error('---------------------------------------------------------');
-        console.error('Error Details:', err.message);
-        console.error('---------------------------------------------------------');
-        
-        if (err.message.includes('Could not connect to any servers')) {
-            console.error('PRO TIP: This is usually an IP Whitelist issue.');
-            console.error('1. Go to MongoDB Atlas -> Network Access.');
-            console.error('2. Add "0.0.0.0/0" to allow access from everywhere for testing.');
-            console.error('3. Check if your MONGO_URI in .env is exactly correct.');
-        }
-        
+        console.error('❌ DATABASE CONNECTION FAILED!', err.message);
         process.exit(1);
     }
 };
 
-// API Routes
+// API Routes - Standardized Registry
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/products', require('./routes/products'));
 app.use('/api/orders', require('./routes/orders'));
@@ -77,10 +66,6 @@ app.use('/api/media', require('./routes/media'));
 app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api/contact', require('./routes/contact'));
 app.use('/api/app-data', require('./routes/appData'));
-
-// Registered missing modules required for Admin Dashboard
-app.use('/api/campaigns', require('./routes/campaigns'));
-app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/catalog', require('./routes/feed'));
 
 // Serve Static Frontend
@@ -89,15 +74,6 @@ if (fs.existsSync(distPath)) {
     app.use(express.static(distPath));
     app.get('*', (req, res) => res.sendFile(path.join(distPath, 'index.html')));
 }
-
-// Server Health Endpoint
-app.get('/api/health', (req, res) => {
-    res.json({
-        uptime: process.uptime(),
-        dbStatus: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
-        timestamp: Date.now()
-    });
-});
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, async () => {

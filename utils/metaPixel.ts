@@ -6,21 +6,10 @@ declare global {
   }
 }
 
-const AUTHORIZED_DOMAINS = [
-    'ladiessmartchoice.com',
-    'www.ladiessmartchoice.com',
-    'localhost'
-];
-
 export const initFacebookPixel = (pixelId: string) => {
-  const currentDomain = window.location.hostname;
-  
-  if (!AUTHORIZED_DOMAINS.some(d => currentDomain.includes(d))) {
-    console.warn(`⚠️ Meta Pixel blocked for domain: ${currentDomain}`);
-    return;
-  }
+  if (!pixelId || typeof window === 'undefined' || window.fbq) return;
 
-  if (!pixelId || window.fbq) return;
+  const cleanPixelId = pixelId.trim();
 
   /* eslint-disable */
   (function(f:any,b:any,e:any,v:any,n?:any,t?:any,s?:any)
@@ -33,21 +22,26 @@ export const initFacebookPixel = (pixelId: string) => {
   'https://connect.facebook.net/en_US/fbevents.js');
   /* eslint-enable */
 
-  window.fbq('init', pixelId);
-  console.log(`✅ Meta Pixel Initialized: ${pixelId}`);
+  window.fbq('init', cleanPixelId);
 };
 
 export const trackEvent = (event: string, data?: any) => {
-  if (!window.fbq) return;
+  if (typeof window === 'undefined' || !window.fbq) return;
 
   const { event_id, ...params } = data || {};
   
-  // Mapping for Standard Events
+  // 🔥 CRITICAL: Match catalog structure exactly
+  const enhancedParams = {
+      ...params,
+      content_type: 'product',
+      item_type: 'PRODUCT_ITEM' 
+  };
+
   const standardEvents = ['PageView', 'ViewContent', 'AddToCart', 'InitiateCheckout', 'Purchase', 'Search', 'Contact'];
   
   if (standardEvents.includes(event)) {
-      window.fbq('track', event, params, { event_id });
+      window.fbq('track', event, enhancedParams, { event_id });
   } else {
-      window.fbq('trackCustom', event, params, { event_id });
+      window.fbq('trackCustom', event, enhancedParams, { event_id });
   }
 };

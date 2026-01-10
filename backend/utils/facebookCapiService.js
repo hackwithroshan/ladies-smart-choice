@@ -3,24 +3,24 @@ const fetch = require('node-fetch');
 const crypto = require('crypto');
 const SiteSettings = require('../models/SiteSettings');
 
-/**
- * SHA-256 Hashing (Required for Meta User Data Privacy)
- */
 function hash(data) {
     if (!data) return undefined;
     return crypto.createHash('sha256').update(String(data).toLowerCase().trim()).digest('hex');
 }
 
 /**
- * META CONVERSIONS API (CAPI) BRIDGE
- * Synchronizes server-side events with Browser Pixel for 100% visibility
+ * META CONVERSIONS API (CAPI) BRIDGE v4.0
+ * Deduplication enabled via event_id
  */
 const sendCapiEvent = async ({ eventName, eventUrl, eventId, userData, customData = {} }) => {
     try {
         const settings = await SiteSettings.findOne();
         if (!settings || !settings.metaPixelId || !settings.metaAccessToken) return;
 
-        // User Data Transformation (Matched with Meta requirements)
+        const pixelId = settings.metaPixelId.trim();
+        const accessToken = settings.metaAccessToken.trim();
+
+        // 1. Prepare User Data (Hashed for privacy)
         const user_data = {
             client_ip_address: userData.ip,
             client_user_agent: userData.userAgent,
@@ -30,11 +30,13 @@ const sendCapiEvent = async ({ eventName, eventUrl, eventId, userData, customDat
             ph: userData.phone ? [hash(userData.phone)] : undefined,
         };
 
-        // Aligning content_ids with Catalog ID format (SKU or MongoDB ID)
-        // This is critical for Retargeting Ads (DABA/DPA)
-        const contentIds = customData.items 
-            ? customData.items.map(i => String(i.sku || i.productId || i.id || i._id))
-            : (customData.productId ? [String(customData.productId)] : []);
+        // 2. Prepare Content IDs (Must match Catalog Retailer ID)
+        let contentIds = [];
+        if (customData.items) {
+            contentIds = customData.items.map(i => String(i.sku || i.productId || i.id));
+        } else if (customData.productId) {
+            contentIds = [String(customData.productId)];
+        }
 
         const eventPayload = {
             data: [{
@@ -42,40 +44,34 @@ const sendCapiEvent = async ({ eventName, eventUrl, eventId, userData, customDat
                 event_time: Math.floor(Date.now() / 1000),
                 event_source_url: eventUrl,
                 action_source: 'website',
-                event_id: eventId,
+                event_id: eventId, // Used for deduplication with browser pixel
                 user_data: user_data,
                 custom_data: {
                     currency: customData.currency || 'INR',
                     value: Number(customData.value || 0),
                     content_ids: contentIds,
-                    content_name: customData.content_name,
-                    content_category: customData.category,
                     content_type: 'product',
                     num_items: Number(customData.num_items || 1)
                 },
             }]
         };
 
-        if (customData.test_event_code) {
-            eventPayload.test_event_code = customData.test_event_code;
-        }
-
-        const response = await fetch(`https://graph.facebook.com/v21.0/${settings.metaPixelId}/events`, {
+        const response = await fetch(`https://graph.facebook.com/v21.0/${pixelId}/events`, {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${settings.metaAccessToken}`
+                'Authorization': `Bearer ${accessToken}`
             },
             body: JSON.stringify(eventPayload),
         });
 
         const result = await response.json();
         if (!response.ok) {
-            console.error(`[Meta-CAPI-Error] ${eventName}:`, result.error?.message);
+            console.error(`[Meta-CAPI-Error]`, JSON.stringify(result));
         }
 
     } catch (error) {
-        console.error(`[Meta-CAPI-Fatal] Connection refused:`, error.message);
+        console.error(`[Meta-CAPI-Fatal]`, error.message);
     }
 };
 

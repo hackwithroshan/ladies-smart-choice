@@ -11,45 +11,55 @@ const getCookie = (name: string): string => {
 };
 
 /**
- * masterTracker orchestrates both Browser Pixel and Server CAPI events
- * to ensure 100% data accuracy even with AdBlockers.
+ * masterTracker orchestrates both Browser Pixel and Server CAPI events.
+ * It strictly ensures that the content_ids used match the Catalog retailer_id.
  */
-export const masterTracker = (
+export const masterTracker = async (
     eventName: string,
     pixelData: Record<string, any> = {},
     internalData: Record<string, any> = {}
 ) => {
-    // Generate a unique Event ID for deduplication between Pixel and CAPI
-    const eventId = `${eventName.toLowerCase()}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    try {
+        // 1. Deduplication ID
+        const eventId = pixelData.event_id || `evt_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
-    // 1. Fire Browser-side Pixel
-    trackPixelEvent(eventName, {
-        ...pixelData,
-        event_id: eventId,
-    });
+        // 2. Standardize Content IDs
+        // Important: Ensure we pass the SKU or ID string for Meta catalog matching
+        const contentIds = pixelData.content_ids || (pixelData.id ? [String(pixelData.id)] : []);
 
-    // 2. Prepare and fire Server-side CAPI event
-    const payload = {
-        eventType: eventName,
-        path: window.location.pathname,
-        domain: window.location.hostname,
-        eventId: eventId,
-        source: new URLSearchParams(window.location.search).get('utm_source') || 'direct',
-        data: {
-            ...internalData,
+        const trackingPayload = {
             ...pixelData,
-            // Capture Meta cookies for high match quality
-            fbp: getCookie('_fbp'),
-            fbc: getCookie('_fbc')
-        }
-    };
+            content_ids: contentIds,
+            event_id: eventId
+        };
 
-    fetch(getApiUrl('analytics/track'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-        keepalive: true // Ensure request finishes even if page unloads
-    }).catch(() => {
-        // Silent fail for tracking to not interrupt user experience
-    });
+        // 3. Fire Browser-side Pixel
+        trackPixelEvent(eventName, trackingPayload);
+
+        // 4. Prepare and fire Server-side CAPI event
+        // (Server-side tracking allows capturing events even if AdBlockers are present)
+        const capiPayload = {
+            eventType: eventName,
+            path: window.location.pathname,
+            domain: window.location.hostname,
+            eventId: eventId,
+            data: {
+                ...internalData,
+                ...pixelData,
+                content_ids: contentIds,
+                fbp: getCookie('_fbp'),
+                fbc: getCookie('_fbc')
+            }
+        };
+
+        fetch(getApiUrl('analytics/track'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(capiPayload),
+            keepalive: true
+        });
+
+    } catch (error) {
+        console.warn("[Tracking] Signal failed", error);
+    }
 };

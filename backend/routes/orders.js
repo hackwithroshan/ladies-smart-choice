@@ -4,6 +4,7 @@ const router = express.Router();
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
 const Order = require('../models/Order');
+const User = require('../models/User');
 const AbandonedCart = require('../models/AbandonedCart');
 const { protect, admin } = require('../middleware/authMiddleware');
 const fetch = require('node-fetch');
@@ -13,6 +14,81 @@ const razorpay = new Razorpay({
     key_secret: process.env.RAZORPAY_KEY_SECRET
 });
 
+// Helper to ensure user exists for order
+const syncUser = async (email, name, phone) => {
+    try {
+        let user = await User.findOne({ email: email.toLowerCase() });
+        if (!user) {
+            // Create user with phone as password
+            user = await User.create({
+                name,
+                email: email.toLowerCase(),
+                password: phone, // This will be hashed by pre-save middleware
+            });
+        } else {
+            // Update name if it changed
+            user.name = name;
+            await user.save();
+        }
+        return user;
+    } catch (e) {
+        console.error("User Sync Error:", e);
+        return null;
+    }
+};
+
+// @desc    Get All Orders (Admin Registry)
+// @route   GET /api/orders
+router.get('/', protect, admin, async (req, res) => {
+    try {
+        const orders = await Order.find({}).sort({ createdAt: -1 });
+        res.json(orders);
+    } catch (err) {
+        res.status(500).json({ message: "Internal server error fetching orders." });
+    }
+});
+
+// @desc    Administrative Master Update (Override all fields)
+router.put('/:id/master-update', protect, admin, async (req, res) => {
+    try {
+        const { 
+            customerName, customerEmail, customerPhone, status, 
+            address, city, postalCode, carrier, trackingNumber, notes 
+        } = req.body;
+
+        const order = await Order.findById(req.params.id);
+        if (!order) return res.status(404).json({ message: "Manifest not found" });
+
+        // Update Identity
+        order.customerName = customerName;
+        order.customerEmail = customerEmail;
+        order.customerPhone = customerPhone;
+        order.status = status;
+        
+        // Update Logistics
+        order.shippingAddress = {
+            ...order.shippingAddress,
+            address,
+            city,
+            postalCode
+        };
+
+        // Update Fulfillment
+        order.trackingInfo = {
+            carrier,
+            trackingNumber,
+            estimatedDelivery: order.trackingInfo?.estimatedDelivery || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        };
+
+        order.notes = notes;
+
+        await order.save();
+        res.json({ success: true, message: "Ledger updated" });
+    } catch (err) {
+        res.status(500).json({ message: "Override protocol failed" });
+    }
+});
+
 // @desc    Get Razorpay Key
 router.get('/key', (req, res) => res.json({ key: process.env.RAZORPAY_KEY_ID }));
 
@@ -20,7 +96,7 @@ router.get('/key', (req, res) => res.json({ key: process.env.RAZORPAY_KEY_ID }))
 router.post('/create-standard-order', async (req, res) => {
     try {
         const total = Number(req.body.total);
-        const amount = Math.round(total * 100); // convert to paisa and ensure integer
+        const amount = Math.round(total * 100);
 
         const options = {
             amount: amount,
@@ -51,11 +127,18 @@ router.post('/verify-magic', async (req, res) => {
 
         const shipping = payment.shipping_address || {};
         const notes = payment.notes || {};
+        const email = payment.email;
+        const name = notes.name || payment.email.split('@')[0];
+        const phone = payment.contact;
+
+        // Sync User
+        const user = await syncUser(email, name, phone);
 
         const newOrder = new Order({
-            customerName: notes.name || payment.email.split('@')[0],
-            customerEmail: payment.email,
-            customerPhone: payment.contact,
+            userId: user ? user._id : undefined,
+            customerName: name,
+            customerEmail: email,
+            customerPhone: phone,
             items: orderDetails.items.map(i => ({
                 productId: i.id || i._id,
                 name: i.name,
@@ -76,7 +159,7 @@ router.post('/verify-magic', async (req, res) => {
         });
 
         await newOrder.save();
-        res.json({ success: true, orderId: newOrder._id });
+        res.json({ success: true, orderId: newOrder._id, email, phone });
 
     } catch (err) {
         console.error("Magic Verify Error:", err);
@@ -95,10 +178,16 @@ router.post('/verify-standard', async (req, res) => {
         .digest("hex");
 
     if (expectedSignature === razorpay_signature) {
+        const info = orderDetails.customerInfo;
+        
+        // Sync User
+        const user = await syncUser(info.email, info.name, info.phone);
+
         const newOrder = new Order({
-            customerName: orderDetails.customerInfo.name,
-            customerEmail: orderDetails.customerInfo.email,
-            customerPhone: orderDetails.customerInfo.phone,
+            userId: user ? user._id : undefined,
+            customerName: info.name,
+            customerEmail: info.email,
+            customerPhone: info.phone,
             items: orderDetails.items.map(i => ({
                 productId: i.id || i._id,
                 name: i.name,
@@ -110,11 +199,11 @@ router.post('/verify-standard', async (req, res) => {
             status: 'Paid',
             paymentId: razorpay_payment_id,
             checkoutType: 'standard',
-            shippingAddress: orderDetails.customerInfo.shippingAddress
+            shippingAddress: info.shippingAddress
         });
 
         await newOrder.save();
-        res.json({ success: true, orderId: newOrder._id });
+        res.json({ success: true, orderId: newOrder._id, email: info.email, phone: info.phone });
     } else {
         res.status(400).json({ success: false, message: 'Invalid payment signature' });
     }
@@ -126,6 +215,17 @@ router.get('/abandoned', protect, admin, async (req, res) => {
         res.json(leads);
     } catch (err) {
         res.status(500).json({ message: "Failed to fetch leads" });
+    }
+});
+
+// @desc    Update Order Status
+router.put('/:id/status', protect, admin, async (req, res) => {
+    try {
+        const order = await Order.findByIdAndUpdate(req.params.id, { status: req.body.status }, { new: true });
+        if (!order) return res.status(404).json({ message: "Order not found" });
+        res.json(order);
+    } catch (err) {
+        res.status(500).json({ message: "Failed to update status" });
     }
 });
 

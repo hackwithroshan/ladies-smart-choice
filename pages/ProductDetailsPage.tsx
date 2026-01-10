@@ -18,6 +18,7 @@ import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { StarIcon, HeartIcon } from '../components/Icons';
 import { cn } from '../utils/utils';
+import { masterTracker } from '../utils/tracking';
 
 const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user, logout }) => {
     const { slug } = useParams();
@@ -45,6 +46,15 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
                 if (!pRes.ok) throw new Error("Product not found");
                 const p = await pRes.json();
                 setProduct(p);
+
+                // FIRE VIEW CONTENT TRACKING
+                masterTracker('ViewContent', {
+                    content_name: p.name,
+                    content_category: p.category,
+                    content_ids: [String(p.sku || p._id || p.id)],
+                    value: p.price,
+                    currency: 'INR'
+                });
 
                 if (p.hasVariants && p.variants) {
                     const defaults: any = {};
@@ -125,8 +135,9 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
                         })
                     });
                     if (verifyRes.ok) {
+                        const verifyData = await verifyRes.json();
                         showToast("Order placed successfully!", "success");
-                        navigate("/dashboard?status=success");
+                        window.location.href = `/thank-you?status=success&orderId=${verifyData.orderId}&email=${encodeURIComponent(verifyData.email)}&phone=${encodeURIComponent(verifyData.phone)}`;
                     }
                 },
                 modal: { ondismiss: () => setProcessing(false) }
@@ -140,22 +151,59 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
         }
     };
 
-    const handleAction = (isBuyNow = true) => {
+    const handleAction = async (isBuyNow = true) => {
         if (!product) return;
         
-        // Internal add to cart
-        const variantStr = Object.values(selectedVariants).join(' / ');
-        const productWithVariant = {
-            ...product,
-            name: variantStr ? `${product.name} (${variantStr})` : product.name
-        };
-        addToCart(productWithVariant, quantity);
+        if (isBuyNow) {
+            setProcessing(true);
+            // Buy Now - Immediate redirect to checkout logic
+            addToCart(product, quantity);
+            
+            // 🔥 TRACK INITIATE CHECKOUT IMMEDIATELY FOR BUY NOW
+            await masterTracker('InitiateCheckout', {
+                content_name: product.name,
+                content_category: product.category,
+                content_ids: [String(product.sku || product.id)],
+                value: product.price * quantity,
+                num_items: quantity,
+                currency: 'INR'
+            });
 
-        // Redirect flow
-        if (siteSettings?.checkoutMode === 'magic') {
-            handleMagicCheckout(product);
+            if (siteSettings?.checkoutMode === 'magic') {
+                handleMagicCheckout(product);
+            } else {
+                navigate('/checkout');
+            }
         } else {
-            navigate('/checkout');
+            // Add to Cart Logic
+            setProcessing(true);
+            const variantStr = Object.values(selectedVariants).join(' / ');
+            const productWithVariant = {
+                ...product,
+                name: variantStr ? `${product.name} (${variantStr})` : product.name
+            };
+            
+            addToCart(productWithVariant, quantity);
+            
+            // 🔥 TRACK ADD TO CART
+            await masterTracker('AddToCart', {
+                content_name: product.name,
+                content_category: product.category,
+                content_ids: [String(product.sku || product.id)],
+                value: product.price * quantity,
+                currency: 'INR'
+            });
+
+            showToast(`${product.name} added to bag! Redirecting to checkout...`, 'success');
+            
+            // 🔥 AUTOMATIC REDIRECT TO CHECKOUT AFTER 2 SECONDS
+            setTimeout(() => {
+                if (siteSettings?.checkoutMode === 'magic') {
+                    navigate('/cart'); // Magic checkout is triggered from cart
+                } else {
+                    navigate('/checkout');
+                }
+            }, 2000);
         }
     };
 
@@ -299,13 +347,20 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
                                                     );
                                                 })}
 
-                                                <div className="pt-6 border-t border-zinc-100">
+                                                <div className="pt-6 border-t border-zinc-100 flex flex-col gap-3">
+                                                    <button 
+                                                        onClick={() => handleAction(false)}
+                                                        disabled={processing}
+                                                        className="w-full bg-zinc-100 text-zinc-900 h-14 font-bold uppercase tracking-[0.15em] text-[13px] hover:bg-zinc-200 active:scale-[0.98] transition-all disabled:opacity-50"
+                                                    >
+                                                        {processing ? 'Processing...' : 'Add to Cart'}
+                                                    </button>
                                                     <button 
                                                         onClick={() => handleAction(true)}
                                                         disabled={processing}
                                                         className="w-full bg-[#16423C] text-white h-14 font-bold uppercase tracking-[0.15em] text-[13px] shadow-xl hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50"
                                                     >
-                                                        {processing ? 'OPENING SECURE GATEWAY...' : siteSettings?.checkoutMode === 'magic' ? '✨ MAGIC BUY NOW' : 'SECURE CHECKOUT'}
+                                                        {processing ? 'Redirecting...' : siteSettings?.checkoutMode === 'magic' ? '✨ MAGIC BUY NOW' : 'SECURE BUY NOW'}
                                                     </button>
                                                 </div>
                                                 
@@ -318,7 +373,7 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
                                         </div>
                                     )}
 
-                                    {/* A+ CONTENT */}
+                                    {/* Other sections remain unchanged */}
                                     {sec.type === 'A+Content' && (
                                         <div className="space-y-32">
                                             {sec.content?.blocks?.map((block: any, bIdx: number) => (
@@ -335,7 +390,6 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
                                         </div>
                                     )}
 
-                                    {/* FAQ SECTIONS */}
                                     {sec.type === 'FAQ' && (
                                         <div className="max-w-4xl mx-auto py-12">
                                             <h2 className="text-2xl font-bold uppercase mb-10 tracking-widest text-center italic">Product Inquiries</h2>

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useCart } from '../contexts/CartContext';
 import { useSiteData } from '../contexts/SiteDataContext';
 import { useToast } from '../contexts/ToastContext';
@@ -7,9 +7,10 @@ import { getApiUrl } from '../utils/apiHelper';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import SEO from '../components/SEO';
+import { masterTracker } from '../utils/tracking';
 
 const CheckoutPage: React.FC<{ user: any; logout: () => void }> = ({ user, logout }) => {
-    const { cart, cartTotal, updateQuantity, clearCart } = useCart();
+    const { cart, cartTotal, cartCount, clearCart } = useCart();
     const { siteSettings } = useSiteData();
     const { showToast } = useToast();
     const [loading, setLoading] = useState(false);
@@ -17,6 +18,7 @@ const CheckoutPage: React.FC<{ user: any; logout: () => void }> = ({ user, logou
     const [couponInput, setCouponInput] = useState('');
     const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
     const [couponLoading, setCouponLoading] = useState(false);
+    const hasTrackedCheckout = useRef(false);
 
     const [customerInfo, setCustomerInfo] = useState({
         name: user?.name || '',
@@ -26,6 +28,22 @@ const CheckoutPage: React.FC<{ user: any; logout: () => void }> = ({ user, logou
         city: '',
         postalCode: '',
     });
+
+    // 🔥 TRACK INITIATE CHECKOUT ON PAGE LOAD
+    useEffect(() => {
+        if (cart.length > 0 && !hasTrackedCheckout.current) {
+            masterTracker('InitiateCheckout', {
+                content_name: 'Standard Checkout Page',
+                content_category: 'E-commerce',
+                content_ids: cart.map(i => String(i.sku || i.id || (i as any)._id)),
+                contents: cart.map(i => ({ id: String(i.sku || i.id), quantity: i.quantity, item_price: i.price })),
+                value: cartTotal,
+                num_items: cartCount,
+                currency: 'INR',
+            });
+            hasTrackedCheckout.current = true;
+        }
+    }, [cart, cartTotal, cartCount]);
 
     const getDiscountValue = () => {
         if (!appliedCoupon) return 0;
@@ -121,8 +139,19 @@ const CheckoutPage: React.FC<{ user: any; logout: () => void }> = ({ user, logou
                         })
                     });
                     if (verifyRes.ok) {
+                        const verifyData = await verifyRes.json();
+                        
+                        // 🔥 TRACK PURCHASE
+                        masterTracker('Purchase', {
+                            content_name: 'Order Completion',
+                            content_ids: cart.map(i => String(i.sku || i.id)),
+                            value: discountedTotal,
+                            currency: 'INR',
+                            num_items: cartCount
+                        });
+
                         clearCart();
-                        window.location.href = "/dashboard?status=success";
+                        window.location.href = `/thank-you?status=success&orderId=${verifyData.orderId}&email=${encodeURIComponent(customerInfo.email)}&phone=${encodeURIComponent(customerInfo.phone)}`;
                     } else {
                         showToast("Payment verification failed. Please contact support.", "error");
                     }
