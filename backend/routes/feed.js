@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const Product = require('../models/Product');
@@ -8,8 +7,9 @@ const { protect, admin } = require('../middleware/authMiddleware');
 const fetch = require('node-fetch');
 
 /**
- * META CATALOG SYNC ENGINE v2.5 (STRICT AUDIT)
- * Targeted Fix: Resolves "(#100) The parameter item_type is required"
+ * META CATALOG SYNC ENGINE v3.4 (STRICT GRAPH API COMPLIANCE)
+ * Resolves: (#100) The parameter item_type is required
+ * Optimized for: ladiessmartchoice.com
  */
 router.post('/sync', protect, admin, async (req, res) => {
     const log = new SyncLog({ service: 'meta-catalog', status: 'in_progress' });
@@ -17,48 +17,56 @@ router.post('/sync', protect, admin, async (req, res) => {
 
     try {
         const settings = await SiteSettings.findOne();
-        if (!settings || !settings.metaAccessToken || !settings.metaCatalogId) {
-            throw new Error('Meta Credentials (Catalog ID/Token) missing in settings.');
+        if (!settings?.metaAccessToken || !settings?.metaCatalogId) {
+            throw new Error('Meta Catalog ID or Access Token missing in Store Settings.');
         }
 
         const products = await Product.find({ status: 'Active' });
-        if (products.length === 0) throw new Error('No active products found to sync.');
+        if (!products.length) throw new Error('No active products found in database.');
 
         const frontendUrl = process.env.FRONTEND_URL || 'https://ladiessmartchoice.com';
 
-        /**
-         * META BATCH REQUEST MAPPING
-         * Strictly adheres to Meta Commerce "PRODUCT_ITEM" Schema
-         */
+        // Mapping to Meta Commerce Strict Schema
         const requests = products.map(p => {
+            // Validate essential fields to prevent partial sync failure
+            if (!p.name || !p.imageUrl || !p.price) return null;
+
             const retailerId = p.sku || p._id.toString();
 
-            // Sanitize Description: No HTML, no weird characters
+            // 1. STRIP HTML & SANITIZE DESCRIPTION (Meta strict requirement)
             const cleanDescription = (p.shortDescription || p.description || p.name)
-                .replace(/<[^>]*>?/gm, '') // Strip HTML tags
-                .replace(/[\r\n]+/gm, ' ') // Remove line breaks
-                .replace(/\s+/g, ' ')      // Remove multiple spaces
+                .replace(/<[^>]*>?/gm, '')       // Remove HTML tags
+                .replace(/[^\x00-\x7F]/g, "")    // Remove non-ASCII characters
+                .replace(/[\r\n]+/gm, ' ')       // Remove line breaks
+                .replace(/\s+/g, ' ')            // Remove excessive spaces
                 .trim()
                 .substring(0, 4500);
 
-            // Ensure Absolute URLs
+            // 2. NORMALIZE ABSOLUTE URLs (Meta rejects relative paths)
             const productLink = `${frontendUrl}/product/${p.slug}`;
-            let imageLink = p.imageUrl || '';
-            if (imageLink && !imageLink.startsWith('http')) {
+            let imageLink = p.imageUrl;
+            if (!imageLink.startsWith('http')) {
                 imageLink = `${frontendUrl}${imageLink.startsWith('/') ? '' : '/'}${imageLink}`;
             }
 
-            // Standardized Price Format
+            // 3. FORMAT PRICE (Meta strictly requires "VALUE CURRENCY" string)
             const priceString = `${Math.round(p.price)} INR`;
+
+            // 4. CATEGORY CLEANING
+            const safeCategory = (p.category || 'Health & Beauty')
+                .replace(/[^a-zA-Z0-9 >]/g, '')
+                .substring(0, 250);
 
             return {
                 method: 'UPDATE',
                 retailer_id: retailerId,
                 data: {
-                    // REQUIRED FIELDS
+                    // 🔥 MANDATORY FIELD FOR Graph API v21.0+
+                    item_type: 'PRODUCT_ITEM', 
+                    
                     id: retailerId,
                     title: p.name.substring(0, 140).trim(),
-                    description: cleanDescription,
+                    description: cleanDescription || p.name,
                     availability: (p.stock && p.stock > 0) ? 'in stock' : 'out of stock',
                     condition: 'new',
                     price: priceString,
@@ -66,23 +74,21 @@ router.post('/sync', protect, admin, async (req, res) => {
                     image_link: imageLink,
                     brand: p.brand || settings.storeName || 'Ayushree',
                     
-                    // CATEGORY & TYPE (Critical for Meta Logic)
-                    item_group_id: p.category ? p.category.toLowerCase().replace(/[^a-z0-9]/g, '_') : 'default_grp',
-                    product_type: p.category || 'Ayurveda',
+                    // TARGETING METADATA
+                    product_type: safeCategory,
                     google_product_category: 'Health & Beauty > Health Care > Fitness & Nutrition > Vitamins & Supplements',
                     
-                    // 🔥 THE FIX: item_type must be explicitly PRODUCT_ITEM
-                    item_type: 'PRODUCT_ITEM', 
-                    
-                    // OPTIONAL BUT RECOMMENDED
-                    status: 'active',
-                    checkout_url: productLink,
-                    currency: 'INR'
+                    // VISIBILITY
+                    status: 'active'
                 }
             };
-        });
+        }).filter(Boolean); // Clear any null entries from validation failures
 
-        // Split into batches of 500 (Safer than 1000 for Meta Graph API stability)
+        if (requests.length === 0) {
+            throw new Error('Zero valid products found to sync. Check image URLs and Prices.');
+        }
+
+        // BATCH PROCESSING (Meta limit is 1000, we use 500 for safety)
         const batchSize = 500;
         let totalProcessed = 0;
 
@@ -104,9 +110,8 @@ router.post('/sync', protect, admin, async (req, res) => {
             const result = await response.json();
 
             if (!response.ok) {
-                console.error("Meta API Rejected Batch:", JSON.stringify(result, null, 2));
-                const errorMsg = result.error?.error_user_msg || result.error?.message || 'Meta API Rejection';
-                throw new Error(`Meta Error: ${errorMsg}`);
+                console.error("META_SYNC_REJECTED:", JSON.stringify(result, null, 2));
+                throw new Error(result.error?.message || 'Meta API rejected the batch data.');
             }
             
             totalProcessed += batch.length;
@@ -118,11 +123,11 @@ router.post('/sync', protect, admin, async (req, res) => {
 
         res.json({ 
             success: true, 
-            message: `Verified and synchronized ${totalProcessed} products with Meta Business Suite.`
+            message: `Synchronized ${totalProcessed} products with Meta Business Suite successfully.`
         });
 
     } catch (error) {
-        console.error("CATALOG_SYNC_FATAL:", error.message);
+        console.error("SYNC_FATAL_ERROR:", error.message);
         log.status = 'failed';
         log.error = error.message;
         await log.save();
