@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, Suspense, lazy, useRef } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import * as ReactRouterDom from 'react-router-dom';
 const { BrowserRouter: Router, Routes, Route, Navigate, useLocation, useNavigate } = ReactRouterDom as any;
 import { HelmetProvider } from 'react-helmet-async';
@@ -7,9 +7,6 @@ import { CartProvider } from './contexts/CartContext';
 import { WishlistProvider } from './contexts/WishlistContext';
 import { SiteDataProvider, useSiteData } from './contexts/SiteDataContext';
 import { ToastProvider } from './contexts/ToastContext';
-import { initFacebookPixel } from './utils/metaPixel';
-import { masterTracker } from './utils/tracking';
-import { getApiUrl } from './utils/apiHelper';
 import ErrorBoundary from './components/ErrorBoundary';
 import SmartPopup from './components/SmartPopup';
 import WhatsAppWidget from './components/WhatsAppWidget';
@@ -30,11 +27,12 @@ const CollectionPage: React.ComponentType<PageWithUserProps> = lazy(() => import
 const ContactPage: React.ComponentType<PageWithUserProps> = lazy(() => import('./pages/ContactPage'));
 const OrderTrackingPage: React.ComponentType<PageWithUserProps> = lazy(() => import('./pages/OrderTrackingPage'));
 const WishlistPage: React.ComponentType<PageWithUserProps> = lazy(() => import('./pages/WishlistPage'));
+const ThankYouPage: React.ComponentType<{}> = lazy(() => import('./pages/ThankYouPage'));
 
 const LoadingSpinner: React.FC = () => (
-    <div className="flex justify-center items-center h-screen w-screen bg-gray-50">
-        <div className="animate-spin rounded-full h-24 w-24 border-t-2 border-b-2 border-[#16423C]"></div>
-    </div>
+  <div className="flex justify-center items-center h-screen w-screen bg-white">
+    <div className="animate-spin rounded-full h-10 w-10 border-4 border-zinc-200 border-t-zinc-900 border-solid"></div>
+  </div>
 );
 
 const AppContent: React.FC = () => {
@@ -44,9 +42,49 @@ const AppContent: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const hostname = window.location.hostname;
-  // Dashboard Mode detection: Either 'dashboard.' subdomain OR path starts with '/app'
-  const isDashboardMode = hostname.startsWith('dashboard.') || location.pathname.startsWith('/app');
+  // Analytics Tracking
+  useEffect(() => {
+    const trackPageView = async () => {
+      // Don't track Admin Dashboard usage
+      if (location.pathname.startsWith('/app')) return;
+
+      try {
+        // Manage Session
+        let sessionId = sessionStorage.getItem('sessionId');
+        if (!sessionId) {
+          sessionId = crypto.randomUUID();
+          sessionStorage.setItem('sessionId', sessionId);
+        }
+
+        // Parse UTM
+        const params = new URLSearchParams(location.search);
+        const utm = {
+          source: params.get('utm_source'),
+          medium: params.get('utm_medium'),
+          campaign: params.get('utm_campaign')
+        };
+
+        const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:5000' : '';
+
+        await fetch(`${apiUrl}/api/analytics/track`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            eventType: 'PageView',
+            path: location.pathname,
+            sessionId,
+            referrer: document.referrer,
+            utm
+          })
+        });
+      } catch (e) {
+        console.error("Tracking failed", e);
+      }
+    };
+
+    // access siteSettings to check tracking enabled? assuming monitoring always ON for admin stats
+    trackPageView();
+  }, [location]);
 
   useEffect(() => {
     if (token && user) {
@@ -58,105 +96,84 @@ const AppContent: React.FC = () => {
     }
   }, [token, user]);
 
+  // Update Favicon & Title
+  useEffect(() => {
+    if (siteSettings?.faviconUrl) {
+      const link = document.querySelector("link[rel*='icon']") as HTMLLinkElement || document.createElement('link');
+      link.type = 'image/x-icon';
+      link.rel = 'shortcut icon';
+      link.href = siteSettings.faviconUrl;
+      document.getElementsByTagName('head')[0].appendChild(link);
+    }
+    if (siteSettings?.storeName) {
+      document.title = siteSettings.storeName;
+    }
+  }, [siteSettings]);
+
   const handleAuthSuccess = (data: { token: string; user: any }) => {
     setToken(data.token);
     setUser(data.user);
-    
-    if (data.user?.isAdmin) {
-        const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
-        
-        if (isLocal) {
-            // Localhost doesn't resolve dashboard.localhost easily, so use path prefix
-            navigate('/app/dashboard');
-        } else if (!hostname.startsWith('dashboard.')) {
-            // Production: Redirect to the official dashboard subdomain
-            window.location.href = `${window.location.protocol}//dashboard.${hostname.replace('www.', '')}/app/dashboard`;
-        } else {
-            navigate('/app/dashboard');
-        }
-    } else {
-        navigate('/dashboard');
-    }
+    if (data.user?.isAdmin) navigate('/app/dashboard');
+    else navigate('/dashboard');
   };
 
   const handleLogout = () => {
     setToken(null);
     setUser(null);
-    navigate('/login'); 
+    navigate('/login');
   };
 
-  const isMaintenance = siteSettings?.isMaintenanceMode && !user?.isAdmin;
-
-  // --- DASHBOARD ROUTING (SUBDOMAIN OR /APP PATH) ---
-  if (isDashboardMode) {
-      return (
-          <Suspense fallback={<LoadingSpinner />}>
-              <Routes>
-                  <Route path="/" element={<Navigate to="/app/dashboard" replace />} />
-                  <Route path="/app/*" element={user?.isAdmin ? <AdminDashboardPage user={user} logout={handleLogout} /> : <Navigate to="/login" />} />
-                  <Route path="/login" element={<LoginPage onAuthSuccess={handleAuthSuccess} />} />
-                  <Route path="*" element={<Navigate to="/app/dashboard" replace />} />
-              </Routes>
-          </Suspense>
-      );
+  if (siteSettings?.isMaintenanceMode && !user?.isAdmin) {
+    return <MaintenancePage />;
   }
 
-  // --- FRONT STORE ROUTING ---
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen selection:bg-zinc-900 selection:text-zinc-50">
       <Suspense fallback={<LoadingSpinner />}>
-        {isMaintenance ? (
-           <Routes>
-              <Route path="/login" element={<LoginPage onAuthSuccess={handleAuthSuccess} />} />
-              <Route path="*" element={<MaintenancePage />} />
-           </Routes>
-        ) : (
-          <Routes>
-            <Route path="/" element={<HomePage user={user} logout={handleLogout} />} />
-            <Route path="/login" element={!user ? <LoginPage onAuthSuccess={handleAuthSuccess} /> : <Navigate to="/" />} />
-            <Route path="/register" element={!user ? <RegisterPage onAuthSuccess={handleAuthSuccess} /> : <Navigate to="/" />} />
-            <Route path="/dashboard" element={user ? <UserDashboardPage user={user} logout={handleLogout} /> : <Navigate to="/login" />} />
-            <Route path="/product/:slug" element={<ProductDetailsPage user={user} logout={handleLogout} />} />
-            <Route path="/collections/:id" element={<CollectionPage user={user} logout={handleLogout} />} />
-            <Route path="/pages/:slug" element={<DynamicPage user={user} logout={handleLogout} />} />
-            <Route path="/cart" element={<CartPage user={user} logout={handleLogout} />} />
-            <Route path="/wishlist" element={<WishlistPage user={user} logout={handleLogout} />} />
-            <Route path="/checkout" element={<CheckoutPage user={user} logout={handleLogout} />} />
-            <Route path="/contact" element={<ContactPage user={user} logout={handleLogout} />} />
-            <Route path="/track-order" element={<OrderTrackingPage user={user} logout={handleLogout} />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        )}
+        <Routes>
+          {/* Public Storefront */}
+          <Route path="/" element={<HomePage user={user} logout={handleLogout} />} />
+          <Route path="/product/:slug" element={<ProductDetailsPage user={user} logout={handleLogout} />} />
+          <Route path="/collections/:id" element={<CollectionPage user={user} logout={handleLogout} />} />
+          <Route path="/pages/:slug" element={<DynamicPage user={user} logout={handleLogout} />} />
+          <Route path="/cart" element={<CartPage user={user} logout={handleLogout} />} />
+          <Route path="/wishlist" element={<WishlistPage user={user} logout={handleLogout} />} />
+          <Route path="/checkout" element={<CheckoutPage user={user} logout={handleLogout} />} />
+          <Route path="/contact" element={<ContactPage user={user} logout={handleLogout} />} />
+          <Route path="/track-order" element={<OrderTrackingPage user={user} logout={handleLogout} />} />
+          <Route path="/thank-you" element={<ThankYouPage />} />
+
+          {/* Auth */}
+          <Route path="/login" element={!user ? <LoginPage onAuthSuccess={handleAuthSuccess} /> : <Navigate to="/" />} />
+          <Route path="/register" element={!user ? <RegisterPage onAuthSuccess={handleAuthSuccess} /> : <Navigate to="/" />} />
+
+          {/* Private Dashboards */}
+          <Route path="/dashboard" element={user ? <UserDashboardPage user={user} logout={handleLogout} /> : <Navigate to="/login" />} />
+          <Route path="/app/*" element={user?.isAdmin ? <AdminDashboardPage user={user} logout={handleLogout} /> : <Navigate to="/login" />} />
+
+          {/* Catch All */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </Suspense>
-      
-      {!user?.isAdmin && !isMaintenance && (
-        <>
-          <SmartPopup />
-          <WhatsAppWidget />
-        </>
-      )}
+      {!location.pathname.startsWith('/app') && <><SmartPopup /><WhatsAppWidget /></>}
     </div>
   );
 };
 
-const App: React.FC = () => {
-  return (
-    <HelmetProvider>
-      <CartProvider>
-        <WishlistProvider>
-          <SiteDataProvider>
-            <ToastProvider>
-                <Router>
-                  <ErrorBoundary>
-                    <AppContent />
-                  </ErrorBoundary>
-                </Router>
-            </ToastProvider>
-          </SiteDataProvider>
-        </WishlistProvider>
-      </CartProvider>
-    </HelmetProvider>
-  );
-};
+const App: React.FC = () => (
+  <HelmetProvider>
+    <CartProvider>
+      <WishlistProvider>
+        <SiteDataProvider>
+          <ToastProvider>
+            <Router>
+              <ErrorBoundary><AppContent /></ErrorBoundary>
+            </Router>
+          </ToastProvider>
+        </SiteDataProvider>
+      </WishlistProvider>
+    </CartProvider>
+  </HelmetProvider>
+);
 
 export default App;

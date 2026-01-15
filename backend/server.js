@@ -6,51 +6,61 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 
-if (!process.env.MONGO_URI) {
-    console.error('FATAL ERROR: MONGO_URI is not defined in .env file.');
-    process.exit(1);
-}
-
 const app = express();
 
-// --- DYNAMIC CORS SETUP ---
+// Security Configuration
 const allowedOrigins = [
     'http://localhost:3000',
     'https://ladiessmartchoice.com',
-    'https://www.ladiessmartchoice.com',
     'https://dashboard.ladiessmartchoice.com'
 ];
 
 app.use(cors({
     origin: function (origin, callback) {
-        // allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) return callback(null, true);
-        if (allowedOrigins.indexOf(origin) === -1) {
-            const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-            return callback(new Error(msg), false);
+        if (!origin || allowedOrigins.indexOf(origin) !== -1 || origin.includes('localhost')) {
+            callback(null, true);
+        } else {
+            callback(new Error('CORS Policy: Access Denied for this origin.'));
         }
-        return callback(null, true);
     },
     credentials: true
 }));
 
 app.use(express.json());
 
-// MongoDB Connection
+// Robust Connection Logic
 const connectDB = async () => {
+    const mongoUri = process.env.MONGO_URI;
+    
+    if (!mongoUri) {
+        console.error('❌ FATAL ERROR: process.env.MONGO_URI is missing!');
+        process.exit(1);
+    }
+
     try {
-        await mongoose.connect(process.env.MONGO_URI, {
+        console.log('⏳ Attempting to connect to MongoDB...');
+        await mongoose.connect(mongoUri, {
             useNewUrlParser: true,
             useUnifiedTopology: true,
+            serverSelectionTimeoutMS: 15000,
         });
-        console.log('✅ MongoDB Connected Successfully!');
+        console.log('✅ DATABASE CONNECTED: Connection to MongoDB Atlas Cluster established.');
     } catch (err) {
-        console.error('❌ MongoDB Connection Failed:', err.message);
+        console.error('❌ DATABASE CONNECTION FAILED!');
+        console.error('---------------------------------------------------------');
+        console.error('Error Details:', err.message);
+        console.error('---------------------------------------------------------');
+        
+        if (err.message.includes('Could not connect to any servers')) {
+            console.error('PRO TIP: This is usually an IP Whitelist issue.');
+            console.error('1. Go to MongoDB Atlas -> Network Access.');
+            console.error('2. Add "0.0.0.0/0" to allow access from everywhere for testing.');
+            console.error('3. Check if your MONGO_URI in .env is exactly correct.');
+        }
+        
+        process.exit(1);
     }
 };
-
-connectDB();
-mongoose.set('bufferCommands', false);
 
 // API Routes
 app.use('/api/auth', require('./routes/auth'));
@@ -64,28 +74,33 @@ app.use('/api/collections', require('./routes/collections'));
 app.use('/api/blogs', require('./routes/blogs'));
 app.use('/api/pages', require('./routes/pages'));
 app.use('/api/media', require('./routes/media'));
-app.use('/api/campaigns', require('./routes/campaigns'));
-app.use('/api/discounts', require('./routes/discounts'));
 app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api/contact', require('./routes/contact'));
-app.use('/api/notifications', require('./routes/notifications'));
-app.use('/api/catalog', require('./routes/feed')); 
-app.use('/api/integrations', require('./routes/integrations'));
-app.use('/api/shipping', require('./routes/shipping'));
 app.use('/api/app-data', require('./routes/appData'));
 
-const distPath = path.resolve(__dirname, '..', 'dist');
+// Registered missing modules required for Admin Dashboard
+app.use('/api/campaigns', require('./routes/campaigns'));
+app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/catalog', require('./routes/feed'));
 
+// Serve Static Frontend
+const distPath = path.resolve(__dirname, '..', 'dist');
 if (fs.existsSync(distPath)) {
     app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-        res.sendFile(path.join(distPath, 'index.html'));
-    });
-} else {
-    app.get('/', (req, res) => {
-        res.send('Backend is running.');
-    });
+    app.get('*', (req, res) => res.sendFile(path.join(distPath, 'index.html')));
 }
 
+// Server Health Endpoint
+app.get('/api/health', (req, res) => {
+    res.json({
+        uptime: process.uptime(),
+        dbStatus: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
+        timestamp: Date.now()
+    });
+});
+
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server on Port ${PORT}`));
+app.listen(PORT, async () => {
+    await connectDB();
+    console.log(`🚀 STORE BACKEND ACTIVE ON PORT ${PORT}`);
+});

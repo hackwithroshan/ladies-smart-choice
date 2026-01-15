@@ -69,14 +69,14 @@ const MediaPicker: React.FC<MediaPickerProps> = ({ value, onChange, type = 'any'
             const formData = new FormData();
             formData.append('file', file);
             formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-            
+
             try {
                 const res = await fetch(CLOUDINARY_UPLOAD_URL, { method: 'POST', body: formData });
                 const data = await res.json();
 
                 if (data.secure_url) {
                     if (index === 0) firstUrl = data.secure_url;
-                    
+
                     await fetch(getApiUrl('/api/media'), {
                         method: 'POST',
                         headers: {
@@ -131,11 +131,10 @@ const MediaPicker: React.FC<MediaPickerProps> = ({ value, onChange, type = 'any'
         <button
             type="button"
             onClick={() => setActiveTab(id)}
-            className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${
-                activeTab === id
+            className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${activeTab === id
                     ? 'bg-white text-rose-600 shadow'
                     : 'text-gray-500 hover:bg-gray-200'
-            }`}
+                }`}
         >
             {label}
         </button>
@@ -150,23 +149,23 @@ const MediaPicker: React.FC<MediaPickerProps> = ({ value, onChange, type = 'any'
                 <>
                     <div className="flex items-center gap-2">
                         <div className="flex-1 relative">
-                            <input 
-                                type="text" 
-                                value={value} 
-                                onChange={(e) => onChange(e.target.value)} 
-                                className="block w-full border-gray-300 rounded-l-lg shadow-sm p-2.5 border text-sm focus:ring-rose-500 focus:border-rose-500" 
+                            <input
+                                type="text"
+                                value={value}
+                                onChange={(e) => onChange(e.target.value)}
+                                className="block w-full border-gray-300 rounded-l-lg shadow-sm p-2.5 border text-sm focus:ring-rose-500 focus:border-rose-500"
                                 placeholder={placeholder || "https://..."}
                             />
                         </div>
-                        <button 
-                            type="button" 
-                            onClick={() => { setIsOpen(true); setActiveTab('upload'); }} 
+                        <button
+                            type="button"
+                            onClick={() => { setIsOpen(true); setActiveTab('upload'); }}
                             className="px-4 py-2.5 bg-gray-100 border border-l-0 border-gray-300 rounded-r-lg hover:bg-gray-200 text-sm font-medium text-gray-700"
                         >
                             Choose
                         </button>
                     </div>
-                    
+
                     {value && (
                         <div className="mt-2 w-20 h-20 rounded-md border border-gray-200 overflow-hidden relative bg-gray-50">
                             {value.match(/\.(mp4|webm|ogg)$/i) ? (
@@ -181,7 +180,7 @@ const MediaPicker: React.FC<MediaPickerProps> = ({ value, onChange, type = 'any'
             )}
 
             {isOpen && (
-                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm p-4 animate-fade-in">
+                <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm p-4 animate-fade-in">
                     <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col h-[85vh]">
                         <div className="flex justify-between items-center p-4 border-b bg-gray-50/70">
                             <div className="flex items-center gap-2 p-1 bg-gray-200 rounded-lg">
@@ -196,10 +195,10 @@ const MediaPicker: React.FC<MediaPickerProps> = ({ value, onChange, type = 'any'
                         <div className="flex-1 overflow-y-auto">
                             {activeTab === 'upload' ? (
                                 <div className="p-4 h-full" onDragEnter={handleDrag}>
-                                    <div 
+                                    <div
                                         className={`w-full h-full border-2 border-dashed rounded-xl flex flex-col items-center justify-center text-center transition-all duration-300 ${dragActive ? 'border-rose-500 bg-rose-50 scale-[1.02]' : 'border-gray-300 bg-gray-50'}`}
-                                        onDragLeave={handleDrag} 
-                                        onDragOver={handleDrag} 
+                                        onDragLeave={handleDrag}
+                                        onDragOver={handleDrag}
                                         onDrop={handleDrop}
                                     >
                                         <input ref={fileInputRef} type="file" multiple className="hidden" onChange={(e) => handleUpload(e.target.files)} accept="image/*,video/*" />
@@ -226,8 +225,8 @@ const MediaPicker: React.FC<MediaPickerProps> = ({ value, onChange, type = 'any'
                                     {loading ? <div className="text-center py-8">Loading Library...</div> : (
                                         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
                                             {media.map((item) => (
-                                                <div 
-                                                    key={item.id} 
+                                                <div
+                                                    key={item.id}
                                                     onClick={() => handleSelect(item.url)}
                                                     className="cursor-pointer group relative bg-white rounded-lg border border-gray-200 overflow-hidden aspect-square hover:border-rose-500 hover:ring-2 hover:ring-rose-200 transition-all"
                                                 >

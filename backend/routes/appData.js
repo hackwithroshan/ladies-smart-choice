@@ -12,6 +12,7 @@ const Slide = require('../models/Slide');
 const Collection = require('../models/Collection');
 const ShoppableVideo = require('../models/ShoppableVideo');
 const Testimonial = require('../models/Testimonial');
+const HomepageLayout = require('../models/HomepageLayout');
 
 router.get('/', async (req, res) => {
     try {
@@ -26,7 +27,9 @@ router.get('/', async (req, res) => {
             Slide.find({}),
             Collection.find({ isActive: true }),
             ShoppableVideo.find({}),
-            Testimonial.find({})
+            Testimonial.find({}),
+            HomepageLayout.findOne(),
+            require('../models/StoreDetails').findOne()
         ]);
 
         const data = {
@@ -39,7 +42,9 @@ router.get('/', async (req, res) => {
             slides: results[6].status === 'fulfilled' ? results[6].value : [],
             collections: results[7].status === 'fulfilled' ? results[7].value : [],
             videos: results[8].status === 'fulfilled' ? results[8].value : [],
-            testimonials: results[9].status === 'fulfilled' ? results[9].value : []
+            testimonials: results[9].status === 'fulfilled' ? results[9].value : [],
+            homepageLayout: results[10].status === 'fulfilled' ? results[10].value : { sections: [] },
+            storeDetails: results[11].status === 'fulfilled' ? results[11].value : {}
         };
 
         res.json(data);

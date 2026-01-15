@@ -24,6 +24,49 @@ const logAction = async (req, action, target, targetId, details) => {
     } catch (e) { console.error("Logging failed", e); }
 };
 
+// @desc    Get related products (same category)
+// @route   GET /api/products/:id/related
+router.get('/:id/related', async (req, res) => {
+    try {
+        const product = await Product.findById(req.params.id);
+        if (!product) return res.status(404).json({ message: 'Product not found' });
+
+        const related = await Product.find({
+            category: product.category,
+            _id: { $ne: product._id },
+            status: 'Active'
+        }).limit(4);
+
+        res.json(related);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// @desc    Add review to product
+// @route   POST /api/products/:id/reviews
+router.post('/:id/reviews', protect, async (req, res) => {
+    const { rating, comment } = req.body;
+    try {
+        const product = await Product.findById(req.params.id);
+        if (!product) return res.status(404).json({ message: 'Product not found' });
+
+        const review = {
+            name: req.user.name,
+            rating: Number(rating),
+            comment,
+            userId: req.user._id,
+            date: new Date()
+        };
+
+        product.reviews.push(review);
+        await product.save();
+        res.status(201).json({ message: 'Review added successfully', reviews: product.reviews });
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+});
+
 // POST a new product
 router.post('/', protect, admin, async (req, res) => {
     try {

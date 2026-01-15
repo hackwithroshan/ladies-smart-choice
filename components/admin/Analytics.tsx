@@ -1,10 +1,18 @@
 
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  PieChart, Pie, Cell, BarChart, Bar
+import React, { useState, useEffect } from 'react';
+import {
+    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+    BarChart, Bar, Cell, PieChart, Pie, Legend
 } from 'recharts';
+import { Activity, Users, ShoppingCart, DollarSign, ArrowUpRight, ArrowDownRight, MousePointer2 } from '../Icons';
 import { getApiUrl } from '../../utils/apiHelper';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
+import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
+import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
+import { Separator } from '../ui/separator';
+import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '../ui/chart';
 
 // --- TYPE DEFINITIONS ---
 interface AnalyticsData {
@@ -22,32 +30,70 @@ interface LiveData {
     recentEvents: { eventType: string; path?: string; createdAt: string; source?: string }[];
 }
 
-const PIE_COLORS: { [key: string]: string } = {
-    meta: '#1877F2', google: '#EA4335', organic: '#34A853',
-    direct: '#16423C', referral: '#6A9C89'
-};
+interface AnalyticsDetails {
+    device: { _id: string, count: number }[];
+    location: { _id: { country: string, state: string, city: string, area?: string }, count: number }[];
+    landingPage: { _id: string, count: number }[];
+    referrer: { _id: string, count: number }[];
+    socialSessions: { _id: string, count: number }[];
+    socialSales: { _id: string, totalSales: number }[];
+}
+
+const COLORS = ['#8884d8', '#00C49F', '#FFBB28', '#FF8042'];
 
 const Analytics: React.FC<{ token: string | null }> = ({ token }) => {
     const [data, setData] = useState<AnalyticsData | null>(null);
     const [live, setLive] = useState<LiveData | null>(null);
+    const [details, setDetails] = useState<AnalyticsDetails | null>(null);
     const [loading, setLoading] = useState(true);
-    const [dateRange, setDateRange] = useState('Last 30 Days');
 
-    // Fetch Historical Data
+    // Chart Configuration
+    const chartConfig = {
+        visitors: { label: "Total Traffic" },
+        desktop: { label: "Sales", color: "hsl(240 5.9% 10%)" },
+        mobile: { label: "Visitors", color: "hsl(240 3.8% 46.1%)" },
+    } satisfies ChartConfig;
+
+    const chartData = data?.timeSeries.map(day => ({
+        date: day.date,
+        desktop: day.sales,
+        mobile: day.visitors // Real data, no scaling
+    })) || [];
+
+    const fetchDetails = async () => {
+        try {
+            const resDetails = await fetch(getApiUrl('/api/analytics/details'), {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (resDetails.ok) setDetails(await resDetails.json());
+        } catch (e) {
+            console.error("Details fetch error", e);
+        }
+    };
+
+    // Fetch Summary & Details
     useEffect(() => {
-        const fetchSummary = async () => {
+        const fetchData = async () => {
             try {
+                // Summary
                 const res = await fetch(getApiUrl('/api/analytics/summary?startDate=2024-01-01&endDate=2025-12-31'), {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (res.ok) setData(await res.json());
-            } catch (e) { console.error(e); }
-            finally { setLoading(false); }
+
+                // Details (Initial Fetch)
+                await fetchDetails();
+
+            } catch (e) {
+                console.error("Analytics fetch error", e);
+            } finally {
+                setLoading(false);
+            }
         };
-        fetchSummary();
+        fetchData();
     }, [token]);
 
-    // Polling for LIVE data every 10 seconds
+    // Polling for LIVE data & Details (Near real-time)
     useEffect(() => {
         const fetchLive = async () => {
             try {
@@ -55,175 +101,354 @@ const Analytics: React.FC<{ token: string | null }> = ({ token }) => {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (res.ok) setLive(await res.json());
+
+                // Refresh location stats
+                await fetchDetails();
             } catch (e) { console.error("Live fetch error", e); }
         };
-
-        fetchLive();
+        // Initial call in separate effect handles loading state, this is just for polling
         const interval = setInterval(fetchLive, 10000);
         return () => clearInterval(interval);
     }, [token]);
 
-    if (loading || !data) return <div className="p-20 text-center animate-pulse text-gray-400 font-bold">Initializing Advanced Analytics...</div>;
+    // Process Location Data for Shopify-style accurate display
+    const processedLocations = React.useMemo(() => {
+        if (!details?.location) return [];
+        return details.location
+            .map(loc => {
+                // 1. Filter 'Unknown' at all levels
+                const parts = [loc._id.country, loc._id.state, loc._id.city, loc._id.area];
+                const validParts = parts
+                    .filter(p => p && typeof p === 'string' && p.trim() !== '' && p.toLowerCase() !== 'unknown');
+
+                return {
+                    label: validParts.join(' · ') || 'Unknown Location', // 5. Fallback rule
+                    count: loc.count,
+                    // 4. Stable Key: Country-State-City-Area
+                    key: parts.join('-')
+                };
+            })
+            // 1. Sort Data First (Descending Count)
+            .sort((a, b) => b.count - a.count);
+    }, [details?.location]);
+
+    // 2. Fix Progress Bar Calculation (Max count from sorted data)
+    const maxLocationCount = processedLocations.length > 0 ? processedLocations[0].count : 0;
+    const getLocationPercent = (count: number) => {
+        if (!maxLocationCount) return 0;
+        return (count / maxLocationCount) * 100;
+    };
+
+    if (loading || !data) return (
+        <div className="flex h-full items-center justify-center p-8">
+            <div className="animate-pulse text-muted-foreground">Loading analytics...</div>
+        </div>
+    );
 
     return (
-        <div className="space-y-8 pb-20">
-            {/* --- LIVE DASHBOARD SECTION --- */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
-                {/* Live Pulse Card */}
-                <div className="bg-[#16423C] text-white p-8 rounded-3xl shadow-2xl relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
-                        <svg className="w-32 h-32" fill="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                    </div>
-                    <div className="relative z-10">
-                        <div className="flex items-center gap-3 mb-6">
-                            <span className="flex h-3 w-3 relative">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-                            </span>
-                            <span className="text-xs font-black uppercase tracking-[0.2em] opacity-70">Active Visitors Now</span>
-                        </div>
-                        <h2 className="text-7xl font-black italic tracking-tighter mb-2">{live?.activeUsers || 0}</h2>
-                        <p className="text-sm font-medium opacity-60">Real-time traffic across all devices</p>
-                        
-                        <div className="mt-8 pt-6 border-t border-white/10 space-y-3">
-                            {live?.activePages.map((p, i) => (
-                                <div key={i} className="flex justify-between items-center text-xs">
-                                    <span className="opacity-70 truncate max-w-[180px] font-mono">{p.path}</span>
-                                    <span className="font-black bg-white/10 px-2 py-0.5 rounded">{p.count}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+        <div className="space-y-6 pb-20">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight">Analytics</h1>
+                    <p className="text-sm text-muted-foreground">Monitor your store's performance and traffic in real-time.</p>
                 </div>
+                <div className="flex items-center gap-2">
+                    <Tabs defaultValue="30d" className="w-[400px]">
+                        <TabsList>
+                            <TabsTrigger value="30d">30d</TabsTrigger>
+                        </TabsList>
+                    </Tabs>
+                    <Button variant="outline"><ArrowDownRight className="mr-2 h-4 w-4" /> Export</Button>
+                </div>
+            </div>
 
-                {/* Live Traffic Sources */}
-                <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 flex flex-col">
-                    <h3 className="text-sm font-black uppercase text-gray-400 tracking-widest mb-6">Live Traffic Origin</h3>
-                    <div className="flex-1 min-h-[200px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={Object.entries(live?.sources || {}).map(([name, value]) => ({ name, value }))}>
-                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold'}} />
-                                <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)'}} />
-                                <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                                    {Object.entries(live?.sources || {}).map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={PIE_COLORS[entry[0]] || '#cbd5e1'} />
-                                    ))}
-                                </Bar>
+            {/* Overview Cards */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                        <DollarSign className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">₹{data.kpis.sales.toLocaleString()}</div>
+                        <p className="text-xs text-muted-foreground">+20.1% from last month</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Visitors</CardTitle>
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{data.kpis.visitors.toLocaleString()}</div>
+                        <p className="text-xs text-muted-foreground">+10.5% from last month</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Orders</CardTitle>
+                        <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{data.kpis.orders.toLocaleString()}</div>
+                        <p className="text-xs text-muted-foreground">+12.2% from last month</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Active Now</CardTitle>
+                        <Activity className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{live?.activeUsers || 0}</div>
+                        <div className="flex items-center gap-2">
+                            <span className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                            </span>
+                            <p className="text-xs text-muted-foreground">Live users on site</p>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Main Graphs */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+                <Card className="col-span-4">
+                    <CardHeader>
+                        <CardTitle>Overview</CardTitle>
+                        <CardDescription>Revenue & traffic trends.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="pl-2">
+                        <ResponsiveContainer width="100%" height={300}>
+                            <BarChart data={chartData}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                                <XAxis
+                                    dataKey="date"
+                                    tickLine={false}
+                                    axisLine={false}
+                                    tickMargin={10}
+                                    tick={{ fontSize: 12, fill: '#6b7280' }}
+                                />
+                                <YAxis
+                                    tickLine={false}
+                                    axisLine={false}
+                                    tick={{ fontSize: 12, fill: '#6b7280' }}
+                                    tickFormatter={(value) => `₹${value}`}
+                                />
+                                <Tooltip
+                                    contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                    cursor={{ fill: 'transparent' }}
+                                />
+                                <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+                                <Bar name="Sales (₹)" dataKey="desktop" fill="#0f172a" radius={[4, 4, 0, 0]} maxBarSize={50} />
+                                <Bar name="Visitors" dataKey="mobile" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={50} />
                             </BarChart>
                         </ResponsiveContainer>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 mt-4">
-                        <div className="text-center"><p className="text-[10px] font-bold text-gray-400 uppercase">Meta</p><p className="font-black text-blue-600">{live?.sources.meta || 0}</p></div>
-                        <div className="text-center"><p className="text-[10px] font-bold text-gray-400 uppercase">Google</p><p className="font-black text-red-600">{live?.sources.google || 0}</p></div>
-                        <div className="text-center"><p className="text-[10px] font-bold text-gray-400 uppercase">Organic</p><p className="font-black text-green-600">{live?.sources.organic || 0}</p></div>
-                    </div>
-                </div>
-
-                {/* Live Event Stream */}
-                <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
-                    <h3 className="text-sm font-black uppercase text-gray-400 tracking-widest mb-6">Live Activity Stream</h3>
-                    <div className="flex-1 overflow-y-auto space-y-4 pr-2 admin-scroll">
-                        {live?.recentEvents.map((ev, idx) => (
-                            <div key={idx} className="flex items-center gap-3 animate-fade-in-up">
-                                <div className={`w-2 h-2 rounded-full shrink-0 ${ev.eventType === 'AddToCart' ? 'bg-orange-500' : 'bg-blue-500'}`}></div>
-                                <div className="min-w-0 flex-1">
-                                    <p className="text-xs font-bold text-gray-800 truncate">{ev.eventType}</p>
-                                    <p className="text-[10px] text-gray-400 truncate font-mono">{ev.path}</p>
+                    </CardContent>
+                </Card>
+                <Card className="col-span-3">
+                    <CardHeader>
+                        <CardTitle>Recent Sales</CardTitle>
+                        <CardDescription>Live Activity Stream</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-4 pr-2 max-h-[250px] overflow-y-auto">
+                            {live?.recentEvents.map((ev, idx) => (
+                                <div key={idx} className="flex items-center">
+                                    <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center mr-4 shrink-0">
+                                        <MousePointer2 className="h-4 w-4" />
+                                    </div>
+                                    <div className="space-y-1 min-w-0">
+                                        <p className="text-sm font-medium truncate">{ev.eventType}</p>
+                                        <p className="text-xs text-muted-foreground truncate">{ev.path}</p>
+                                    </div>
+                                    <div className="ml-auto text-xs text-muted-foreground">
+                                        {new Date(ev.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </div>
                                 </div>
-                                <span className="text-[9px] font-black text-gray-300 uppercase shrink-0">
-                                    {new Date(ev.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            {/* --- HISTORICAL DATA SECTION --- */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                
-                {/* Revenue & Growth Chart */}
-                <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
-                    <div className="flex justify-between items-center mb-8">
-                        <h3 className="text-xl font-bold text-gray-800 italic">Sales Performance</h3>
-                        <span className="text-[10px] font-black bg-green-50 text-green-600 px-3 py-1 rounded-full uppercase tracking-widest border border-green-100">+12.5% Growth</span>
-                    </div>
-                    <div className="h-80">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={data.timeSeries}>
-                                <defs>
-                                    <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#16423C" stopOpacity={0.1}/>
-                                        <stop offset="95%" stopColor="#16423C" stopOpacity={0}/>
-                                    </linearGradient>
-                                </defs>
-                                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
-                                <YAxis hide />
-                                <Tooltip contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'}} />
-                                <Area type="monotone" dataKey="sales" stroke="#16423C" strokeWidth={4} fillOpacity={1} fill="url(#colorSales)" />
-                            </AreaChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-
-                {/* Funnel & Conversion */}
-                <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
-                    <h3 className="text-xl font-bold text-gray-800 italic mb-8">E-commerce Funnel</h3>
-                    <div className="space-y-6">
-                        {[
-                            { label: 'Visitors', value: data.funnel.visitors, color: '#94a3b8' },
-                            { label: 'Product Views', value: Math.round(data.funnel.visitors * 0.7), color: '#6A9C89' },
-                            { label: 'Add to Cart', value: data.funnel.addToCart, color: '#f59e0b' },
-                            { label: 'Orders', value: data.funnel.purchased, color: '#16423C' },
-                        ].map((step, i) => (
-                            <div key={i}>
-                                <div className="flex justify-between items-end mb-2">
-                                    <span className="text-xs font-black uppercase text-gray-400 tracking-widest">{step.label}</span>
-                                    <span className="text-lg font-black text-gray-800">{step.value.toLocaleString()}</span>
-                                </div>
-                                <div className="h-2 w-full bg-gray-50 rounded-full overflow-hidden border border-gray-100">
-                                    <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${(step.value / data.funnel.visitors) * 100}%`, backgroundColor: step.color }}></div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                    <div className="mt-10 bg-gray-50 rounded-2xl p-6 text-center border border-gray-100">
-                         <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Overall Store Conversion</p>
-                         <h4 className="text-4xl font-black text-[#16423C] italic">{data.kpis.conversionRate}%</h4>
-                    </div>
-                </div>
-            </div>
-
-            {/* Top Landing Pages Table */}
-            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="p-8 border-b border-gray-50">
-                    <h3 className="text-xl font-bold text-gray-800 italic">Historical Traffic Distribution</h3>
-                </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead className="bg-gray-50/50">
-                            <tr>
-                                <th className="px-8 py-4 text-[10px] font-black uppercase text-gray-400 tracking-widest">Page Path</th>
-                                <th className="px-8 py-4 text-[10px] font-black uppercase text-gray-400 tracking-widest">Visitors</th>
-                                <th className="px-8 py-4 text-[10px] font-black uppercase text-gray-400 tracking-widest">Popularity</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-50">
-                            {data.topPages.map((p, i) => (
-                                <tr key={i} className="hover:bg-gray-50 transition-colors">
-                                    <td className="px-8 py-4 text-sm font-bold text-blue-600 font-mono italic">{p.path}</td>
-                                    <td className="px-8 py-4 text-sm font-black text-gray-800">{p.views.toLocaleString()}</td>
-                                    <td className="px-8 py-4">
-                                        <div className="w-48 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                            <div className="h-full bg-[#6A9C89] rounded-full" style={{ width: `${(p.views / data.topPages[0].views) * 100}%` }}></div>
-                                        </div>
-                                    </td>
-                                </tr>
                             ))}
-                        </tbody>
-                    </table>
-                </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Content & Funnel */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+                <Card className="col-span-4">
+                    <CardHeader><CardTitle>Content Performance</CardTitle></CardHeader>
+                    <CardContent>
+                        <Table>
+                            <TableHeader><TableRow><TableHead>Page</TableHead><TableHead className="text-right">Active Users</TableHead></TableRow></TableHeader>
+                            <TableBody>
+                                {live?.activePages.map((page, i) => (
+                                    <TableRow key={i}>
+                                        <TableCell className="truncate max-w-[200px]">{page.path}</TableCell>
+                                        <TableCell className="text-right"><Badge variant="secondary">{page.count}</Badge></TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+                <Card className="col-span-3">
+                    <CardHeader><CardTitle>Conversion Funnel</CardTitle></CardHeader>
+                    <CardContent>
+                        <div className="space-y-4">
+                            {[
+                                { label: 'Visitors', value: data.funnel.visitors },
+                                { label: 'Purchased', value: data.funnel.purchased }
+                            ].map((step, i) => (
+                                <div key={i} className="flex justify-between text-sm">
+                                    <span>{step.label}</span>
+                                    <span className="font-bold">{step.value}</span>
+                                </div>
+                            ))}
+                        </div>
+                        <Separator className="my-6" />
+                        <div className="flex justify-between items-center">
+                            <span>Conversion Rate</span>
+                            <span className="text-2xl font-bold">{data.kpis.conversionRate}%</span>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* NEW REAL-TIME INSIGHTS (The 6 Cards) */}
+            <h3 className="text-lg font-bold mt-8">Real-Time Insights</h3>
+            <div className="grid gap-4 md:grid-cols-3">
+
+                {/* 1. Device Type */}
+                <Card>
+                    <CardHeader><CardTitle className="text-sm font-semibold">Sessions by device type</CardTitle></CardHeader>
+                    <CardContent className="h-[250px] flex items-center justify-center">
+                        {details?.device?.length ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={details.device}
+                                        dataKey="count"
+                                        nameKey="_id"
+                                        cx="50%"
+                                        cy="50%"
+                                        innerRadius={60}
+                                        outerRadius={80}
+                                        paddingAngle={5}
+                                    >
+                                        {details.device.map((_, index) => (
+                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        ))}
+                                    </Pie>
+                                    <Legend
+                                        verticalAlign="middle"
+                                        align="right"
+                                        layout="vertical"
+                                        formatter={(value, entry: any) => {
+                                            const count = entry.payload.count;
+                                            // Explicitly use payload _id for name, fallback to Desktop
+                                            const name = entry.payload._id || value || 'Desktop';
+                                            const total = details.device.reduce((a, b) => a + b.count, 0) || 1;
+                                            const percent = ((count / total) * 100).toFixed(0);
+                                            return <span className="text-sm font-medium text-zinc-700 ml-2">{name} <span className="text-muted-foreground font-normal">{count} ({percent}%)</span></span>;
+                                        }}
+                                    />
+                                    <Tooltip />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        ) : <div className="text-center py-10 text-muted-foreground text-sm">No data</div>}
+                    </CardContent>
+                </Card>
+
+                {/* 2. Location */}
+                <Card>
+                    <CardHeader><CardTitle className="text-sm font-semibold">Sessions by location</CardTitle></CardHeader>
+                    <CardContent className="space-y-4 pt-0">
+                        {processedLocations.length > 0 ? processedLocations.map((loc) => (
+                            <div key={loc.key} className="space-y-1.5">
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-zinc-700 font-medium">{loc.label}</span>
+                                    <span className="font-bold text-zinc-900">{loc.count}</span>
+                                </div>
+                                <div className="h-1.5 w-full bg-zinc-100 rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full bg-blue-500/80 rounded-full"
+                                        style={{ width: `${getLocationPercent(loc.count)}%` }}
+                                    />
+                                </div>
+                            </div>
+                        )) : <div className="text-center py-10 text-muted-foreground text-sm">No data</div>}
+                    </CardContent>
+                </Card>
+
+                {/* 3. Sales by Social */}
+                <Card>
+                    <CardHeader><CardTitle className="text-sm font-semibold">Total sales by social referrer</CardTitle></CardHeader>
+                    <CardContent className="space-y-4 pt-0">
+                        {details?.socialSales?.length ? details.socialSales.map((s, i) => (
+                            <div key={i} className="space-y-1.5">
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-zinc-700 font-medium capitalize">{s._id}</span>
+                                    <span className="font-bold text-zinc-900">₹{s.totalSales.toLocaleString()}</span>
+                                </div>
+                                <div className="h-1.5 w-full bg-zinc-100 rounded-full">
+                                    <div
+                                        className="h-full bg-emerald-500 rounded-full"
+                                        style={{ width: `${(s.totalSales / (details.socialSales[0]?.totalSales || 1)) * 100}%` }}
+                                    />
+                                </div>
+                            </div>
+                        )) : <div className="flex flex-col items-center justify-center h-[180px] text-muted-foreground text-sm">
+                            <p>No data for this date range</p>
+                        </div>}
+                    </CardContent>
+                </Card>
+
+                {/* 4. Landing Page */}
+                <Card>
+                    <CardHeader><CardTitle className="text-sm font-semibold">Sessions by landing page</CardTitle></CardHeader>
+                    <CardContent className="space-y-0 pt-0">
+                        {details?.landingPage?.length ? details.landingPage.map((p, i) => (
+                            <div key={i} className="flex justify-between items-center py-3 border-b border-zinc-100 last:border-0">
+                                <span className="text-sm font-medium text-zinc-700 truncate max-w-[220px]" title={p._id}>
+                                    {p._id}
+                                </span>
+                                <Badge variant="secondary" className="font-mono">{p.count}</Badge>
+                            </div>
+                        )) : <div className="text-center py-10 text-muted-foreground text-sm">No data</div>}
+                    </CardContent>
+                </Card>
+
+                {/* 5. Social Referrer */}
+                <Card>
+                    <CardHeader><CardTitle className="text-sm font-semibold">Sessions by social referrer</CardTitle></CardHeader>
+                    <CardContent className="space-y-0 pt-0">
+                        {details?.socialSessions?.length ? details.socialSessions.map((s, i) => (
+                            <div key={i} className="flex justify-between items-center py-3 border-b border-zinc-100 last:border-0">
+                                <span className="text-sm font-medium text-zinc-700 capitalize">{s._id}</span>
+                                <Badge variant="outline" className="font-bold">{s.count}</Badge>
+                            </div>
+                        )) : <div className="flex flex-col items-center justify-center h-[180px] text-muted-foreground text-sm">
+                            <p>No social traffic</p>
+                        </div>}
+                    </CardContent>
+                </Card>
+
+                {/* 6. Referrer */}
+                <Card>
+                    <CardHeader><CardTitle className="text-sm font-semibold">Sessions by referrer</CardTitle></CardHeader>
+                    <CardContent className="space-y-0 pt-0">
+                        {details?.referrer?.length ? details.referrer.map((r, i) => (
+                            <div key={i} className="flex justify-between items-center py-3 border-b border-zinc-100 last:border-0">
+                                <span className="text-sm font-medium text-zinc-700 truncate max-w-[220px]">
+                                    {r._id}
+                                </span>
+                                <span className="font-bold text-sm text-zinc-900">{r.count}</span>
+                            </div>
+                        )) : <div className="text-center py-10 text-muted-foreground text-sm">No referrer data</div>}
+                    </CardContent>
+                </Card>
+
             </div>
         </div>
     );

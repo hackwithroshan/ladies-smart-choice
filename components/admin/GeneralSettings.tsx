@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { SiteSettings } from '../../types';
 import { getApiUrl } from '../../utils/apiHelper';
-import StoreDetailsSettings from './StoreDetailsSettings';
+
 
 const GeneralSettings: React.FC<{ token: string | null }> = ({ token }) => {
     const [settings, setSettings] = useState<Partial<SiteSettings>>({});
@@ -48,9 +48,9 @@ const GeneralSettings: React.FC<{ token: string | null }> = ({ token }) => {
                 {/* CHECKOUT STRATEGY SELECTOR */}
                 <div className="bg-white p-6 rounded-2xl border-2 border-gray-100 shadow-sm">
                     <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-6">Checkout Strategy</h3>
-                    
+
                     <div className="space-y-4">
-                        <button 
+                        <button
                             onClick={() => updateMode('standard')}
                             className={`w-full p-5 rounded-xl border-2 transition-all flex items-center justify-between text-left ${settings.checkoutMode === 'standard' ? 'border-[#16423C] bg-[#16423C]/5' : 'border-gray-100 hover:border-gray-200'}`}
                         >
@@ -61,7 +61,7 @@ const GeneralSettings: React.FC<{ token: string | null }> = ({ token }) => {
                             {settings.checkoutMode === 'standard' && <div className="w-5 h-5 bg-[#16423C] rounded-full flex items-center justify-center"><svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg></div>}
                         </button>
 
-                        <button 
+                        <button
                             onClick={() => updateMode('magic')}
                             className={`w-full p-5 rounded-xl border-2 transition-all flex items-center justify-between text-left ${settings.checkoutMode === 'magic' ? 'border-blue-600 bg-blue-50' : 'border-gray-100 hover:border-gray-200'}`}
                         >
@@ -95,13 +95,8 @@ const GeneralSettings: React.FC<{ token: string | null }> = ({ token }) => {
                             </button>
                         </div>
                     </div>
-                    <button onClick={() => setIsStoreModalOpen(true)} className="w-full py-4 bg-white hover:bg-gray-50 text-gray-800 font-bold rounded-2xl border-2 border-gray-100 transition-all">
-                        Edit Business Details
-                    </button>
                 </div>
             </div>
-
-            {isStoreModalOpen && <StoreDetailsSettings token={token} onClose={() => setIsStoreModalOpen(false)} />}
         </div>
     );
 };

@@ -5,16 +5,30 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import ErrorMessage from '../components/ErrorMessage';
 import { getApiUrl } from '../utils/apiHelper';
+import { useSiteData } from '../contexts/SiteDataContext';
 
 interface ContactPageProps {
-  user: any;
-  logout: () => void;
+    user: any;
+    logout: () => void;
 }
 
 const ContactPage: React.FC<ContactPageProps> = ({ user, logout }) => {
+    const { storeDetails } = useSiteData();
     const [formData, setFormData] = useState({ name: '', email: '', subject: '', message: '' });
     const [loading, setLoading] = useState(false);
     const [feedback, setFeedback] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+
+    const formattedAddress = [
+        storeDetails?.address,
+        storeDetails?.city,
+        storeDetails?.state,
+        storeDetails?.zipCode,
+        storeDetails?.country
+    ].filter(Boolean).join(', ') || "123 Fashion Ave, Mumbai, Maharashtra 400001, India";
+
+    const address = formattedAddress;
+    const email = storeDetails?.contactEmail || "support@ladiessmartchoice.com";
+    const phone = storeDetails?.contactPhone || "+91 987 654 3210";
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -66,12 +80,12 @@ const ContactPage: React.FC<ContactPageProps> = ({ user, logout }) => {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 max-w-6xl mx-auto">
                         {/* Contact Info Section */}
                         <div className="space-y-8">
-                             <div>
+                            <div>
                                 <h2 className="text-2xl font-bold font-serif text-gray-800 mb-6">Contact Information</h2>
                                 <div className="space-y-4">
-                                    <InfoItem icon={<IconLocation />} title="Our Address" text="123 Fashion Ave, Mumbai, Maharashtra 400001, India" />
-                                    <InfoItem icon={<IconEmail />} title="Email Us" text="support@ladiessmartchoice.com" />
-                                    <InfoItem icon={<IconPhone />} title="Call Us" text="+91 987 654 3210" />
+                                    <InfoItem icon={<IconLocation />} title="Our Address" text={address} />
+                                    <InfoItem icon={<IconEmail />} title="Email Us" text={email} />
+                                    <InfoItem icon={<IconPhone />} title="Call Us" text={phone} />
                                 </div>
                             </div>
                             <div className="h-80 w-full rounded-lg overflow-hidden shadow-md">
@@ -101,7 +115,7 @@ const ContactPage: React.FC<ContactPageProps> = ({ user, logout }) => {
                                     <label htmlFor="message" className="block text-sm font-medium text-gray-700">Message</label>
                                     <textarea id="message" name="message" rows={5} value={formData.message} onChange={handleInputChange} required className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-rose-500 focus:border-rose-500"></textarea>
                                 </div>
-                                
+
                                 {feedback && (
                                     feedback.type === 'success' ? (
                                         <div className="p-4 bg-green-50 text-green-700 rounded-md text-sm">{feedback.message}</div>
@@ -128,7 +142,7 @@ const ContactPage: React.FC<ContactPageProps> = ({ user, logout }) => {
 
 // --- Helper Components for Contact Page ---
 
-const InputField: React.FC<{id: string, name: string, label: string, value: string, onChange: (e: any) => void, type?: string, required?: boolean}> = ({ id, name, label, value, onChange, type = 'text', required = false }) => (
+const InputField: React.FC<{ id: string, name: string, label: string, value: string, onChange: (e: any) => void, type?: string, required?: boolean }> = ({ id, name, label, value, onChange, type = 'text', required = false }) => (
     <div>
         <label htmlFor={id} className="block text-sm font-medium text-gray-700">{label}</label>
         <input type={type} id={id} name={name} value={value} onChange={onChange} required={required} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-rose-500 focus:border-rose-500" />

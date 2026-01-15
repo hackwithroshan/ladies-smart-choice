@@ -1,165 +1,187 @@
 
 import React, { useState } from 'react';
-import { Icons } from '../../constants';
-import { User } from '../../types';
-
-type AdminView = 'dashboard' | 'analytics' | 'products' | 'inventory' | 'categories' | 'orders' | 'abandoned-checkouts' | 'create-order' | 'customers' | 'marketing' | 'discounts' | 'settings' | 'cms' | 'shop-videos' | 'slider' | 'media' | 'blogs' | 'pages' | 'contact-messages' | 'admin-profile' | 'shipping-integrations' | 'magic-setup';
+import * as ReactRouterDom from 'react-router-dom';
+const { useNavigate } = ReactRouterDom as any;
+import {
+    LayoutDashboard, Activity, ShoppingCart, Package, Users,
+    LayoutTemplate, Settings, Video, Image, FileText,
+    Truck, CreditCard, BadgePercent, ChevronDown, ChevronRight,
+    StarIcon, SearchIcon, Megaphone, Smartphone, Wand2
+} from '../Icons';
+import { User, AdminView } from '../../types';
+import {
+    Sidebar, SidebarContent, SidebarHeader, SidebarMenu,
+    SidebarMenuItem, SidebarMenuButton, SidebarGroup, SidebarGroupLabel
+} from '../ui/sidebar';
+import { cn } from '../../utils/utils';
 
 interface AdminSidebarProps {
-  user: User;
-  currentView: AdminView;
-  setCurrentView: (view: AdminView) => void;
-  isOpen: boolean;
-  setIsOpen: (isOpen: boolean) => void;
+    user: User;
+    currentView: AdminView;
+    setCurrentView: (view: AdminView) => void;
 }
 
-interface MenuItem {
-  id: string;
-  label: string;
-  icon?: React.ReactNode;
-  view?: AdminView;
-  path?: string; 
-  children?: MenuItem[];
-}
+const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentView, setCurrentView, user }) => {
+    const navigate = useNavigate();
+    const [openSubmenus, setOpenSubmenus] = useState<Record<string, boolean>>({
+        'products': true,
+        'orders': true,
+        'content': false,
+        'store-builder': true
+    });
 
-const AdminSidebar: React.FC<AdminSidebarProps> = ({ user, currentView, setCurrentView, isOpen, setIsOpen }) => {
-  const [expandedMenus, setExpandedMenus] = useState<string[]>(['catalog', 'sales', 'magic']);
+    const toggleSubmenu = (key: string) => {
+        setOpenSubmenus(prev => ({ ...prev, [key]: !prev[key] }));
+    };
 
-  const toggleMenu = (id: string) => {
-    setExpandedMenus(prev => 
-      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
-    );
-  };
+    const NavItem = ({ icon: Icon, label, view, path, isSubItem = false }: any) => {
+        const isActive = currentView === view;
+        return (
+            <SidebarMenuItem>
+                <SidebarMenuButton
+                    isActive={isActive}
+                    onClick={() => {
+                        if (path === '/app/products/design') {
+                            window.open(path, '_blank');
+                            return;
+                        }
+                        setCurrentView(view);
+                        navigate(path);
+                    }}
+                    className={cn(
+                        "relative overflow-hidden font-semibold text-[13px] tracking-tight transition-all rounded-lg",
+                        isActive
+                            ? "bg-emerald-50 text-emerald-900 border border-emerald-100 shadow-sm"
+                            : "text-muted-foreground hover:bg-muted/70",
+                        isSubItem ? "pl-9 h-8 text-[12px]" : "h-9"
+                    )}
+                >
+                    {!isSubItem && <Icon className="size-4" />}
+                    <span>{label}</span>
+                    {isActive && <span className="absolute inset-y-1 left-1 w-1 rounded-full bg-emerald-500" />}
+                </SidebarMenuButton>
+            </SidebarMenuItem>
+        );
+    };
 
-  const handleItemClick = (item: MenuItem) => {
-    if (item.view) {
-      setCurrentView(item.view);
-      const newPath = item.path || `/app/${item.view}`;
-      window.history.pushState({}, '', newPath);
-      
-      if (window.innerWidth < 1024) {
-        setIsOpen(false);
-      }
-    }
-  };
+    const SubMenuTrigger = ({ icon: Icon, label, subKey, view, path }: any) => {
+        const isOpen = openSubmenus[subKey];
+        return (
+            <SidebarMenuItem>
+                <SidebarMenuButton
+                    isActive={currentView === view}
+                    onClick={() => {
+                        toggleSubmenu(subKey);
+                        if (path && view) {
+                            setCurrentView(view);
+                            navigate(path);
+                        }
+                    }}
+                    className={cn(
+                        "font-semibold text-[13px] tracking-tight h-9 rounded-lg",
+                        isOpen ? "bg-muted/60 text-foreground" : "text-muted-foreground hover:bg-muted/70",
+                        currentView === view && "bg-emerald-50 text-emerald-900 border border-emerald-100"
+                    )}
+                >
+                    <Icon className="size-4" />
+                    <span className="flex-1">{label}</span>
+                    <ChevronDown className={cn("size-3 transition-transform", !isOpen && "-rotate-90")} />
+                </SidebarMenuButton>
+            </SidebarMenuItem>
+        );
+    };
 
-  const menuStructure: MenuItem[] = [
-    { id: 'dashboard', label: 'Overview', icon: Icons.dashboard, view: 'dashboard', path: '/app/dashboard' },
-    { id: 'analytics', label: 'Analytics', icon: Icons.marketing, view: 'analytics', path: '/app/analytics' },
-    {
-      id: 'magic',
-      label: 'Magic Checkout',
-      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" strokeWidth={2}/></svg>,
-      children: [
-        { id: 'magic-settings', label: 'Checkout Setup', view: 'magic-setup', path: '/app/magic/settings/checkout-setup' },
-        { id: 'abandoned-leads', label: 'Abandoned Leads', view: 'abandoned-checkouts', path: '/app/magic/abandoned' },
-      ]
-    },
-    {
-      id: 'catalog',
-      label: 'Products & Inventory',
-      icon: Icons.products,
-      children: [
-        { id: 'products-list', label: 'Product List', view: 'products', path: '/app/products' },
-        { id: 'categories', label: 'Categories', view: 'categories', path: '/app/categories' },
-        { id: 'shop-videos', label: 'Shop-by-Videos', view: 'shop-videos', path: '/app/shop-videos' },
-      ]
-    },
-    {
-      id: 'sales',
-      label: 'Sales & Orders',
-      icon: Icons.orders,
-      children: [
-        { id: 'orders-list', label: 'All Orders', view: 'orders', path: '/app/orders' },
-        { id: 'create-order', label: 'Manual Order', view: 'create-order', path: '/app/orders/new' },
-        { id: 'customers', label: 'Customers', view: 'customers', path: '/app/customers' },
-        { id: 'discounts', label: 'Coupons', view: 'discounts', path: '/app/discounts' },
-        { id: 'shipping', label: 'Logistics Integrations', view: 'shipping-integrations', path: '/app/shipping' },
-      ]
-    },
-    {
-      id: 'cms',
-      label: 'Store Content',
-      icon: Icons.content,
-      children: [
-        { id: 'slider', label: 'Hero Banners', view: 'slider', path: '/app/content/banners' },
-        { id: 'blogs', label: 'Wellness Blog', view: 'blogs', path: '/app/content/blogs' },
-        { id: 'pages', label: 'Legal Pages', view: 'pages', path: '/app/content/pages' },
-        { id: 'media', label: 'Media Library', view: 'media', path: '/app/content/media' },
-      ]
-    },
-    { id: 'settings', label: 'System Settings', icon: Icons.settings, view: 'settings', path: '/app/settings/general' }
-  ];
+    return (
+        <Sidebar className="border-r border-border/70 bg-white/90 backdrop-blur shadow-sm">
+            <SidebarHeader className="h-16 border-b border-border/60 px-6 flex flex-row items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-800 text-white flex items-center justify-center font-black italic text-xs shadow-sm">
+                    A
+                </div>
+                <div className="flex flex-col">
+                    <span className="text-[12px] font-black uppercase tracking-tight text-foreground leading-none">
+                        Admin Dashboard
+                    </span>
+                    <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-700 border border-emerald-100">
+                        Live
+                    </span>
+                </div>
+            </SidebarHeader>
 
-  return (
-    <>
-      <div 
-        className={`fixed inset-0 z-20 bg-black/60 lg:hidden backdrop-blur-sm transition-opacity duration-300 ${
-          isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-        }`} 
-        onClick={() => setIsOpen(false)}
-      />
+            <SidebarContent className="admin-scroll py-4">
+                <SidebarGroup className="px-3 space-y-3">
+                    <SidebarGroupLabel className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground px-2">
+                        Main
+                    </SidebarGroupLabel>
+                    <SidebarMenu className="space-y-0.5">
+                        <NavItem icon={LayoutDashboard} label="Dashboard" view="dashboard" path="/app/dashboard" />
+                        <NavItem icon={Activity} label="Analytics" view="analytics" path="/app/analytics" />
+                        <SubMenuTrigger icon={ShoppingCart} label="Orders" subKey="orders" view="orders" path="/app/orders" />
+                        {openSubmenus['orders'] && (
+                            <div className="space-y-0.5 mb-2">
+                                <NavItem label="Orders" view="orders" path="/app/orders" isSubItem />
+                                <NavItem label="Drafts" view="drafts" path="/app/orders/drafts" isSubItem />
+                                <NavItem label="Abandoned checkouts" view="abandoned-checkouts" path="/app/orders/abandoned-checkouts" isSubItem />
+                            </div>
+                        )}
 
-      <div className={`fixed inset-y-0 left-0 z-30 w-72 bg-[#16423C] text-gray-300 lg:static lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'} flex flex-col border-r border-gray-800 shadow-2xl transition-transform duration-300`}>
-        <div className="h-20 flex items-center justify-between px-6 border-b border-[#2D5A27] bg-[#16423C] flex-shrink-0">
-            <div className="flex flex-col">
-                 <span className="text-white text-xl font-serif font-extrabold tracking-tight italic">Indoshopsee</span>
-                 <span className="text-[8px] text-brand-accent uppercase tracking-[0.2em] mt-1 font-black">Admin Panel</span>
-            </div>
-        </div>
+                        {/* PRODUCTS SUBMENU */}
+                        <SubMenuTrigger icon={Package} label="Products" subKey="products" view="products" path="/app/products" />
+                        {openSubmenus['products'] && (
+                            <div className="space-y-0.5 mb-2">
+                                <NavItem label="All Products" view="products" path="/app/products" isSubItem />
+                                <NavItem label="Collections" view="categories" path="/app/categories" isSubItem />
+                                <NavItem label="Inventory" view="inventory" path="/app/products/inventory" isSubItem />
+                                <NavItem label="Discounts" view="discounts" path="/app/discounts" isSubItem />
+                                <NavItem label="Reviews" view="reviews" path="/app/reviews" isSubItem />
+                            </div>
+                        )}
 
-        <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-1 admin-scroll">
-          {menuStructure.map((item) => {
-            const isChildActive = item.children?.some(child => child.view === currentView);
-            const isActive = item.view === currentView || isChildActive;
-            const isExpanded = expandedMenus.includes(item.id);
+                        <NavItem icon={Users} label="Customers" view="customers" path="/app/customers" />
 
-            return (
-              <div key={item.id} className="mb-1">
-                {item.children ? (
-                  <div className="rounded-lg overflow-hidden">
-                    <button
-                      onClick={() => toggleMenu(item.id)}
-                      className={`w-full flex items-center justify-between px-4 py-3 text-sm font-medium transition-all ${
-                        isActive || isExpanded ? 'bg-[#2D5A27]/30 text-white' : 'text-gray-400 hover:bg-[#2D5A27]/20 hover:text-white'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className={`transition-colors ${isActive ? 'text-[#6A9C89]' : 'text-gray-500'}`}>{item.icon}</span>
-                        <span>{item.label}</span>
-                      </div>
-                      <svg className={`w-4 h-4 transition-transform duration-300 ${isExpanded ? 'rotate-180 text-[#6A9C89]' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                    </button>
-                    
-                    <div className={`overflow-hidden transition-all duration-300 ${isExpanded ? 'max-h-[500px]' : 'max-h-0'}`}>
-                      <div className="bg-[#0b211e]/40 py-1 space-y-0.5">
-                        {item.children.map((child) => (
-                          <button
-                            key={child.id}
-                            onClick={() => handleItemClick(child)}
-                            className={`w-full flex items-center pl-12 pr-4 py-2.5 text-sm transition-colors border-l-2 ${
-                              currentView === child.view ? 'border-[#6A9C89] text-[#6A9C89] bg-[#6A9C89]/5 font-bold' : 'border-transparent text-gray-500 hover:text-gray-300'
-                            }`}
-                          >
-                            {child.label}
-                          </button>
-                        ))}
-                      </div>
+                        {/* CONTENT SUBMENU */}
+                        <SubMenuTrigger icon={LayoutTemplate} label="Content" subKey="content" view="header-settings" path="/app/content/header" />
+                        {openSubmenus['content'] && (
+                            <div className="space-y-0.5 mb-2">
+                                <NavItem label="Header / Menu" view="header-settings" path="/app/content/header" isSubItem />
+                                <NavItem label="Footer" view="footer" path="/app/content/footer" isSubItem />
+                                <NavItem label="Popup / Modal" view="popup-settings" path="/app/content/popup" isSubItem />
+                                <NavItem label="Media Library" view="media" path="/app/content/media" isSubItem />
+                            </div>
+                        )}
+
+                        {/* STORE BUILDER SUBMENU */}
+                        <SubMenuTrigger icon={Wand2} label="Store Builder" subKey="store-builder" view="cms" path="/app/content/builder" />
+                        {openSubmenus['store-builder'] && (
+                            <div className="space-y-0.5 mb-2">
+                                <NavItem label="Home Page Builder" view="cms" path="/app/content/builder" isSubItem />
+                                {/* Level 3 Nested Visual Simulation */}
+                                <NavItem label="• Home Page SEO" view="homepage-seo" path="/app/content/homepage-seo" isSubItem />
+                                <NavItem label="• Shop Videos" view="shop-videos" path="/app/content/videos" isSubItem />
+
+                                <NavItem label="Product Designer" view="pdp-builder" path="/app/products/design" isSubItem />
+                            </div>
+                        )}
+
+                        <NavItem icon={Megaphone} label="Facebook & Instagram" view="marketing" path="/app/marketing" />
+                        <NavItem icon={SearchIcon} label="Google Ads" view="marketing" path="/app/marketing" />
+                        <NavItem icon={Settings} label="Settings" view="settings" path="/app/settings" />
+                    </SidebarMenu>
+                </SidebarGroup>
+            </SidebarContent>
+
+            <div className="mt-auto p-4 border-t border-border/60 bg-muted/40">
+                <div className="flex items-center gap-3">
+                    <div className="size-9 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center justify-center text-[11px] font-black uppercase">
+                        {user.name.substring(0, 1)}
                     </div>
-                  </div>
-                ) : (
-                  <button onClick={() => handleItemClick(item)} className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all ${isActive ? 'bg-[#6A9C89] text-white shadow-lg' : 'text-gray-400 hover:bg-[#2D5A27]/20 hover:text-white'}`}>
-                    <span className={`flex-shrink-0 mr-3 ${isActive ? 'text-white' : 'text-gray-500'}`}>{item.icon}</span>
-                    {item.label}
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </nav>
-      </div>
-    </>
-  );
+                    <div className="flex flex-col min-w-0">
+                        <span className="text-xs font-semibold text-foreground truncate">{user.name}</span>
+                        <span className="text-[10px] font-medium text-muted-foreground truncate">{user.role}</span>
+                    </div>
+                </div>
+            </div>
+        </Sidebar>
+    );
 };
 
 export default AdminSidebar;

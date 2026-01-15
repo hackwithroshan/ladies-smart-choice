@@ -1,194 +1,202 @@
 
-import React, { useState, useEffect, useRef } from 'react';
-import { User } from '../../types';
+import React, { useState, useEffect } from 'react';
 import { getApiUrl } from '../../utils/apiHelper';
-import { useSiteData } from '../../contexts/SiteDataContext';
+import { User, AdminView } from '../../types';
+import { Button } from '../ui/button';
+import { Separator } from '../ui/separator';
+import { SidebarTrigger } from '../ui/sidebar';
+import {
+    DropdownMenu,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuItem,
+} from "../ui/dropdown-menu";
+import { SearchIcon, UserIcon, Bell } from '../Icons';
+import { cn } from '../../utils/utils';
 
 interface AdminHeaderProps {
-  user: User;
-  logout: () => void;
-  toggleSidebar: () => void;
-  openGlobalSearch: () => void;
-  setCurrentView: (view: any) => void;
+    user: User;
+    logout: () => void;
+    openGlobalSearch: () => void;
+    currentView: AdminView;
+    setCurrentView: (view: any) => void;
+    token: string | null;
 }
 
 interface Notification {
-    id: string;
+    _id: string;
     message: string;
-    link: string;
     read: boolean;
     createdAt: string;
 }
 
-function timeAgo(dateString: string): string {
-    const date = new Date(dateString);
-    const now = new Date();
-    const seconds = Math.round((now.getTime() - date.getTime()) / 1000);
-    if (seconds < 60) return `${seconds}s ago`;
-    const minutes = Math.round(seconds / 60);
-    if (minutes < 60) return `${minutes}m ago`;
-    const hours = Math.round(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
-    return date.toLocaleDateString();
-}
-
-const AdminHeader: React.FC<AdminHeaderProps> = ({ user, logout, toggleSidebar, openGlobalSearch, setCurrentView }) => {
-    const [isProfileOpen, setIsProfileOpen] = useState(false);
-    const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-    const { siteSettings } = useSiteData();
-    
+const AdminHeader: React.FC<AdminHeaderProps> = ({ user, logout, openGlobalSearch, currentView, setCurrentView, token }) => {
     const [notifications, setNotifications] = useState<Notification[]>([]);
-    const [unreadMessages, setUnreadMessages] = useState(0);
-
-    const profileRef = useRef<HTMLDivElement>(null);
-    const notificationsRef = useRef<HTMLDivElement>(null);
-    const token = localStorage.getItem('token');
-
-    const unreadNotifs = notifications.filter(n => !n.read).length;
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [loadingNotifications, setLoadingNotifications] = useState(false);
 
     useEffect(() => {
-        const fetchData = async () => {
+        if (!token) return;
+        const fetchNotifications = async () => {
+            setLoadingNotifications(true);
             try {
-                const notifRes = await fetch(getApiUrl('/notifications'), { headers: { 'Authorization': `Bearer ${token}` } });
-                if (notifRes.ok) setNotifications(await notifRes.json());
-                const msgRes = await fetch(getApiUrl('/contact'), { headers: { 'Authorization': `Bearer ${token}` } });
-                if (msgRes.ok) {
-                    const messages = await msgRes.json();
-                    setUnreadMessages(messages.filter((m: any) => !m.read).length);
+                const res = await fetch(getApiUrl('/api/notifications'), {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setNotifications(data);
+                    setUnreadCount(data.filter((n: any) => !n.read).length);
                 }
             } catch (error) {
-                console.error("Failed to fetch header data:", error);
+                console.error('Failed to fetch notifications', error);
+            } finally {
+                setLoadingNotifications(false);
             }
         };
-        fetchData();
-        const interval = setInterval(fetchData, 30000);
+
+        fetchNotifications();
+        // Refresh every minute to keep updated
+        const interval = setInterval(fetchNotifications, 60000);
         return () => clearInterval(interval);
     }, [token]);
 
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (profileRef.current && !profileRef.current.contains(event.target as Node)) setIsProfileOpen(false);
-            if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) setIsNotificationsOpen(false);
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    const handleMarkAllRead = async () => {
-        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    const markAllRead = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!token) return;
         try {
-            await fetch(getApiUrl('/notifications/mark-read'), {
+            const res = await fetch(getApiUrl('/api/notifications/mark-read'), {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-        } catch (error) { console.error(error); }
+            if (res.ok) {
+                setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+                setUnreadCount(0);
+            }
+        } catch (error) {
+            console.error('Failed to mark notifications read', error);
+        }
     };
-
-    const getInitials = (name: string) => {
-      if (!name) return 'A';
-      const parts = name.split(' ').filter(Boolean);
-      return parts.length > 1 ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() : name.substring(0, 2).toUpperCase();
+    // Format current view to a readable title
+    const getPageTitle = (view: AdminView) => {
+        const titles: Record<string, string> = {
+            'dashboard': 'Control Panel',
+            'analytics': 'Market Intelligence',
+            'products': 'Product Catalog',
+            'pdp-builder': 'Visual Designer',
+            'orders': 'Order Manifests',
+            'customers': 'Customer Directory',
+            'marketing': 'Growth Campaigns',
+            'settings': 'System Settings',
+            'shipping-integrations': 'Logistics Hub',
+            'cms': 'Content Builder',
+            'blogs': 'Blog Editor'
+        };
+        return titles[view] || view.charAt(0).toUpperCase() + view.slice(1).replace('-', ' ');
     };
 
     return (
-        <div className="flex flex-col flex-shrink-0">
-            {/* Maintenance Mode Warning Bar */}
-            {siteSettings?.isMaintenanceMode && (
-                <div className="bg-amber-600 text-white text-[10px] sm:text-xs font-bold py-1.5 text-center flex items-center justify-center gap-2 uppercase tracking-widest shadow-inner z-50">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                    Maintenance Mode Active - Public Access is Restricted
-                </div>
-            )}
+        <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-30 px-4 md:px-6">
+            <div className="flex w-full items-center gap-2">
+                <SidebarTrigger className="-ml-2 text-muted-foreground hover:text-foreground hover:bg-muted/50" />
 
-            <header className="bg-white shadow-sm p-4 flex justify-between items-center z-40 border-b h-20">
-                <div className="flex items-center gap-3">
-                    <button onClick={toggleSidebar} className="lg:hidden text-gray-500 p-2 rounded-full hover:bg-gray-100">
-                        <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.75"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+                <Separator
+                    orientation="vertical"
+                    className="mx-2 h-4 sm:h-5 sm:mx-4"
+                />
+
+                <div className="flex flex-col gap-0.5">
+                    {/* <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground leading-none hidden sm:block">Admin</span> */}
+                    {/* <h1 className="text-sm sm:text-lg font-black uppercase tracking-tighter italic text-foreground truncate leading-none">
+                        {getPageTitle(currentView)}
+                    </h1> */}
+                </div>
+
+                <div className="ml-auto flex items-center gap-2 sm:gap-4">
+                    {/* Global Command Search */}
+                    <button
+                        onClick={openGlobalSearch}
+                        className="hidden md:flex items-center gap-3 h-9 px-4 rounded-full border border-input bg-background hover:bg-accent/50 hover:text-accent-foreground transition-all shadow-sm group w-64"
+                    >
+                        <SearchIcon className="h-4 w-4 text-muted-foreground group-hover:text-foreground" />
+                        <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground">Search platform...</span>
+                        <kbd className="pointer-events-none ml-auto hidden h-5 select-none items-center gap-1 rounded bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
+                            <span className="text-xs">⌘</span>K
+                        </kbd>
+                    </button>
+                    <button onClick={openGlobalSearch} className="md:hidden p-2 rounded-full hover:bg-muted text-muted-foreground">
+                        <SearchIcon className="h-5 w-5" />
                     </button>
 
-                    <div className="relative">
-                        <button 
-                            onClick={openGlobalSearch} 
-                            className="hidden sm:flex items-center text-left text-sm text-gray-500 bg-gray-100 border border-gray-200 rounded-lg py-2 px-4 hover:bg-gray-200 transition-colors w-64 lg:w-96"
-                        >
-                            <svg className="w-5 h-5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.75"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                            Search products, orders...
-                            <span className="ml-auto text-xs border border-gray-300 rounded px-1.5 py-0.5 font-mono hidden md:inline">Ctrl K</span>
-                        </button>
-                        <button onClick={openGlobalSearch} className="sm:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-full">
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.75"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                        </button>
-                    </div>
-                </div>
-
-                <div className="flex items-center space-x-2 md:space-x-4">
-                    <a href="/" target="_blank" rel="noopener noreferrer" className="hidden md:flex text-sm text-blue-600 font-medium hover:underline items-center gap-1 p-2 rounded-md hover:bg-blue-50 transition-colors">
-                        <span>View Store</span>
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.75"><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                    </a>
-                    
-                    <div className="w-px h-6 bg-gray-200 hidden md:block"></div>
-
-                    <div className="flex items-center space-x-1">
-                        <button onClick={() => setCurrentView('contact-messages')} className="relative p-2 text-gray-500 rounded-full hover:bg-gray-100 hover:text-gray-800 transition-colors" title="Contact Messages">
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.75"><path strokeLinecap="round" strokeLinejoin="round" d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
-                            {unreadMessages > 0 && <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-blue-500 text-white text-[10px] font-bold ring-2 ring-white">{unreadMessages}</span>}
-                        </button>
-                        
-                        <div className="relative" ref={notificationsRef}>
-                            <button onClick={() => setIsNotificationsOpen(prev => !prev)} className="relative p-2 text-gray-500 rounded-full hover:bg-gray-100 hover:text-gray-800 transition-colors" title="Notifications">
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.75">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-                                </svg>
-                                {unreadNotifs > 0 && <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-white text-[10px] font-bold ring-2 ring-white">{unreadNotifs}</span>}
-                            </button>
-                            {isNotificationsOpen && (
-                                <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-2xl border border-gray-200 z-50 animate-fade-in-up overflow-hidden">
-                                    <div className="p-3 flex justify-between items-center border-b">
-                                        <h4 className="font-bold text-gray-800">Notifications</h4>
-                                        {unreadNotifs > 0 && <button onClick={handleMarkAllRead} className="text-xs text-blue-600 font-medium hover:underline">Mark all as read</button>}
-                                    </div>
-                                    <div className="max-h-96 overflow-y-auto">
-                                        {notifications.length === 0 ? <p className="text-sm text-gray-500 text-center py-8">No new notifications.</p> :
-                                        notifications.map(notif => (
-                                            <div key={notif.id} className={`p-3 border-b border-gray-100 last:border-0 hover:bg-gray-50 cursor-pointer ${!notif.read ? 'bg-blue-50' : 'bg-white'}`}>
-                                                <p className="text-sm text-gray-700">{notif.message}</p>
-                                                <p className="text-xs text-gray-400 mt-1">{timeAgo(notif.createdAt)}</p>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="relative" ref={profileRef}>
-                            <button onClick={() => setIsProfileOpen(prev => !prev)} className="flex items-center space-x-2 p-1 rounded-full hover:bg-gray-100">
-                                {user.avatarUrl ? (
-                                    <img src={user.avatarUrl} alt={user.name} className="w-8 h-8 rounded-full object-cover" />
-                                ) : (
-                                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-rose-500 to-orange-600 flex items-center justify-center text-xs font-bold text-white">
-                                        {getInitials(user.name)}
-                                    </div>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger className="h-9 w-9 rounded-full relative inline-flex items-center justify-center hover:bg-accent hover:text-accent-foreground transition-colors">
+                            <Bell className="h-5 w-5" />
+                            {unreadCount > 0 && <span className="absolute top-2 right-2.5 h-2 w-2 bg-rose-500 rounded-full animate-pulse"></span>}
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-80">
+                            <DropdownMenuLabel className="flex justify-between items-center">
+                                <span>Notifications</span>
+                                {unreadCount > 0 && (
+                                    <Button variant="ghost" size="sm" onClick={markAllRead} className="text-xs h-6 px-2 text-muted-foreground hover:text-foreground">
+                                        Mark all read
+                                    </Button>
                                 )}
-                            </button>
-                            {isProfileOpen && (
-                                <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-2xl py-1 z-50 ring-1 ring-black ring-opacity-5 animate-fade-in-up">
-                                    <div className="px-4 py-3 border-b">
-                                        <p className="text-sm font-semibold text-gray-900 truncate">{user.name}</p>
-                                        <p className="text-xs text-gray-500 truncate">{user.email}</p>
-                                    </div>
-                                    <button onClick={() => { setCurrentView('admin-profile'); setIsProfileOpen(false); }} className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">My Profile</button>
-                                    <button onClick={() => { setCurrentView('settings'); setIsProfileOpen(false); }} className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Settings</button>
-                                    <div className="border-t my-1"></div>
-                                    <button onClick={() => { logout(); setIsProfileOpen(false); }} className="w-full text-left block px-4 py-2 text-sm text-red-600 hover:bg-red-50">Logout</button>
+                            </DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <div className="max-h-[300px] overflow-y-auto">
+                                {loadingNotifications ? (
+                                    <div className="p-4 text-center text-xs text-muted-foreground">Loading...</div>
+                                ) : notifications.length === 0 ? (
+                                    <div className="p-4 text-center text-sm text-muted-foreground">No new notifications</div>
+                                ) : (
+                                    notifications.map((notification) => (
+                                        <div key={notification._id} className={cn("flex flex-col items-start p-3 gap-1 border-b last:border-0 hover:bg-muted/50 transition-colors", !notification.read && "bg-muted/30")}>
+                                            <p className={cn("text-sm leading-none", !notification.read ? "font-semibold text-foreground" : "font-medium text-muted-foreground")}>
+                                                {notification.message}
+                                            </p>
+                                            <p className="text-[10px] text-muted-foreground">
+                                                {new Date(notification.createdAt).toLocaleDateString()} • {new Date(notification.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </p>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    <div className="h-8 w-px bg-border hidden sm:block mx-1"></div>
+
+                    {/* Profile Dropdown */}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger className="relative h-9 w-9 rounded-full border border-input bg-background p-0 hover:bg-accent hover:text-accent-foreground flex items-center justify-center focus-visible:outline-none transition-colors">
+                            <span className="text-xs font-black italic">{user.name?.[0]}</span>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56 p-1">
+                            <div className="flex items-center justify-start gap-2 p-2">
+                                <div className="flex flex-col space-y-0.5 leading-none">
+                                    <p className="font-bold text-sm truncate">{user.name}</p>
+                                    <p className="text-xs text-muted-foreground truncate font-medium">{user.email}</p>
                                 </div>
-                            )}
-                        </div>
-                    </div>
+                            </div>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => setCurrentView('admin-profile')} className="cursor-pointer font-medium">
+                                Profile Settings
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setCurrentView('settings')} className="cursor-pointer font-medium">
+                                System Preferences
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={logout} className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer font-bold">
+                                Log out
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
-            </header>
-        </div>
+            </div>
+        </header>
     );
 };
 

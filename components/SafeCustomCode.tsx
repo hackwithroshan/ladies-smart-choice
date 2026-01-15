@@ -1,111 +1,118 @@
 
 import React, { useEffect, useRef } from 'react';
+import { Product } from '../types';
 
 interface SafeCustomCodeProps {
     code: string;
     sectionId: string;
+    settingsJson?: string;
+    productContext?: Product; 
+    relatedProducts?: Product[];
+    fbtProducts?: Product[];
 }
 
-const SafeCustomCode: React.FC<SafeCustomCodeProps> = ({ code, sectionId }) => {
+const SafeCustomCode: React.FC<SafeCustomCodeProps> = ({ 
+    code, 
+    sectionId, 
+    settingsJson, 
+    productContext,
+    relatedProducts = [],
+    fbtProducts = []
+}) => {
     const containerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        if (!containerRef.current) return;
+        if (!containerRef.current || !code) return;
 
-        // 1. Clear previous content
-        containerRef.current.innerHTML = '';
-
-        // 2. Parse HTML string
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(code, 'text/html');
+        // 1. Build context object (Merging JSON settings + Product Data)
+        let contextObj: Record<string, any> = {
+            sectionId,
+            relatedProducts: relatedProducts || [],
+            fbtProducts: fbtProducts || []
+        };
         
-        // 3. Inject CSS Styles immediately
-        const styles = Array.from(doc.querySelectorAll('link[rel="stylesheet"], style'));
-        styles.forEach(style => {
-            const head = document.head;
-            if (style.tagName === 'LINK') {
-                const href = style.getAttribute('href');
-                if (href && !head.querySelector(`link[href="${href}"]`)) {
-                    const newLink = document.createElement('link');
-                    Array.from(style.attributes).forEach(attr => newLink.setAttribute(attr.name, attr.value));
-                    head.appendChild(newLink);
-                }
-            } else {
-                const newStyle = document.createElement('style');
-                newStyle.textContent = style.textContent;
-                head.appendChild(newStyle);
+        // Parse the section-specific JSON (Liquid-style Settings)
+        try {
+            if (settingsJson && settingsJson.trim()) {
+                const customVars = JSON.parse(settingsJson);
+                contextObj = { ...contextObj, ...customVars };
+            }
+        } catch (e) { 
+            console.warn(`[Designer] JSON Syntax Error in ${sectionId}`); 
+        }
+
+        // Add Product Global Variables
+        if (productContext) {
+            contextObj = {
+                ...contextObj,
+                id: productContext.id || (productContext as any)._id,
+                productName: productContext.name,
+                price: productContext.price,
+                formattedPrice: (productContext.price || 0).toLocaleString('en-IN'),
+                mrp: productContext.mrp || 0,
+                formattedMrp: (productContext.mrp || 0).toLocaleString('en-IN'),
+                productImage: productContext.imageUrl,
+                gallery: productContext.galleryImages || [],
+                category: productContext.category || 'General',
+                brandName: productContext.brand || 'Ayushree',
+                shortDescription: productContext.shortDescription || '',
+                description: productContext.description || '',
+                slug: productContext.slug,
+                reviews: productContext.reviews || []
+            };
+        }
+
+        // 2. Perform string replacement (The Liquid Engine)
+        let processedCode = code;
+        Object.entries(contextObj).forEach(([key, val]) => {
+            if (typeof val !== 'object') {
+                const regex = new RegExp(`{{\\s*${key}\\s*}}`, 'g');
+                processedCode = processedCode.replace(regex, String(val ?? ''));
             }
         });
 
-        // 4. Inject Clean HTML Content
-        const contentClone = doc.body.cloneNode(true) as HTMLElement;
-        contentClone.querySelectorAll('script, link, style').forEach(el => el.remove());
-        containerRef.current.innerHTML = contentClone.innerHTML;
+        // 3. Inject and Execute
+        try {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(processedCode, 'text/html');
+            
+            containerRef.current.innerHTML = '';
 
-        // 5. Smart Script Runner
-        const scripts = Array.from(doc.querySelectorAll('script'));
-        
-        const runScripts = async () => {
-            for (const script of scripts) {
-                if (script.src) {
-                    // Load External JS (like Swiper)
-                    await new Promise<void>((resolve, reject) => {
-                        if (document.querySelector(`script[src="${script.src}"]`)) {
-                            resolve(); return;
-                        }
-                        const newScript = document.createElement('script');
-                        Array.from(script.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
-                        newScript.onload = () => resolve();
-                        newScript.onerror = () => reject();
-                        document.head.appendChild(newScript);
-                    });
-                } else {
-                    // Execute Inline JS with "Wait-for-Library" logic
-                    const executeWithRetry = (retryCount = 0) => {
-                        const needsSwiper = script.innerHTML.includes('Swiper');
-                        const swiperReady = (window as any).Swiper;
+            // Handle Styles
+            doc.querySelectorAll('style').forEach(s => {
+                const styleEl = document.createElement('style');
+                styleEl.textContent = s.textContent;
+                containerRef.current?.appendChild(styleEl);
+            });
 
-                        if (needsSwiper && !swiperReady && retryCount < 30) {
-                            // Wait 100ms and try again
-                            setTimeout(() => executeWithRetry(retryCount + 1), 100);
-                            return;
-                        }
+            // Handle Body
+            const wrapper = document.createElement('div');
+            wrapper.id = `wrapper-${sectionId}`;
+            const tempBody = doc.body.cloneNode(true) as HTMLElement;
+            tempBody.querySelectorAll('script, style').forEach(el => el.remove());
+            wrapper.innerHTML = tempBody.innerHTML;
+            containerRef.current.appendChild(wrapper);
 
-                        // Ensure DOM is ready for dimension calculations
-                        requestAnimationFrame(() => {
-                            try {
-                                const runner = new Function('sectionId', 'sectionElement', `
-                                    try {
-                                        ${script.innerHTML}
-                                    } catch (e) {
-                                        console.error("Custom JS error in section [" + sectionId + "]:", e);
-                                    }
-                                `);
-                                runner(sectionId, document.getElementById(sectionId));
-                            } catch (e) {
-                                console.error("Script parsing error:", e);
-                            }
-                        });
-                    };
-
-                    executeWithRetry();
+            // Execute Scripts with context access
+            doc.querySelectorAll('script').forEach(s => {
+                try {
+                    // Create function scope with 'sectionContext' available
+                    const runner = new Function('sectionContext', s.innerHTML);
+                    runner(contextObj);
+                } catch (scriptErr) { 
+                    console.error(`[Designer JS Error] ${sectionId}:`, scriptErr); 
                 }
-            }
-        };
+            });
 
-        runScripts();
+        } catch (err) {
+            console.error(`[Designer Render Error]`, err);
+        }
 
-        return () => {
-            if (containerRef.current) containerRef.current.innerHTML = '';
-        };
-    }, [code, sectionId]);
+        return () => { if (containerRef.current) containerRef.current.innerHTML = ''; };
+    }, [code, settingsJson, productContext, sectionId, relatedProducts, fbtProducts]);
 
     return (
-        <div 
-            id={sectionId} 
-            ref={containerRef} 
-            className="custom-section-container w-full"
-        />
+        <div id={`pdp-section-${sectionId}`} ref={containerRef} className="w-full relative overflow-visible" />
     );
 };
 

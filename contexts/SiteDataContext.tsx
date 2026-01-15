@@ -1,8 +1,8 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { 
-    HeaderSettings, 
-    FooterSettings, 
+import {
+    HeaderSettings,
+    FooterSettings,
     Category,
     Product,
     Slide,
@@ -10,9 +10,12 @@ import {
     ShoppableVideo,
     Testimonial,
     SiteSettings,
-    HomePageSettings
+    HomePageSettings,
+    HomepageLayout,
+    StoreDetails
 } from '../types';
 import { getApiUrl } from '../utils/apiHelper';
+import { initFacebookPixel } from '../utils/metaPixel';
 
 interface SiteDataContextType {
     headerSettings: HeaderSettings;
@@ -25,6 +28,8 @@ interface SiteDataContextType {
     testimonials: Testimonial[];
     siteSettings: SiteSettings | null;
     homePageSettings: HomePageSettings | null;
+    homepageLayout: HomepageLayout | null;
+    storeDetails: StoreDetails | null;
     loading: boolean;
     refreshSiteData: () => Promise<void>;
 }
@@ -62,8 +67,10 @@ const SiteDataContext = createContext<SiteDataContextType>({
     testimonials: [],
     siteSettings: null,
     homePageSettings: null,
+    homepageLayout: null,
+    storeDetails: null,
     loading: true,
-    refreshSiteData: async () => {},
+    refreshSiteData: async () => { },
 });
 
 export const SiteDataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -77,6 +84,8 @@ export const SiteDataProvider: React.FC<{ children: ReactNode }> = ({ children }
     const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
     const [siteSettings, setSiteSettings] = useState<SiteSettings | null>(null);
     const [homePageSettings, setHomePageSettings] = useState<HomePageSettings | null>(null);
+    const [homepageLayout, setHomepageLayout] = useState<HomepageLayout | null>(null);
+    const [storeDetails, setStoreDetails] = useState<StoreDetails | null>(null);
     const [loading, setLoading] = useState(true);
 
     const fetchSiteData = useCallback(async () => {
@@ -95,6 +104,8 @@ export const SiteDataProvider: React.FC<{ children: ReactNode }> = ({ children }
             setTestimonials(data.testimonials || []);
             setSiteSettings(data.siteSettings || null);
             setHomePageSettings(data.homePageSettings || null);
+            setHomepageLayout(data.homepageLayout || { sections: [] });
+            setStoreDetails(data.storeDetails || null);
 
             if (data.siteSettings) {
                 const root = document.documentElement;
@@ -113,25 +124,13 @@ export const SiteDataProvider: React.FC<{ children: ReactNode }> = ({ children }
     }, [fetchSiteData]);
 
     useEffect(() => {
-        if (siteSettings?.fontFamily) {
-            const fontName = siteSettings.fontFamily;
-            const linkId = 'dynamic-font-link';
-            const styleId = 'dynamic-font-style';
-
-            document.getElementById(linkId)?.remove();
+        if (siteSettings) {
+            const styleId = 'dynamic-theme-style';
             document.getElementById(styleId)?.remove();
-
-            const link = document.createElement('link');
-            link.id = linkId;
-            link.rel = 'stylesheet';
-            link.href = `https://fonts.googleapis.com/css2?family=${fontName.replace(/ /g, '+')}:wght@300;400;500;600;700;800&display=swap`;
-            document.head.appendChild(link);
 
             const style = document.createElement('style');
             style.id = styleId;
             style.innerHTML = `
-                body { font-family: 'Inter', sans-serif; }
-                h1, h2, h3, h4, .font-brand { font-family: '${fontName}', serif !important; }
                 .bg-brand-primary { background-color: var(--brand-primary) !important; }
                 .text-brand-primary { color: var(--brand-primary) !important; }
                 .bg-brand-accent { background-color: var(--brand-accent) !important; }
@@ -140,22 +139,30 @@ export const SiteDataProvider: React.FC<{ children: ReactNode }> = ({ children }
             `;
             document.head.appendChild(style);
         }
-    }, [siteSettings?.fontFamily]);
+    }, [siteSettings?.primaryColor, siteSettings?.accentColor]);
+
+    useEffect(() => {
+        if (siteSettings?.metaPixelId) {
+            initFacebookPixel(siteSettings.metaPixelId);
+        }
+    }, [siteSettings?.metaPixelId]);
 
     return (
-        <SiteDataContext.Provider value={{ 
-            headerSettings, 
-            footerSettings, 
-            categories, 
-            products, 
-            slides, 
-            collections, 
-            videos, 
-            testimonials, 
-            siteSettings, 
-            homePageSettings, 
+        <SiteDataContext.Provider value={{
+            headerSettings,
+            footerSettings,
+            categories,
+            products,
+            slides,
+            collections,
+            videos,
+            testimonials,
+            siteSettings,
+            homePageSettings,
+            homepageLayout,
+            storeDetails,
             loading,
-            refreshSiteData: fetchSiteData 
+            refreshSiteData: fetchSiteData
         }}>
             {children}
         </SiteDataContext.Provider>

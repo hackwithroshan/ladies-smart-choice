@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
-import { ChevronDownIcon } from './Icons';
+// Fix: Import ChevronDown as ChevronDownIcon
+import { ChevronDown as ChevronDownIcon } from './Icons';
 
 interface AccordionProps {
   title: string;

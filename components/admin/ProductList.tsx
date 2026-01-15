@@ -1,48 +1,51 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { Product, Category } from '../../types';
-import { COLORS } from '../../constants';
-import ProductForm from './ProductForm';
+
 import { getApiUrl } from '../../utils/apiHelper';
+import * as ReactRouterDom from 'react-router-dom';
+const { useNavigate } = ReactRouterDom as any;
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '../ui/table';
+import { Checkbox } from '../ui/checkbox';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
+import { Badge } from '../ui/badge';
+import {
+  ArrowUpDown, MoreHorizontal, ChevronRight, ChevronLeft,
+  Package, SearchIcon, LayoutTemplate, Activity, Edit, Trash2, FileText,
+  Download, Upload, ChevronDown, Calendar
+} from '../Icons';
+import { cn } from '../../utils/utils';
 
-const ProductList: React.FC<{token: string | null}> = ({token}) => {
+const ProductList: React.FC<{ token: string | null }> = ({ token }) => {
+  const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
-  // Search & Pagination State
-  const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState("all");
+  const [actionMenuOpen, setActionMenuOpen] = useState<string | null>(null);
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
-
-  // Bulk Action State
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [bulkAction, setBulkAction] = useState<string>('');
-  const [targetCategory, setTargetCategory] = useState<string>('');
-  const [processingBulk, setProcessingBulk] = useState(false);
+  const pageSize = 50;
 
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      setError(null);
-      
-      const [prodRes, catRes] = await Promise.all([
-          fetch(getApiUrl('/api/products/all'), { headers: { 'Authorization': `Bearer ${token}` } }),
-          fetch(getApiUrl('/api/products/categories'))
-      ]);
-
-      if (!prodRes.ok) throw new Error("Failed to fetch products");
-      
-      setProducts(await prodRes.json());
-      if(catRes.ok) setCategories(await catRes.json());
-      
-      setCurrentPage(1); // Reset to first page on refresh
-      setSelectedIds(new Set()); // Clear selection
-    } catch (error: any) {
-      setError(error.message);
+      const res = await fetch(getApiUrl('/api/products/all'), {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setProducts(Array.isArray(data) ? data : []);
+      }
+    } catch (error) {
+      console.error('Error fetching products:', error);
     } finally {
       setLoading(false);
     }
@@ -52,379 +55,413 @@ const ProductList: React.FC<{token: string | null}> = ({token}) => {
     fetchProducts();
   }, [token]);
 
-  // Reset to page 1 when search term changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm]);
+  const filteredProducts = useMemo(() => {
+    let result = products;
 
-  // --- Handlers ---
+    // Filter by tab
+    if (activeTab === "active") {
+      result = result.filter(p => p.status === 'Active');
+    } else if (activeTab === "draft") {
+      result = result.filter(p => p.status === 'Draft');
+    } else if (activeTab === "archived") {
+      result = result.filter(p => p.status === 'Archived');
+    }
 
-  const handleAddClick = () => {
-    setEditingProduct(null);
-    setIsModalOpen(true);
+    // Filter by search
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(p =>
+        p.name.toLowerCase().includes(query) ||
+        p.category?.toLowerCase().includes(query) ||
+        p.sku?.toLowerCase().includes(query)
+      );
+    }
+
+    return result;
+  }, [products, activeTab, searchQuery]);
+
+  const totalPages = Math.ceil(filteredProducts.length / pageSize);
+  const paginatedProducts = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredProducts.slice(start, start + pageSize);
+  }, [filteredProducts, currentPage]);
+
+  const stats = useMemo(() => {
+    const total = products.length;
+    const active = products.filter(p => p.status === 'Active').length;
+    const draft = products.filter(p => p.status === 'Draft').length;
+    const archived = products.filter(p => p.status === 'Archived').length;
+
+    return { total, active, draft, archived };
+  }, [products]);
+
+  const toggleRowSelection = (productId: string) => {
+    const next = new Set(selectedRows);
+    if (next.has(productId)) {
+      next.delete(productId);
+    } else {
+      next.add(productId);
+    }
+    setSelectedRows(next);
   };
 
-  const handleEditClick = (product: Product) => {
-    setEditingProduct(product);
-    setIsModalOpen(true);
-  };
-
-  const handleSave = async (productToSave: Omit<Product, 'id'> & { id?: string }) => {
-    const isEditing = !!productToSave.id;
-    const url = isEditing ? getApiUrl(`/api/products/${productToSave.id}`) : getApiUrl('/api/products');
-    const method = isEditing ? 'PUT' : 'POST';
-
-    try {
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(productToSave)
-      });
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.message || 'Failed to save product');
-      }
-      setIsModalOpen(false);
-      fetchProducts(); // Refresh list
-    } catch (err: any) {
-      setError(err.message);
+  const toggleAllSelection = () => {
+    if (selectedRows.size === paginatedProducts.length) {
+      setSelectedRows(new Set());
+    } else {
+      setSelectedRows(new Set(paginatedProducts.map(p => p.id)));
     }
   };
 
-  const handleDelete = async (productId: string) => {
-    if (!window.confirm('Are you sure you want to delete this product?')) return;
+  const handleDeleteProduct = async (productId: string) => {
+    if (!confirm('Are you sure you want to delete this product?')) return;
+
     try {
-      const response = await fetch(getApiUrl(`/api/products/${productId}`), {
+      const res = await fetch(getApiUrl(`/api/products/${productId}`), {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (!response.ok) throw new Error('Failed to delete product');
-      fetchProducts(); // Refresh list
-    } catch (err: any) {
-      setError(err.message);
+
+      if (res.ok) {
+        await fetchProducts();
+        setActionMenuOpen(null);
+      }
+    } catch (error) {
+      console.error('Error deleting product:', error);
     }
   };
 
-  // --- Bulk Action Handlers ---
+  const handleToggleStatus = async (product: Product, newStatus: 'Active' | 'Draft' | 'Archived') => {
+    try {
+      const res = await fetch(getApiUrl(`/api/products/${product.id}`), {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
 
-  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (e.target.checked) {
-          // Select all visible on current page
-          const ids = new Set(selectedIds);
-          currentProducts.forEach(p => ids.add(p.id));
-          setSelectedIds(ids);
-      } else {
-          // Deselect all visible on current page
-          const ids = new Set(selectedIds);
-          currentProducts.forEach(p => ids.delete(p.id));
-          setSelectedIds(ids);
+      if (res.ok) {
+        await fetchProducts();
+        setActionMenuOpen(null);
       }
+    } catch (error) {
+      console.error('Error updating product status:', error);
+    }
   };
 
-  const handleSelectOne = (id: string) => {
-      const ids = new Set(selectedIds);
-      if (ids.has(id)) ids.delete(id);
-      else ids.add(id);
-      setSelectedIds(ids);
-  };
-
-  const executeBulkAction = async () => {
-      if (!bulkAction) return;
-      if (bulkAction === 'category' && !targetCategory) return alert("Please select a category.");
-      
-      const confirmMessage = bulkAction === 'delete' 
-        ? `Permanently delete ${selectedIds.size} products?` 
-        : `Apply '${bulkAction}' to ${selectedIds.size} products?`;
-      
-      if (!window.confirm(confirmMessage)) return;
-
-      setProcessingBulk(true);
-      try {
-          const res = await fetch(getApiUrl('/api/products/bulk'), {
-              method: 'POST',
-              headers: { 
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${token}`
-              },
-              body: JSON.stringify({
-                  ids: Array.from(selectedIds),
-                  action: bulkAction,
-                  data: bulkAction === 'category' ? { category: targetCategory } : undefined
-              })
-          });
-
-          if (res.ok) {
-              await fetchProducts(); // Refresh data and clear selection
-              setBulkAction('');
-              setTargetCategory('');
-          } else {
-              const data = await res.json();
-              alert(`Error: ${data.message}`);
-          }
-      } catch (err) {
-          console.error(err);
-          alert("Failed to execute bulk action.");
-      } finally {
-          setProcessingBulk(false);
-      }
-  };
-
-  // --- Filtering Logic (Client-Side Search) ---
-  const filteredProducts = products.filter(product => {
-    const term = searchTerm.toLowerCase();
-    const nameMatch = product.name.toLowerCase().includes(term);
-    const categoryMatch = (product.category || '').toLowerCase().includes(term);
-    const statusMatch = (product.status || '').toLowerCase().includes(term);
-    return nameMatch || categoryMatch || statusMatch;
-  });
-
-  // --- Pagination Logic (Applied to Filtered Results) ---
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentProducts = filteredProducts.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
-
-  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
-
-  // Check if all visible items are selected
-  const allVisibleSelected = currentProducts.length > 0 && currentProducts.every(p => selectedIds.has(p.id));
-
-  if (loading) return <div>Loading products...</div>;
+  if (loading) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-zinc-800 border-t-zinc-200"></div>
+      </div>
+    );
+  }
 
   return (
-    <>
-      <div className="bg-white p-6 rounded-lg shadow-md">
-        
-        {/* Header & Search Bar */}
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
-          <h2 className="text-2xl font-bold text-gray-800">Manage Products ({filteredProducts.length})</h2>
-          
-          <div className="flex gap-3 w-full sm:w-auto">
-             <div className="relative flex-1 sm:w-64">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                </span>
-                <input 
-                    type="text" 
-                    placeholder="Search name, category, status..." 
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full border border-gray-300 rounded-md py-2 pl-10 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent"
-                />
-             </div>
-             <button 
-                onClick={handleAddClick}
-                className="px-4 py-2 text-sm font-medium text-white rounded-md shadow-sm whitespace-nowrap hover:opacity-90 transition-opacity"
-                style={{backgroundColor: COLORS.accent}}
-             >
-                + Add Product
-             </button>
+    <div className="flex flex-col h-full w-full overflow-hidden space-y-2 pb-2">
+      {/* Header Section */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-1 py-2">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Products</h1>
+          <p className="text-sm text-muted-foreground">
+            Manage your product catalog, inventory, and sales channels.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="h-8">
+            <Download className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
+            Export
+          </Button>
+          <Button variant="outline" size="sm" className="h-8">
+            <Upload className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
+            Import
+          </Button>
+          <Button size="sm" className="h-8" onClick={() => navigate('/app/products/new')}>
+            <div className="mr-1 h-4 w-4 flex items-center justify-center rounded-full bg-primary-foreground/20">
+              <span className="text-xs">+</span>
+            </div>
+            Add Product
+          </Button>
+        </div>
+      </div>
+
+      {/* Summary Metrics Section (Clean Strip) */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-1">
+        <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-4 flex flex-col gap-1">
+          <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Total Products</span>
+          <span className="text-2xl font-bold tracking-tight">{stats.total}</span>
+        </div>
+        <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-4 flex flex-col gap-1">
+          <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Active</span>
+          <div className="flex items-center gap-2">
+            <span className="text-2xl font-bold tracking-tight">{stats.active}</span>
+            <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-0 text-[10px] px-1.5 py-0">Live</Badge>
           </div>
         </div>
-
-        {/* Bulk Action Bar - Only Visible when items are selected */}
-        {selectedIds.size > 0 && (
-            <div className="mb-4 bg-blue-50 border border-blue-200 p-3 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-4 animate-fade-in">
-                <div className="flex items-center gap-2">
-                    <span className="bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full">{selectedIds.size}</span>
-                    <span className="text-sm text-blue-800 font-medium">products selected</span>
-                </div>
-                
-                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                    <select 
-                        value={bulkAction} 
-                        onChange={(e) => setBulkAction(e.target.value)}
-                        className="text-sm border-blue-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    >
-                        <option value="">-- Choose Action --</option>
-                        <option value="activate">Set Status: Active</option>
-                        <option value="draft">Set Status: Draft</option>
-                        <option value="archive">Set Status: Archived</option>
-                        <option value="category">Move to Category...</option>
-                        <option value="delete">Delete Selected</option>
-                    </select>
-
-                    {bulkAction === 'category' && (
-                        <select
-                            value={targetCategory}
-                            onChange={(e) => setTargetCategory(e.target.value)}
-                            className="text-sm border-blue-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                        >
-                            <option value="">Select Category</option>
-                            {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                        </select>
-                    )}
-
-                    <button 
-                        onClick={executeBulkAction} 
-                        disabled={!bulkAction || processingBulk}
-                        className={`px-4 py-2 rounded-md text-sm font-bold text-white transition-colors ${bulkAction === 'delete' ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'} disabled:opacity-50`}
-                    >
-                        {processingBulk ? 'Applying...' : 'Apply'}
-                    </button>
-                </div>
-            </div>
-        )}
-
-        {error && <p className="mb-4 text-sm text-red-600 bg-red-100 p-3 rounded-md">{error}</p>}
-        
-        <div className="overflow-x-auto border border-gray-200 rounded-lg">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 w-10 text-center">
-                    <input 
-                        type="checkbox" 
-                        checked={allVisibleSelected} 
-                        onChange={handleSelectAll}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
-                    />
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
-                <th scope="col" className="relative px-6 py-3"><span className="sr-only">Actions</span></th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {currentProducts.length > 0 ? (
-                  currentProducts.map((product) => (
-                    <tr key={product.id} className={`hover:bg-gray-50 transition-colors ${selectedIds.has(product.id) ? 'bg-blue-50' : ''}`}>
-                      <td className="px-4 py-4 text-center">
-                          <input 
-                            type="checkbox" 
-                            checked={selectedIds.has(product.id)} 
-                            onChange={() => handleSelectOne(product.id)}
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
-                          />
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0 h-10 w-10">
-                            <img className="h-10 w-10 rounded-full object-cover border border-gray-200" src={product.imageUrl || 'https://via.placeholder.com/40'} alt={product.name} />
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                            <div className="text-xs text-gray-500">{product.category}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            product.status === 'Active' ? 'bg-green-100 text-green-800' :
-                            product.status === 'Draft' ? 'bg-gray-100 text-gray-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
-                              {product.status}
-                          </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₹{product.price.toFixed(2)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${product.stock > 10 ? 'bg-green-100 text-green-800' : product.stock > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
-                              {product.stock}
-                          </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-4">
-                        <button onClick={() => handleEditClick(product)} className="text-indigo-600 hover:text-indigo-900">Edit</button>
-                        <button onClick={() => handleDelete(product.id)} className="text-red-600 hover:text-red-900">Delete</button>
-                      </td>
-                    </tr>
-                  ))
-              ) : (
-                  <tr>
-                      <td colSpan={6} className="px-6 py-10 text-center text-gray-500">
-                          {searchTerm ? 'No products found matching your search.' : 'No products available.'}
-                      </td>
-                  </tr>
-              )}
-            </tbody>
-          </table>
+        <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-4 flex flex-col gap-1">
+          <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Drafts</span>
+          <span className="text-2xl font-bold tracking-tight">{stats.draft}</span>
         </div>
-
-        {/* Pagination Controls */}
-        {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-6 border-t border-gray-200 pt-4">
-                <div className="flex-1 flex justify-between sm:hidden">
-                    <button 
-                        onClick={() => paginate(currentPage - 1)} 
-                        disabled={currentPage === 1}
-                        className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-                    >
-                        Previous
-                    </button>
-                    <button 
-                        onClick={() => paginate(currentPage + 1)} 
-                        disabled={currentPage === totalPages}
-                        className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-                    >
-                        Next
-                    </button>
-                </div>
-                <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                    <div>
-                        <p className="text-sm text-gray-700">
-                            Showing <span className="font-medium">{indexOfFirstItem + 1}</span> to <span className="font-medium">{Math.min(indexOfLastItem, filteredProducts.length)}</span> of <span className="font-medium">{filteredProducts.length}</span> results
-                        </p>
-                    </div>
-                    <div>
-                        <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                            <button
-                                onClick={() => paginate(currentPage - 1)}
-                                disabled={currentPage === 1}
-                                className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                            >
-                                <span className="sr-only">Previous</span>
-                                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                    <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                                </svg>
-                            </button>
-                            {/* Page Numbers */}
-                            {[...Array(totalPages)].map((_, idx) => (
-                                <button
-                                    key={idx}
-                                    onClick={() => paginate(idx + 1)}
-                                    className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                                        currentPage === idx + 1
-                                            ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
-                                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                                    }`}
-                                >
-                                    {idx + 1}
-                                </button>
-                            ))}
-                            <button
-                                onClick={() => paginate(currentPage + 1)}
-                                disabled={currentPage === totalPages}
-                                className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                            >
-                                <span className="sr-only">Next</span>
-                                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                                </svg>
-                            </button>
-                        </nav>
-                    </div>
-                </div>
-            </div>
-        )}
+        <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-4 flex flex-col gap-1">
+          <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Archived</span>
+          <span className="text-2xl font-bold tracking-tight">{stats.archived}</span>
+        </div>
       </div>
-      
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex justify-center items-center p-0 md:p-4 backdrop-blur-sm">
-          <div className="bg-white md:rounded-lg shadow-xl w-full h-full md:h-[95vh] overflow-hidden z-50 flex flex-col">
-            <ProductForm
-              product={editingProduct}
-              onSave={handleSave}
-              onCancel={() => setIsModalOpen(false)}
+
+      {/* Toolbar */}
+      <div className="flex items-center justify-between gap-4 px-1 mt-2">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full md:w-auto">
+          <TabsList className="bg-muted/60 p-1 h-9">
+            <TabsTrigger value="all" className="text-xs px-3 h-7 data-[state=active]:bg-background data-[state=active]:shadow-sm">All</TabsTrigger>
+            <TabsTrigger value="active" className="text-xs px-3 h-7 data-[state=active]:bg-background data-[state=active]:shadow-sm">Active</TabsTrigger>
+            <TabsTrigger value="draft" className="text-xs px-3 h-7 data-[state=active]:bg-background data-[state=active]:shadow-sm">Draft</TabsTrigger>
+            <TabsTrigger value="archived" className="text-xs px-3 h-7 data-[state=active]:bg-background data-[state=active]:shadow-sm">Archived</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="h-9 w-[200px] lg:w-[300px] pl-8 text-xs bg-background"
             />
           </div>
+          <Button variant="outline" size="sm" className="h-9 px-2 gap-1 text-xs">
+            <LayoutTemplate className="h-3.5 w-3.5 mr-1" />
+            View
+          </Button>
         </div>
-      )}
-    </>
+      </div>
+
+      {/* Products Table */}
+      <div className="rounded-lg border bg-card text-card-foreground shadow-sm flex-1 overflow-hidden flex flex-col mt-2">
+        <div className="flex-1 overflow-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent border-b bg-muted/30">
+                <TableHead className="w-[40px] px-4">
+                  <Checkbox
+                    checked={selectedRows.size === paginatedProducts.length && paginatedProducts.length > 0}
+                    onCheckedChange={toggleAllSelection}
+                  />
+                </TableHead>
+                <TableHead className="font-semibold text-xs uppercase tracking-wider text-muted-foreground h-11">Product</TableHead>
+                <TableHead className="font-semibold text-xs uppercase tracking-wider text-muted-foreground h-11">Status</TableHead>
+                <TableHead className="font-semibold text-xs uppercase tracking-wider text-muted-foreground h-11">Inventory</TableHead>
+                <TableHead className="font-semibold text-xs uppercase tracking-wider text-muted-foreground h-11">Category</TableHead>
+                <TableHead className="font-semibold text-xs uppercase tracking-wider text-muted-foreground h-11 text-right">Price</TableHead>
+                <TableHead className="w-[50px]"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginatedProducts.length > 0 ? (
+                paginatedProducts.map((product) => (
+                  <TableRow
+                    key={product.id}
+                    className="group cursor-pointer hover:bg-muted/40 transition-colors h-16 border-b"
+                    onClick={() => navigate(`/app/products/edit/${product.id}`)}
+                  >
+                    <TableCell className="px-4" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selectedRows.has(product.id)}
+                        onCheckedChange={() => toggleRowSelection(product.id)}
+                      />
+                    </TableCell>
+                    <TableCell className="py-2.5">
+                      <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 rounded-md overflow-hidden border bg-muted flex items-center justify-center shrink-0">
+                          {product.imageUrl ? (
+                            <img
+                              src={product.imageUrl}
+                              alt={product.name}
+                              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
+                            />
+                          ) : (
+                            <Package className="h-5 w-5 text-muted-foreground/40" />
+                          )}
+                        </div>
+                        <div className="flex flex-col gap-0.5 max-w-[200px] xl:max-w-md">
+                          <span className="text-sm font-medium leading-none text-foreground truncate">
+                            {product.name}
+                          </span>
+                          <span className="text-[11px] text-muted-foreground truncate">
+                            SKU: {product.sku || 'N/A'}
+                          </span>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={product.status === 'Active' ? 'default' : 'secondary'}
+                        className={cn(
+                          "rounded-md px-2 py-0 h-5 text-[10px] font-medium border-0 shadow-none",
+                          product.status === 'Active' && "bg-emerald-100 text-emerald-700 hover:bg-emerald-100",
+                          product.status === 'Draft' && "bg-amber-100 text-amber-700 hover:bg-amber-100",
+                          product.status === 'Archived' && "bg-zinc-100 text-zinc-700 hover:bg-zinc-100"
+                        )}
+                      >
+                        {product.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-1">
+                        <span className={cn(
+                          "text-sm font-medium",
+                          (product.stock || 0) < (product.lowStockThreshold || 10) ? "text-rose-600" : "text-foreground"
+                        )}>
+                          {product.stock || 0}
+                        </span>
+                        {(product.stock || 0) < (product.lowStockThreshold || 10) && (
+                          <span className="text-[10px] text-rose-600 font-medium">Low Stock</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs font-normal text-muted-foreground bg-transparent">
+                        {product.category || 'Uncategorized'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <span className="text-sm font-medium">₹{product.price.toLocaleString()}</span>
+                    </TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const viewportWidth = window.innerWidth;
+                          const menuWidth = 192; // 12rem/w-48
+
+                          let left = rect.right - menuWidth;
+                          // If menu goes off-screen to the left, align with left edge of button
+                          if (left < 10) left = rect.left;
+
+                          // Ensure we don't overflow right edge either
+                          if (left + menuWidth > viewportWidth) left = viewportWidth - menuWidth - 10;
+
+                          setMenuPos({ top: rect.bottom + 5, left });
+                          setActionMenuOpen(actionMenuOpen === product.id ? null : product.id);
+                        }}
+                      >
+                        <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-48 text-center">
+                    <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                      <Package className="h-8 w-8 opacity-20" />
+                      <p className="text-sm">No products found</p>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* Footer / Pagination */}
+        <div className="border-t p-4 flex items-center justify-between bg-muted/10">
+          <span className="text-xs text-muted-foreground">
+            Showing <span className="font-medium text-foreground">{paginatedProducts.length}</span> of <span className="font-medium text-foreground">{filteredProducts.length}</span> products
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages || totalPages === 0}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+
+
+
+      {
+        actionMenuOpen && createPortal((() => {
+          const product = products.find(p => p.id === actionMenuOpen);
+          if (!product) return null;
+          return (
+            <>
+              <div
+                className="fixed inset-0 z-[100]"
+                onClick={() => setActionMenuOpen(null)}
+              />
+              <div
+                className="fixed z-[101] w-48 rounded-md border bg-popover shadow-lg animate-in fade-in zoom-in-95 duration-100"
+                style={{ top: menuPos.top, left: menuPos.left }}
+              >
+                <div className="p-1">
+                  <button
+                    className="flex w-full items-center gap-2 rounded-sm px-2 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+                    onClick={() => {
+                      navigate(`/app/products/edit/${product.id}`);
+                      setActionMenuOpen(null);
+                    }}
+                  >
+                    <Edit className="h-4 w-4" />
+                    Edit
+                  </button>
+                  <button
+                    className="flex w-full items-center gap-2 rounded-sm px-2 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+                    onClick={() => {
+                      navigate(`/app/products/design?productId=${product.id}`);
+                      setActionMenuOpen(null);
+                    }}
+                  >
+                    <Activity className="h-4 w-4" />
+                    Edit in builder
+                  </button>
+                  <button
+                    className="flex w-full items-center gap-2 rounded-sm px-2 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+                    onClick={() => {
+                      const newStatus = product.status === 'Draft' ? 'Active' : 'Draft';
+                      handleToggleStatus(product, newStatus);
+                    }}
+                  >
+                    <FileText className="h-4 w-4" />
+                    {product.status === 'Draft' ? 'Mark as active' : 'Mark as draft'}
+                  </button>
+                  <div className="my-1 h-px bg-border" />
+                  <button
+                    className="flex w-full items-center gap-2 rounded-sm px-2 py-2 text-sm text-destructive hover:bg-destructive/10 hover:text-destructive transition-colors"
+                    onClick={() => handleDeleteProduct(product.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </>
+          );
+        })(), document.body)
+      }
+    </div >
   );
 };
 

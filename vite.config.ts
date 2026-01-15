@@ -1,9 +1,16 @@
-
+import path from "path"
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      "components": path.resolve(__dirname, "./components"),
+      "ui": path.resolve(__dirname, "./components/ui"),
+      "utils": path.resolve(__dirname, "./utils/utils.ts"),
+    },
+  },
   server: {
     port: 3000,
     proxy: {

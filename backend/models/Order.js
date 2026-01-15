@@ -8,14 +8,18 @@ const OrderSchema = new mongoose.Schema({
     customerName: { type: String, required: true },
     customerEmail: { type: String, required: true },
     customerPhone: { type: String },
-    
+
     // SOURCE TRACKING
-    checkoutType: { 
-        type: String, 
-        enum: ['standard', 'magic'], 
+    checkoutType: {
+        type: String,
+        enum: ['standard', 'magic'],
         required: true,
         default: 'standard' // Fallback for legacy orders
     },
+    utmSource: String,
+    utmMedium: String,
+    utmCampaign: String,
+    referrer: String,
 
     items: [{
         productId: { type: String },
@@ -25,10 +29,10 @@ const OrderSchema = new mongoose.Schema({
         imageUrl: { type: String }
     }],
     total: { type: Number, required: true },
-    status: { 
-        type: String, 
-        enum: ['Paid', 'Pending', 'Processing', 'Packed', 'Shipped', 'Delivered', 'Cancelled', 'Returned'], 
-        default: 'Pending' 
+    status: {
+        type: String,
+        enum: ['Paid', 'Pending', 'Processing', 'Packed', 'Shipped', 'Delivered', 'Cancelled', 'Returned'],
+        default: 'Pending'
     },
     paymentId: { type: String },
     shippingAddress: {
@@ -53,7 +57,7 @@ const OrderSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // Auto-increment order number logic
-OrderSchema.pre('save', async function(next) {
+OrderSchema.pre('save', async function (next) {
     if (!this.orderNumber) {
         const lastOrder = await this.constructor.findOne({}, {}, { sort: { 'orderNumber': -1 } });
         this.orderNumber = lastOrder && lastOrder.orderNumber ? lastOrder.orderNumber + 1 : 1001;

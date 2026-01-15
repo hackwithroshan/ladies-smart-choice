@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import * as ReactRouterDom from 'react-router-dom';
 const { useNavigate } = ReactRouterDom as any;
@@ -6,319 +7,319 @@ import Footer from '../components/Footer';
 import ProductCard from '../components/ProductCard';
 import { Product, HomeSection, ShoppableVideo, Slide, Collection } from '../types';
 import { useSiteData } from '../contexts/SiteDataContext';
-import { COLORS } from '../constants';
-import { PlayIcon, NavArrowIcon } from '../components/Icons';
-import ErrorBoundary from '../components/ErrorBoundary';
+import { PlayIcon } from '../components/Icons';
 import SEO from '../components/SEO';
-import { useToast } from '../contexts/ToastContext';
-import { getApiUrl } from '../utils/apiHelper';
 import SafeCustomCode from '../components/SafeCustomCode';
+import { cn } from '../utils/utils';
 
 interface VideoListItemProps { video: ShoppableVideo; autoplay: boolean; onClick: () => void; }
 const VideoListItem: React.FC<VideoListItemProps> = ({ video, autoplay, onClick }) => {
     const videoElRef = useRef<HTMLVideoElement>(null);
     useEffect(() => {
-        if (autoplay && videoElRef.current) videoElRef.current.play().catch(() => {});
+        if (autoplay && videoElRef.current) videoElRef.current.play().catch(() => { });
         else if (videoElRef.current) videoElRef.current.pause();
     }, [autoplay]);
 
     return (
-      <div onClick={onClick} className="relative flex-shrink-0 w-44 md:w-full aspect-[9/16] rounded-2xl overflow-hidden group cursor-pointer shadow-lg transition-transform transform hover:scale-[1.02]">
-          {autoplay ? <video ref={videoElRef} src={video.videoUrl} muted loop playsInline className="w-full h-full object-cover pointer-events-none" /> : <img src={video.thumbnailUrl || video.videoUrl.replace('.mp4', '.jpg')} alt={video.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 pointer-events-none"/>}
-          <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors pointer-events-none"></div>
-          {!autoplay && <div className="absolute inset-0 flex items-center justify-center pointer-events-none"><div className="w-10 h-10 md:w-12 md:h-12 bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/50 group-hover:scale-110 transition-transform"><PlayIcon className="h-4 w-4 md:h-5 md:w-5 text-white ml-1"/></div></div>}
-          <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 via-black/20 to-transparent text-white pointer-events-none">
-              <h4 className="font-bold text-sm md:text-base truncate leading-tight">{video.title}</h4>
-              <div className="flex justify-between items-center mt-2">
-                  <span className="font-black text-xs md:text-sm text-brand-accent">{video.price}</span>
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); onClick(); }}
-                    className="bg-white text-black text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-tighter pointer-events-auto hover:bg-brand-accent hover:text-white transition-colors"
-                  >
-                    Shop
-                  </button>
-              </div>
-          </div>
-      </div>
+        <div onClick={onClick} className="relative flex-shrink-0 w-full aspect-[9/16] overflow-hidden group cursor-pointer shadow-lg transition-transform transform hover:scale-[1.02]">
+            <video ref={videoElRef} src={video.videoUrl} muted loop playsInline className="w-full h-full object-cover pointer-events-none" />
+            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors pointer-events-none"></div>
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="w-10 h-10 md:w-12 md:h-12 bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/50 group-hover:scale-110 transition-transform">
+                    <PlayIcon className="h-4 w-4 md:h-5 md:w-5 text-white ml-1" />
+                </div>
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 via-black/20 to-transparent text-white pointer-events-none">
+                <h4 className="font-bold text-sm md:text-base truncate leading-tight uppercase tracking-tight">{video.title}</h4>
+                <div className="flex justify-between items-center mt-2">
+                    <span className="font-black text-xs md:text-sm text-emerald-400">{video.price || 'New'}</span>
+                    <button className="bg-white text-black text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-tighter">Shop</button>
+                </div>
+            </div>
+        </div>
     );
 };
 
 const HomePage: React.FC<{ user: any; logout: () => void }> = ({ user, logout }) => {
-  const { products, collections, slides, videos, siteSettings, homePageSettings, loading: siteLoading } = useSiteData();
-  const [layout, setLayout] = useState<{ sections: HomeSection[] }>({ sections: [] });
-  const [layoutLoading, setLayoutLoading] = useState(true);
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const [selectedVideo, setSelectedVideo] = useState<ShoppableVideo | null>(null);
-  const navigate = useNavigate();
+    const { products, collections, slides, videos, siteSettings, homePageSettings, homepageLayout, loading: siteLoading, refreshSiteData } = useSiteData();
+    const [currentSlide, setCurrentSlide] = useState(0);
+    const [selectedVideo, setSelectedVideo] = useState<ShoppableVideo | null>(null);
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+    const navigate = useNavigate();
 
-  const collectionSliderRef = useRef<HTMLDivElement>(null);
-  const newArrivalsSliderRef = useRef<HTMLDivElement>(null);
-  const bestSellersSliderRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        refreshSiteData();
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
-  const [isMouseDown, setIsMouseDown] = useState(false);
-  const [startX, setStartX] = useState(0);
-  const [scrollLeft, setScrollLeft] = useState(0);
-  const [activeSliderRef, setActiveSliderRef] = useState<React.RefObject<HTMLDivElement> | null>(null);
+    const nextSlide = () => { if (slides.length > 0) setCurrentSlide(current => (current === slides.length - 1 ? 0 : current + 1)); };
+    useEffect(() => {
+        if (slides.length > 1) {
+            const interval = setInterval(nextSlide, 6000);
+            return () => clearInterval(interval);
+        }
+    }, [slides.length]);
 
-  useEffect(() => {
-    const fetchLayout = async () => {
-        try {
-            const res = await fetch(getApiUrl('/api/settings/layout'));
-            if (res.ok) setLayout(await res.json());
-        } catch (e) { console.error(e); }
-        finally { setLayoutLoading(false); }
-    };
-    fetchLayout();
-  }, []);
+    const renderSection = (section: HomeSection) => {
+        if (!section.isActive) return null;
 
-  const nextSlide = () => { if (slides.length > 0) setCurrentSlide(current => (current === slides.length - 1 ? 0 : current + 1)); };
-  useEffect(() => { 
-      if (slides.length > 1) {
-        const interval = setInterval(nextSlide, 6000); 
-        return () => clearInterval(interval); 
-      }
-  }, [slides.length]);
+        let s: any = section.settings || {};
 
-  const handleSliderScroll = (ref: React.RefObject<HTMLDivElement>, direction: 'left' | 'right') => {
-      if (ref.current) {
-          const scrollAmount = ref.current.clientWidth * 0.8;
-          ref.current.scrollBy({ left: direction === 'left' ? -scrollAmount : scrollAmount, behavior: 'smooth' });
-      }
-  };
-
-  const onMouseDown = (e: React.MouseEvent, ref: React.RefObject<HTMLDivElement>) => {
-      if (!ref.current) return;
-      setIsMouseDown(true);
-      setActiveSliderRef(ref);
-      setStartX(e.pageX - ref.current.offsetLeft);
-      setScrollLeft(ref.current.scrollLeft);
-  };
-
-  const onMouseLeave = () => setIsMouseDown(false);
-  const onMouseUp = () => setIsMouseDown(false);
-
-  const onMouseMove = (e: React.MouseEvent) => {
-      if (!isMouseDown || !activeSliderRef?.current) return;
-      e.preventDefault();
-      const x = e.pageX - activeSliderRef.current.offsetLeft;
-      const walk = (x - startX) * 2; 
-      activeSliderRef.current.scrollLeft = scrollLeft - walk;
-  };
-
-  const handleVideoShop = (link?: string) => {
-      if (!link) return;
-      if (link.startsWith('http')) {
-          window.open(link, '_blank');
-      } else {
-          const target = link.startsWith('/') ? link : `/product/${link}`;
-          navigate(target);
-      }
-      setSelectedVideo(null);
-  };
-
-  const renderSection = (section: HomeSection) => {
-    if (!section.isActive) return null;
-
-    const desktopW = section.settings?.desktopWidth || '1280px';
-
-    const sectionStyles: React.CSSProperties = {
-        paddingTop: `${section.settings?.paddingTop ?? 48}px`,
-        paddingBottom: `${section.settings?.paddingBottom ?? 48}px`,
-        backgroundColor: section.settings?.backgroundColor || 'transparent',
-        width: '100%',
-        margin: '0 auto'
-    };
-
-    const getGridClasses = (s: HomeSection) => {
-        const isSlider = s.settings?.isSlider;
-        const desktopCols = s.settings?.desktopColumns || 4;
-        const mobileCols = s.settings?.mobileColumns || 2;
-        if (isSlider) return "flex flex-nowrap overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-8 -mx-4 px-4 cursor-grab active:cursor-grabbing select-none relative items-stretch";
-        const gridMap: any = { 2: 'md:grid-cols-2', 3: 'md:grid-cols-3', 4: 'md:grid-cols-4', 5: 'md:grid-cols-5', 6: 'md:grid-cols-6' };
-        const mobMap: any = { 1: 'grid-cols-1', 2: 'grid-cols-2' };
-        return `grid ${mobMap[mobileCols] || 'grid-cols-2'} ${gridMap[desktopCols] || 'md:grid-cols-4'}`;
-    };
-
-    const getItemClasses = (s: HomeSection) => s.settings?.isSlider ? "shrink-0 snap-start flex-none h-auto" : "w-full h-auto";
-
-    const HeaderSection = ({ s }: { s: HomeSection }) => {
-        const alignClass = s.settings?.alignment === 'left' ? 'items-start text-left' : s.settings?.alignment === 'right' ? 'items-end text-right' : 'items-center text-center';
-        return (
-            <div className={`flex flex-col ${alignClass} mb-12 md:mb-16 px-4`}>
-                <h2 className={`font-brand uppercase tracking-tighter text-gray-900 leading-none ${s.settings?.titleItalic ? 'italic' : 'not-italic'}`} style={{ fontSize: `${s.settings?.titleSize || 32}px`, fontWeight: s.settings?.titleWeight || 800 }}>{s.title}</h2>
-                {s.settings?.subtitle && <p className={`text-gray-400 mt-4 tracking-widest uppercase max-w-2xl font-medium ${s.settings?.subtitleItalic ? 'italic' : 'not-italic'}`} style={{ fontSize: `${s.settings?.subtitleSize || 13}px`, fontWeight: s.settings?.subtitleWeight || 500 }}>{s.settings.subtitle}</p>}
-                <div className="w-16 h-1 bg-brand-primary mt-6 rounded-full opacity-60"></div>
-            </div>
-        );
-    };
-
-    switch (section.type) {
-      case 'Hero':
-        if (slides.length === 0) return null;
-        return (
-          <section key={section.id} className="relative bg-white overflow-hidden flex justify-center items-center w-full" style={{ ...sectionStyles, '--desktop-h': section.settings?.desktopHeight || '650px', '--mobile-h': section.settings?.mobileHeight || '400px' } as any}>
-            <div className="h-[var(--mobile-h)] md:h-[var(--desktop-h)] w-full relative overflow-hidden" style={{ maxWidth: desktopW }}>
-                {slides.map((slide, index) => (
-                    <div key={index} className={`absolute inset-0 transition-opacity duration-1000 ${index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
-                        <picture className="absolute inset-0 w-full h-full"><source media="(max-width: 768px)" srcSet={slide.mobileImageUrl || slide.imageUrl} /><img src={slide.imageUrl} alt={slide.title} className="w-full h-full object-cover" /></picture>
-                        <div className="absolute inset-0 bg-black/30 z-20"></div>
-                        <div className="absolute inset-0 flex items-center justify-center z-30 text-center px-4">
-                            <div className="max-w-3xl">
-                                <h1 className="text-3xl md:text-7xl font-brand font-black text-white mb-4 drop-shadow-2xl tracking-tighter uppercase leading-[0.95]">{slide.title}</h1>
-                                <p className="text-sm md:text-xl text-white/90 mb-8 max-w-xl mx-auto font-bold uppercase tracking-widest">{slide.subtitle}</p>
-                                {slide.buttonText?.trim() && <button onClick={() => navigate('/collections/all')} className="px-10 md:px-14 py-4 md:py-5 rounded-full text-white font-black uppercase tracking-[0.2em] text-[10px] md:text-xs shadow-2xl transition-all" style={{backgroundColor: siteSettings?.primaryColor || COLORS.accent}}>{slide.buttonText}</button>}
-                            </div>
-                        </div>
-                    </div>
-                ))}
-            </div>
-          </section>
-        );
-
-      case 'Collections':
-      case 'NewArrivals':
-      case 'BestSellers':
-        const itemGap = section.settings?.itemGap ?? 24;
-        const itemWidth = section.settings?.itemWidth || '280px';
-        const isSlider = !!section.settings?.isSlider;
-        const currentRef = section.type === 'NewArrivals' ? newArrivalsSliderRef : (section.type === 'BestSellers' ? bestSellersSliderRef : collectionSliderRef);
-
-        let displayData: any[] = [];
-        if (section.type === 'Collections' && !section.settings?.collectionId) {
-            displayData = collections.slice(0, section.settings?.limit || 8);
-        } else {
-            let source = products;
-            const targetCollectionId = section.settings?.collectionId;
-            if (targetCollectionId && targetCollectionId !== 'all') {
-                const found = collections.find(c => (c.id || (c as any)._id).toString() === targetCollectionId.toString());
-                if (found && found.products) {
-                    source = (found.products as any[]).map(id => {
-                        const idStr = typeof id === 'string' ? id : (id.id || id._id || id).toString();
-                        return products.find(p => (p.id || (p as any)._id).toString() === idStr);
-                    }).filter(Boolean) as Product[];
-                }
+        // For CustomCode, merge settingsJson to allow layout overrides (width, padding, etc.)
+        if (section.type === 'CustomCode' && section.settingsJson) {
+            try {
+                const jsonSettings = JSON.parse(section.settingsJson);
+                s = { ...s, ...jsonSettings };
+            } catch (e) {
+                // Ignore parse errors, fallback to default settings
             }
-            
-            displayData = section.type === 'NewArrivals' 
-                ? source.slice().sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()).slice(0, section.settings?.limit || 4) 
-                : (section.type === 'BestSellers' 
-                    ? source.slice().sort((a,b) => (b.reviews?.length || 0) - (a.reviews?.length || 0)).slice(0, section.settings?.limit || 4)
-                    : source.slice(0, section.settings?.limit || 4)
-                  );
         }
 
-        return (
-          <section key={section.id} style={sectionStyles} className="group/section relative flex flex-col items-center w-full">
-            <div className="w-full mx-auto" style={{ maxWidth: desktopW }}>
-              <HeaderSection s={section} />
-              <div className="relative px-4">
-                {isSlider && (
-                    <>
-                        <button onClick={() => handleSliderScroll(currentRef, 'left')} className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-white shadow-xl text-brand-primary hover:scale-110 transition-all opacity-0 group-hover/section:opacity-100 -ml-4" style={{ color: siteSettings?.primaryColor }}><NavArrowIcon className="w-5 h-5 rotate-180" /></button>
-                        <button onClick={() => handleSliderScroll(currentRef, 'right')} className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-white shadow-xl text-brand-primary hover:scale-110 transition-all opacity-0 group-hover/section:opacity-100 -mr-4" style={{ color: siteSettings?.primaryColor }}><NavArrowIcon className="w-5 h-5" /></button>
-                    </>
-                )}
-                <div 
-                    ref={isSlider ? currentRef : null} 
-                    onMouseDown={isSlider ? (e) => onMouseDown(e, currentRef) : undefined} 
-                    className={getGridClasses(section)} 
-                    style={{ gap: `${itemGap}px` }}
+        // BUILD DYNAMIC STYLES FROM BUILDER
+        const isCustom = section.type === 'CustomCode';
+        const sectionStyles: React.CSSProperties = {
+            paddingTop: `${s.paddingTop ?? (isCustom ? 0 : 60)}px`,
+            paddingBottom: `${s.paddingBottom ?? (isCustom ? 0 : 60)}px`,
+            paddingLeft: `${s.paddingLeft ?? (isCustom ? 0 : 20)}px`,
+            paddingRight: `${s.paddingRight ?? (isCustom ? 0 : 20)}px`,
+            marginTop: `${s.marginTop ?? 0}px`,
+            marginBottom: `${s.marginBottom ?? 0}px`,
+            backgroundColor: s.backgroundColor || 'transparent',
+            color: s.textColor || 'inherit',
+        };
+
+        const containerStyles: React.CSSProperties = {
+            maxWidth: s.desktopWidth || '1400px',
+            margin: '0 auto',
+        };
+
+        const HeaderBlock = () => (section.title || s.subtitle) ? (
+            <div className={cn("mb-12",
+                s.alignment === 'center' ? 'text-center items-center flex flex-col' :
+                    s.alignment === 'right' ? 'text-right items-end flex flex-col' :
+                        'text-left items-start flex flex-col')}
+            >
+                <h2
+                    className={cn("font-brand leading-none uppercase tracking-tighter", s.titleItalic && "italic")}
+                    style={{
+                        fontSize: s.titleSize ? (isMobile ? `${Math.max(s.titleSize * 0.7, 24)}px` : `${s.titleSize}px`) : '32px',
+                        fontWeight: s.titleWeight || 900
+                    }}
                 >
-                  {displayData.map((item: any) => {
-                        const isCollection = section.type === 'Collections' && !section.settings?.collectionId;
-                        const isRawImage = isCollection && item.displayStyle === 'ImageOnly';
-                        
-                        return (
-                            <div key={item.id || item._id} className={getItemClasses(section)} style={{ width: isSlider ? itemWidth : 'auto' }}>
-                                {isCollection ? (
-                                    <div onClick={() => navigate(`/collections/${item.slug || item.id}`)} className="group cursor-pointer flex flex-col h-full">
-                                        <div className={`overflow-hidden relative transition-all duration-700 aspect-[3/4] flex-1 ${isRawImage ? '' : 'shadow-sm group-hover:shadow-2xl group-hover:-translate-y-2'}`} style={{ height: section.settings?.itemHeight || 'auto', borderRadius: isRawImage ? '0px' : `${section.settings?.itemBorderRadius ?? 24}px` }}>
-                                            <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
-                                            {!isRawImage && (
-                                                <>
-                                                    <div className="absolute inset-0 bg-black/30 group-hover:bg-black/50 transition-colors"></div>
-                                                    <div className="absolute inset-0 flex items-center justify-center p-6 text-center">
-                                                        <h3 className="font-brand font-black uppercase tracking-tighter text-white text-2xl drop-shadow-lg">{item.title}</h3>
-                                                    </div>
-                                                </>
-                                            )}
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <ProductCard product={item as Product} config={section.settings} />
-                                )}
-                            </div>
-                        );
-                  })}
-                </div>
-              </div>
+                    {section.title}
+                </h2>
+                {s.subtitle && (
+                    <p
+                        className={cn("mt-4 tracking-widest uppercase leading-relaxed max-w-2xl", s.subtitleItalic && "italic")}
+                        style={{
+                            fontSize: s.subtitleSize ? `${s.subtitleSize}px` : '14px',
+                            fontWeight: s.subtitleWeight || 500,
+                            opacity: 0.7
+                        }}
+                    >
+                        {s.subtitle}
+                    </p>
+                )}
             </div>
-          </section>
-        );
+        ) : null;
 
-      case 'Videos':
-        return videos.length > 0 && (
-          <section key={section.id} style={sectionStyles} className="overflow-hidden w-full flex flex-col items-center">
-              <div className="w-full mx-auto px-4" style={{ maxWidth: desktopW }}>
-                <HeaderSection s={section} />
-                <div className="flex overflow-x-auto gap-8 pb-8 -mx-4 px-4 scrollbar-hide md:grid md:grid-cols-4">
-                    {/* FIXED: Removed access to non-existent .id property on ShoppableVideo type, using ._id instead */}
-                    {videos.map(v => <VideoListItem key={v._id} video={v} autoplay={siteSettings?.videoAutoplay || false} onClick={() => setSelectedVideo(v)} />)}
-                </div>
-              </div>
-          </section>
-        );
+        switch (section.type) {
+            case 'Hero':
+                const currentS = slides[currentSlide];
+                return (
+                    <section key={section.id} className="relative w-full overflow-hidden bg-zinc-100" style={{ height: isMobile ? (currentS?.mobileHeight || '500px') : (currentS?.desktopHeight || '650px') }}>
+                        {slides.length > 0 ? slides.map((slide, index) => (
+                            <div key={index} className={`absolute inset-0 transition-opacity duration-1000 ${index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
+                                <img src={(isMobile && slide.mobileImageUrl) ? slide.mobileImageUrl : slide.imageUrl} alt={slide.title} className="w-full h-full object-cover" style={{ objectFit: slide.imageFit || 'cover' }} />
+                                <div className="absolute inset-0 bg-black/25 z-20"></div>
+                                <div className="absolute inset-0 flex items-center justify-center z-30 text-center px-4">
+                                    <div className="max-w-4xl">
+                                        <h1 className="text-4xl md:text-8xl font-brand font-black text-white mb-6 tracking-tighter uppercase leading-[0.85] italic animate-fade-in-up">{slide.title}</h1>
+                                        <p className="text-xs md:text-lg text-white/90 mb-10 max-w-2xl mx-auto font-bold uppercase tracking-[0.25em] animate-fade-in-up delay-100">{slide.subtitle}</p>
+                                        {slide.buttonText && (
+                                            <button
+                                                onClick={() => navigate('/collections/all')}
+                                                className="px-12 py-5 text-white font-black uppercase tracking-[0.3em] text-[10px] shadow-2xl transition-all transform hover:scale-105 active:scale-95 animate-fade-in-up delay-200"
+                                                style={{ backgroundColor: siteSettings?.primaryColor || '#16423C' }}
+                                            >
+                                                {slide.buttonText}
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )) : (
+                            <div className="w-full h-full flex items-center justify-center bg-zinc-200">
+                                <p className="font-black text-zinc-400 uppercase tracking-widest italic opacity-30">No Active Slides</p>
+                            </div>
+                        )}
+                    </section>
+                );
 
-      case 'CustomCode':
-        return <section key={section.id} style={sectionStyles} className="w-full flex justify-center"><div className="w-full" style={{ maxWidth: desktopW }}><SafeCustomCode code={section.code || ''} sectionId={section.id} /></div></section>;
+            case 'Collections':
+                return (
+                    <section key={section.id} style={sectionStyles} className="w-full">
+                        <div style={containerStyles}>
+                            <HeaderBlock />
+                            <div
+                                className={cn(
+                                    s.isSlider
+                                        ? "flex overflow-x-auto pb-8 gap-6 scrollbar-hide snap-x snap-mandatory"
+                                        : "grid gap-6"
+                                )}
+                                style={!s.isSlider ? {
+                                    gridTemplateColumns: `repeat(${s.itemsPerRow || 4}, minmax(0, 1fr))`
+                                } : undefined}
+                            >
+                                {(collections || []).slice(0, s.limit || 8).map((col) => {
+                                    const id = col.id || (col as any)._id;
+                                    return (
+                                        <div key={id} onClick={() => navigate(`/collections/${col.slug || id}`)} className={cn("group cursor-pointer flex-shrink-0 transition-all snap-start", s.isSlider ? "w-[280px] md:w-[350px]" : "w-full")}>
+                                            <div className={cn("overflow-hidden relative shadow-lg group-hover:shadow-2xl transition-all duration-700", s.imageAspectRatio || "aspect-[4/5]")}>
+                                                <img src={col.imageUrl || 'https://via.placeholder.com/400x500'} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
+                                                <div className="absolute inset-0 bg-black/30 group-hover:bg-black/50 transition-colors"></div>
+                                                <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center">
+                                                    <h3 className="font-brand font-black uppercase tracking-tighter text-white text-2xl md:text-3xl italic leading-none">{col.title}</h3>
+                                                    <span className="mt-4 px-4 py-1.5 bg-white/10 backdrop-blur-md border border-white/20 rounded-full text-white text-[9px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all transform translate-y-4 group-hover:translate-y-0">Explore Now</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </section>
+                );
 
-      case 'Newsletter':
-        return (
-            <section key={section.id} style={sectionStyles} className="w-full flex justify-center items-center py-20 md:py-32">
-                 <div className="w-full px-6 flex flex-col items-center text-center" style={{ maxWidth: desktopW }}>
-                    <h2 className="text-3xl md:text-6xl font-brand font-black italic tracking-tighter uppercase mb-6 leading-none">Stay Radiant</h2>
-                    <p className="text-sm md:text-lg text-gray-500 max-w-xl font-medium mb-12 uppercase tracking-widest">Join our circle for exclusive Ayurvedic tips & launches.</p>
-                    <div className="w-full max-w-lg flex flex-col sm:flex-row gap-3">
-                         <input type="email" placeholder="YOUR EMAIL ADDRESS" className="flex-1 px-8 py-4 rounded-full border-2 border-gray-100 focus:border-brand-primary outline-none text-xs font-bold tracking-widest transition-all" />
-                         <button className="bg-brand-primary text-white px-12 py-4 rounded-full font-black uppercase text-[10px] tracking-[0.2em] shadow-2xl hover:scale-105 transition-all">Subscribe</button>
+            case 'NewArrivals':
+            case 'BestSellers':
+                return (
+                    <section key={section.id} style={sectionStyles} className="w-full overflow-hidden">
+                        <div style={containerStyles}>
+                            <HeaderBlock />
+                            <div
+                                className={cn(
+                                    s.isSlider
+                                        ? "flex overflow-x-auto pb-8 gap-6 scrollbar-hide snap-x snap-mandatory"
+                                        : "grid gap-4 md:gap-8"
+                                )}
+                                style={!s.isSlider ? {
+                                    gridTemplateColumns: `repeat(${s.itemsPerRow || 4}, minmax(0, 1fr))`
+                                } : undefined}
+                            >
+                                {(products || []).slice(0, s.limit || 8).map(p => (
+                                    <div key={p.id || (p as any)._id} className={cn("flex-shrink-0 snap-start", s.isSlider ? "w-[260px] md:w-[320px]" : "w-full")}>
+                                        <ProductCard product={p} config={s} />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </section>
+                );
+
+            case 'Videos':
+                return videos && videos.length > 0 && (
+                    <section key={section.id} style={sectionStyles} className="w-full">
+                        <div style={containerStyles}>
+                            <HeaderBlock />
+                            <div
+                                className="grid gap-4 md:gap-8"
+                                style={{ gridTemplateColumns: `repeat(${s.itemsPerRow || 5}, minmax(0, 1fr))` }}
+                            >
+                                {videos.slice(0, s.limit || 5).map(v => (
+                                    <VideoListItem key={v._id || v.id} video={v} autoplay={siteSettings?.videoAutoplay ?? true} onClick={() => setSelectedVideo(v)} />
+                                ))}
+                            </div>
+                        </div>
+                    </section>
+                );
+
+            case 'Newsletter':
+                return (
+                    <section key={section.id} style={sectionStyles} className="w-full">
+                        <div style={containerStyles} className="bg-zinc-900 p-8 md:p-16 text-center text-white shadow-2xl relative overflow-hidden group rounded-[2rem]">
+                            <div className="relative z-10 space-y-6 max-w-2xl mx-auto">
+                                <h2
+                                    className={cn("font-brand font-black italic tracking-tighter uppercase leading-none", s.titleItalic && "italic")}
+                                    style={{ fontSize: s.titleSize ? `${s.titleSize}px` : '40px', color: '#FFFFFF' }}
+                                >
+                                    {section.title}
+                                </h2>
+                                <p className="text-zinc-400 font-bold uppercase tracking-[0.2em] text-[9px] md:text-xs leading-relaxed opacity-80">{s.subtitle}</p>
+                                <form className="flex flex-col sm:flex-row gap-4 pt-4" onSubmit={(e) => e.preventDefault()}>
+                                    <input type="email" placeholder="EMAIL ADDRESS" className="flex-1 bg-white/5 border border-white/10 rounded-xl px-6 py-4 text-white font-bold outline-none focus:bg-white/10 focus:border-emerald-500/50 transition-all tracking-widest text-xs" />
+                                    <button className="bg-white text-zinc-900 px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl hover:bg-[#16423C] hover:text-white transition-all transform active:scale-95">Subscribe</button>
+                                </form>
+                            </div>
+                        </div>
+                    </section>
+                );
+
+            case 'CustomCode':
+                // Explicitly use the width from settings for CustomCode containers
+                const customContainerStyle: React.CSSProperties = {
+                    maxWidth: isMobile ? (s.mobileWidth || '100%') : (s.desktopWidth || '100%'),
+                    width: '100%',
+                    margin: '0 auto',
+                };
+                return (
+                    <section key={section.id} style={sectionStyles} className="w-full">
+                        <div style={customContainerStyle}>
+                            <SafeCustomCode code={section.code || ''} sectionId={section.id} settingsJson={section.settingsJson} />
+                        </div>
+                    </section>
+                );
+
+            default: return null;
+        }
+    };
+
+    if (siteLoading) return (
+        <div className="h-screen flex items-center justify-center bg-white flex-col gap-4">
+            <div className="w-10 h-10 border-4 border-[#16423C] border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-[10px] text-zinc-400 font-black uppercase tracking-widest">Booting Storefront...</p>
+        </div>
+    );
+
+    const activeSections = homepageLayout?.sections?.filter(s => s.isActive) || [];
+
+    return (
+        <div className="flex flex-col min-h-screen bg-white">
+            <SEO title={homePageSettings?.seoTitle || 'Pure Ayurvedic Wellness'} />
+            <Header user={user} logout={logout} />
+
+            <main className="flex-grow">
+                {activeSections.length > 0 ? (
+                    activeSections.map(renderSection)
+                ) : (
+                    <div className="py-40 text-center">
+                        <h1 className="text-4xl font-brand font-black italic tracking-tighter uppercase text-zinc-900">Virtual Storefront</h1>
+                        <p className="text-zinc-400 font-bold uppercase tracking-[0.2em] text-[10px] mt-4">Waiting for layout publication...</p>
                     </div>
-                 </div>
-            </section>
-        );
+                )}
+            </main>
 
-      default: return null;
-    }
-  };
+            <Footer />
 
-  if (siteLoading || layoutLoading) return <div className="h-screen flex items-center justify-center bg-white"><div className="w-10 h-10 border-4 border-[#16423C] border-t-transparent rounded-full animate-spin"></div></div>;
-
-  return (
-    <div className="flex flex-col min-h-screen bg-white" onMouseMove={onMouseMove} onMouseUp={onMouseUp}>
-      <SEO title={homePageSettings?.seoTitle || 'Ladies Choice'} />
-      <Header user={user} logout={logout} />
-      <main className="flex-grow">{layout.sections.map(renderSection)}</main>
-      <Footer />
-
-      {selectedVideo && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-fade-in">
-              <div className="absolute inset-0" onClick={() => setSelectedVideo(null)}></div>
-              <div className="relative w-full max-w-md h-[85vh] bg-black rounded-3xl overflow-hidden shadow-2xl border border-white/10">
-                  <button onClick={() => setSelectedVideo(null)} className="absolute top-6 right-6 z-20 text-white bg-black/50 hover:bg-black/80 rounded-full p-2.5 transition-all backdrop-blur-xl">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                  </button>
-                  <video src={selectedVideo.videoUrl} className="w-full h-full object-cover" autoPlay playsInline loop onClick={(e) => (e.target as HTMLVideoElement).paused ? (e.target as HTMLVideoElement).play() : (e.target as HTMLVideoElement).pause()} />
-                  <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-black via-black/40 to-transparent">
-                      <h3 className="text-white font-bold text-2xl mb-1 shadow-sm">{selectedVideo.title}</h3>
-                      <p className="text-rose-400 font-bold text-xl mb-8">{selectedVideo.price}</p>
-                      <button onClick={() => handleVideoShop(selectedVideo.productLink)} className="w-full bg-white text-black font-bold py-4 rounded-2xl hover:bg-gray-100 transition-all transform active:scale-95 flex items-center justify-center gap-3 shadow-2xl">
-                          <span className="uppercase text-sm tracking-widest">Shop This Style</span>
-                      </button>
-                  </div>
-              </div>
-          </div>
-      )}
-    </div>
-  );
+            {selectedVideo && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in duration-300">
+                    <div className="absolute inset-0" onClick={() => setSelectedVideo(null)}></div>
+                    <div className="relative w-full max-w-md h-[85vh] bg-black rounded-3xl overflow-hidden shadow-2xl border border-white/10">
+                        <video src={selectedVideo.videoUrl} className="w-full h-full object-cover" autoPlay playsInline loop />
+                        <button onClick={() => setSelectedVideo(null)} className="absolute top-6 right-6 w-12 h-12 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/20 hover:bg-white hover:text-black transition-all z-20">
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" strokeWidth={2.5} /></svg>
+                        </button>
+                        <div className="absolute bottom-0 left-0 right-0 p-10 bg-gradient-to-t from-black via-black/40 to-transparent">
+                            <h3 className="text-white font-black text-2xl mb-6 italic uppercase tracking-tighter leading-tight">{selectedVideo.title}</h3>
+                            <button onClick={() => navigate(`/product/${selectedVideo.productLink}`)} className="w-full bg-white text-zinc-900 font-black py-5 rounded-2xl uppercase text-[10px] tracking-[0.2em] shadow-2xl hover:bg-[#16423C] hover:text-white transition-all transform active:scale-95">Shop This Ritual</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
 };
 
 export default HomePage;

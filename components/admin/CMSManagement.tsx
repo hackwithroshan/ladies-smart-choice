@@ -7,8 +7,11 @@ import VideoSettings from './VideoSettings';
 import TestimonialSettings from './TestimonialSettings';
 import CollectionSettings from './CollectionSettings';
 import HomepageEditor from './HomepageEditor';
+import * as ReactRouterDom from 'react-router-dom';
+const { useNavigate } = ReactRouterDom as any;
 
-type CMSTab = 'page-builder' | 'slider' | 'collections' | 'blogs' | 'pages' | 'videos' | 'reviews';
+// Removed 'header' from CMSTab type
+type CMSTab = 'page-builder' | 'pdp-builder' | 'collections' | 'blogs' | 'pages' | 'videos' | 'reviews' | 'slider';
 
 interface CMSManagementProps {
     token: string | null;
@@ -17,6 +20,7 @@ interface CMSManagementProps {
 
 const CMSManagement: React.FC<CMSManagementProps> = ({ token, initialTab }) => {
     const [activeTab, setActiveTab] = useState<CMSTab>(initialTab || 'page-builder');
+    const navigate = useNavigate();
 
     useEffect(() => {
         if (initialTab) setActiveTab(initialTab);
@@ -24,7 +28,13 @@ const CMSManagement: React.FC<CMSManagementProps> = ({ token, initialTab }) => {
 
     const TabButton = ({ id, label }: { id: CMSTab, label: string }) => (
         <button 
-            onClick={() => setActiveTab(id)}
+            onClick={() => {
+                if (id === 'pdp-builder') {
+                    navigate('/app/content/pdp?productId=global');
+                } else {
+                    setActiveTab(id);
+                }
+            }}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === id ? 'border-rose-600 text-rose-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
         >
             {label}
@@ -39,7 +49,8 @@ const CMSManagement: React.FC<CMSManagementProps> = ({ token, initialTab }) => {
 
             <div className="border-b border-gray-200 overflow-x-auto">
                 <div className="flex space-x-4 min-w-max">
-                    <TabButton id="page-builder" label="Page Builder (New)" />
+                    <TabButton id="page-builder" label="Homepage Builder" />
+                    <TabButton id="pdp-builder" label="Product Designer" />
                     <TabButton id="collections" label="Collections" />
                     <TabButton id="videos" label="Shop Videos" />
                     <TabButton id="slider" label="Banners" />

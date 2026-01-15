@@ -7,14 +7,15 @@ const { createNotification } = require('./utils/createNotification');
 
 console.log('Cron job scheduler initialized.');
 
-// 1. Hourly Product Feed Generation
-cron.schedule('0 * * * *', () => {
+// 1. Hourly Product Feed Generation (Meta Catalog / Google Merchant)
+cron.schedule('0 * * * *', async () => {
     console.log('Running hourly product feed generation...');
-    generateFeedFiles();
+    try {
+        await generateFeedFiles();
+    } catch (e) { console.error("Feed generation failed", e); }
 });
 
-// 2. Hourly Order Status Sync (Logistics)
-// Runs every hour. Checks orders that are 'Shipped' but not 'Delivered'
+// 2. Hourly Order Status Sync (Real-time Logistics Update)
 cron.schedule('30 * * * *', async () => {
     console.log('Running hourly order status sync...');
     try {
@@ -23,49 +24,25 @@ cron.schedule('30 * * * *', async () => {
             'trackingInfo.trackingNumber': { $exists: true } 
         });
 
-        console.log(`Found ${activeOrders.length} active shipments to sync.`);
-
         for (const order of activeOrders) {
             const syncResult = await syncOrderStatus(order);
-            
             if (syncResult) {
                 let updated = false;
-
-                // Update Status if changed (e.g. Shipped -> Delivered)
                 if (syncResult.status && syncResult.status !== order.status) {
                     order.status = syncResult.status;
                     updated = true;
-                    
-                    // Notify Admin if Delivered
                     if (syncResult.status === 'Delivered') {
                         await createNotification({
-                            type: 'NEW_ORDER', // Reusing type for generic update
-                            message: `Order #${order._id.toString().substring(0,6)} has been DELIVERED.`,
-                            link: `/admin?view=orders&id=${order._id}`
+                            type: 'NEW_ORDER',
+                            message: `Order #${order._id.toString().substring(0,6)} Delivered.`,
+                            link: `/app/orders`
                         });
                     }
                 }
-
-                // Update History (always, to show movement)
-                if (syncResult.history && syncResult.history.length > order.trackingHistory.length) {
-                    order.trackingHistory = syncResult.history;
-                    updated = true;
-                }
-
-                if (updated) {
-                    order.lastTrackingSync = new Date();
-                    await order.save();
-                    console.log(`Updated Order #${order._id} status to ${order.status}`);
-                }
+                if (updated) await order.save();
             }
         }
-    } catch (error) {
-        console.error("Error in Order Sync Cron:", error);
-    }
+    } catch (error) { console.error("Order Sync Cron Error:", error); }
 });
 
-// Run once on startup after 10s
-setTimeout(() => {
-    // console.log('Running initial feed generation on startup...');
-    // generateFeedFiles();
-}, 10000);
+module.exports = cron;

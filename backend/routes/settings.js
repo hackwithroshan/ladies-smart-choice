@@ -1,101 +1,127 @@
 
 const express = require('express');
 const router = express.Router();
-const { protect, admin } = require('../middleware/authMiddleware');
-
-const HeaderSetting = require('../models/HeaderSetting');
-const FooterSetting = require('../models/FooterSetting');
 const SiteSettings = require('../models/SiteSettings');
 const HomePageSetting = require('../models/HomePageSetting');
-const HomepageLayout = require('../models/HomepageLayout');
+const HeaderSetting = require('../models/HeaderSetting');
+const FooterSetting = require('../models/FooterSetting');
 const StoreDetails = require('../models/StoreDetails');
+const PageLayout = require('../models/PageLayout');
+const HomepageLayout = require('../models/HomepageLayout');
+const { protect, admin } = require('../middleware/authMiddleware');
 
-// --- Layout Editor ---
+// --- Layout Management (Visual Builder) ---
+
 router.get('/layout', async (req, res) => {
-    let layout = await HomepageLayout.findOne();
-    if (!layout) {
-        // Seed default order if none exists
-        layout = await HomepageLayout.create({
-            sections: [
-                { id: 'hero-1', type: 'Hero', isActive: true },
-                { id: 'coll-1', type: 'Collections', isActive: true },
-                { id: 'new-1', type: 'NewArrivals', isActive: true },
-                { id: 'vid-1', type: 'Videos', isActive: true },
-                { id: 'best-1', type: 'BestSellers', isActive: true },
-                { id: 'test-1', type: 'Testimonials', isActive: true },
-                { id: 'news-1', type: 'Newsletter', isActive: true }
-            ]
-        });
-    }
-    res.json(layout);
+    try {
+        let layout = await HomepageLayout.findOne();
+        if (!layout) {
+            layout = await HomepageLayout.create({ sections: [] });
+        }
+        res.json(layout);
+    } catch (e) { res.status(500).json({ message: 'Error' }); }
 });
 
 router.put('/layout', protect, admin, async (req, res) => {
-    const layout = await HomepageLayout.findOneAndUpdate({}, req.body, { new: true, upsert: true });
-    res.json(layout);
+    try {
+        const layout = await HomepageLayout.findOneAndUpdate({}, req.body, { new: true, upsert: true });
+        res.json(layout);
+    } catch (e) { res.status(500).json({ message: 'Save Failed' }); }
 });
 
-// --- Store Details (Business/Invoicing) ---
+router.get('/pdp-layout/:productId', async (req, res) => {
+    try {
+        const productId = req.params.productId;
+        let layout = await PageLayout.findOne({ productId });
+        if (!layout && productId !== 'global') {
+            layout = await PageLayout.findOne({ productId: 'global' });
+        }
+        if (!layout) {
+            return res.json({ productId: 'global', sections: [] });
+        }
+        res.json(layout);
+    } catch (e) { res.status(500).json({ message: 'Error' }); }
+});
+
+router.put('/pdp-layout/:productId', protect, admin, async (req, res) => {
+    try {
+        const layout = await PageLayout.findOneAndUpdate(
+            { productId: req.params.productId },
+            req.body,
+            { new: true, upsert: true }
+        );
+        res.json(layout);
+    } catch (e) { res.status(500).json({ message: 'Save Failed' }); }
+});
+
+// --- Store Brand & Identity ---
+
+router.get('/site', async (req, res) => {
+    try {
+        let s = await SiteSettings.findOne();
+        if (!s) s = await SiteSettings.create({});
+        res.json(s);
+    } catch (e) { res.status(500).json({ message: 'Error' }); }
+});
+
+router.put('/site', protect, admin, async (req, res) => {
+    try {
+        const s = await SiteSettings.findOneAndUpdate({}, req.body, { new: true, upsert: true });
+        res.json(s);
+    } catch (e) { res.status(500).json({ message: 'Update Failed' }); }
+});
+
 router.get('/store-details', async (req, res) => {
     try {
-        const details = await StoreDetails.findOne();
-        res.json(details || {});
-    } catch (error) {
-        res.status(500).json({ message: 'Error fetching store details' });
-    }
+        let d = await StoreDetails.findOne();
+        if (!d) d = await StoreDetails.create({});
+        res.json(d);
+    } catch (e) { res.status(500).json({ message: 'Error' }); }
 });
 
 router.put('/store-details', protect, admin, async (req, res) => {
     try {
-        const details = await StoreDetails.findOneAndUpdate({}, req.body, { new: true, upsert: true });
-        res.json(details);
-    } catch (error) {
-        res.status(500).json({ message: 'Error saving store details' });
-    }
+        const d = await StoreDetails.findOneAndUpdate({}, req.body, { new: true, upsert: true });
+
+        // Sync Phone Number with Header
+        if (req.body.contactPhone) {
+            await HeaderSetting.findOneAndUpdate({}, { phoneNumber: req.body.contactPhone }, { upsert: true });
+        }
+
+        res.json(d);
+    } catch (e) { res.status(500).json({ message: 'Update Failed' }); }
 });
 
-// --- Site Branding/Colors ---
-router.get('/site', async (req, res) => {
-    const settings = await SiteSettings.findOne();
-    res.json(settings || {});
-});
+// --- Menu & Header/Footer ---
 
-router.put('/site', protect, admin, async (req, res) => {
-    const settings = await SiteSettings.findOneAndUpdate({}, req.body, { new: true, upsert: true });
-    res.json(settings);
-});
-
-// --- Header Settings ---
 router.get('/header', async (req, res) => {
-    const settings = await HeaderSetting.findOne();
-    res.json(settings || {});
+    try {
+        let h = await HeaderSetting.findOne();
+        if (!h) h = await HeaderSetting.create({});
+        res.json(h);
+    } catch (e) { res.status(500).json({ message: 'Error' }); }
 });
 
 router.put('/header', protect, admin, async (req, res) => {
-    const settings = await HeaderSetting.findOneAndUpdate({}, req.body, { new: true, upsert: true });
-    res.json(settings);
+    try {
+        const h = await HeaderSetting.findOneAndUpdate({}, req.body, { new: true, upsert: true });
+        res.json(h);
+    } catch (e) { res.status(500).json({ message: 'Update Failed' }); }
 });
 
-// --- Footer Settings ---
 router.get('/footer', async (req, res) => {
-    const settings = await FooterSetting.findOne();
-    res.json(settings || {});
+    try {
+        let f = await FooterSetting.findOne();
+        if (!f) f = await FooterSetting.create({});
+        res.json(f);
+    } catch (e) { res.status(500).json({ message: 'Error' }); }
 });
 
 router.put('/footer', protect, admin, async (req, res) => {
-    const settings = await FooterSetting.findOneAndUpdate({}, req.body, { new: true, upsert: true });
-    res.json(settings);
-});
-
-// --- SEO Settings ---
-router.get('/homepage', async (req, res) => {
-    const settings = await HomePageSetting.findOne();
-    res.json(settings || {});
-});
-
-router.put('/homepage', protect, admin, async (req, res) => {
-    const settings = await HomePageSetting.findOneAndUpdate({}, req.body, { new: true, upsert: true });
-    res.json(settings);
+    try {
+        const f = await FooterSetting.findOneAndUpdate({}, req.body, { new: true, upsert: true });
+        res.json(f);
+    } catch (e) { res.status(500).json({ message: 'Update Failed' }); }
 });
 
 module.exports = router;
