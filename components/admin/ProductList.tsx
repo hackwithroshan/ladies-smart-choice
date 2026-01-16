@@ -151,6 +151,39 @@ const ProductList: React.FC<{ token: string | null }> = ({ token }) => {
     }
   };
 
+  const handleCreateProduct = async () => {
+    try {
+      // Create Draft Product Immediately
+      const res = await fetch(getApiUrl('/api/products'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: `Untitled Product ${new Date().toLocaleString()}`,
+          description: 'Start editing your product...',
+          category: 'Uncategorized',
+          price: 0,
+          stock: 0,
+          status: 'Draft',
+          imageUrl: 'https://placehold.co/600x600?text=Product+Image'
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        navigate(`/app/products/edit/${data._id || data.id}`);
+      } else {
+        console.error("Failed to create draft");
+        alert("Could not create draft product.");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Error creating product.");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
@@ -178,7 +211,7 @@ const ProductList: React.FC<{ token: string | null }> = ({ token }) => {
             <Upload className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
             Import
           </Button>
-          <Button size="sm" className="h-8" onClick={() => navigate('/app/products/new')}>
+          <Button size="sm" className="h-8" onClick={handleCreateProduct}>
             <div className="mr-1 h-4 w-4 flex items-center justify-center rounded-full bg-primary-foreground/20">
               <span className="text-xs">+</span>
             </div>

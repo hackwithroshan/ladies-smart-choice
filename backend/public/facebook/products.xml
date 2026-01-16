@@ -10,9 +10,32 @@
       <g:description><![CDATA[cd]]></g:description>
       <g:link>https://your-store.com/product/test</g:link>
       <g:image_link>https://res.cloudinary.com/djbv48acj/image/upload/v1765609325/myrzraasoobnscepgxkj.jpg</g:image_link>
-      <g:availability>in stock</g:availability>
+      <g:availability>out of stock</g:availability>
       <g:price>1400 INR</g:price>
       <g:sale_price>1200 INR</g:sale_price>
+      <g:condition>new</g:condition>
+      <g:brand>Ladies Smart Choice</g:brand>
+    </item>
+    <item>
+      <g:id>LSC001</g:id>
+      <g:title>g</g:title>
+      <g:description><![CDATA[g]]></g:description>
+      <g:link>https://your-store.com/product/g</g:link>
+      <g:image_link>https://www.libas.in/cdn/shop/files/libas-art-gold-embroidered-silk-blend-straight-suit-set-with-dupatta-51107a.jpg?v=1762242926&amp;width=1080</g:image_link>
+      <g:availability>in stock</g:availability>
+      <g:price>5 INR</g:price>
+      <g:condition>new</g:condition>
+      <g:brand>Ladies Smart Choice</g:brand>
+    </item>
+    <item>
+      <g:id>AYU-TK0S-713860</g:id>
+      <g:title> Ladies Smart Choice Teal Green Traditional Anarkali Suit with Dupatta</g:title>
+      <g:description><![CDATA[Rich teal green Anarkali suit with ethnic prints and embroidered neckline.]]></g:description>
+      <g:link>https://your-store.com/product/royal-plum-silk-embroidered-kurta-set-with-dupatta</g:link>
+      <g:image_link>https://res.cloudinary.com/djbv48acj/image/upload/v1767172659/oztf3lxtxqydzaxqmzdx.jpg</g:image_link>
+      <g:availability>in stock</g:availability>
+      <g:price>5999 INR</g:price>
+      <g:sale_price>2099 INR</g:sale_price>
       <g:condition>new</g:condition>
       <g:brand>Ladies Smart Choice</g:brand>
     </item>

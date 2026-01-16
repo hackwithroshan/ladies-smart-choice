@@ -20,12 +20,6 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ token, productId }) => {
             const fetchProduct = async () => {
                 try {
                     setLoading(true);
-                    // Currently using getAll to find product because specific ID endpoint usage differs or for safety
-                    // But typically /api/products/:id is best if available.
-                    // Checking ProductList, it uses /api/products/all. 
-                    // Let's try fetching specific product if endpoint exists, otherwise we rely on what we have.
-                    // ProductList deletes using /api/products/:id, so GET /api/products/:id likely exists.
-
                     const res = await fetch(getApiUrl(`/api/products/${productId}`), {
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
@@ -35,6 +29,8 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ token, productId }) => {
                         setProduct(data);
                     } else {
                         console.error("Failed to fetch product");
+                        alert("Product not found");
+                        navigate('/app/products');
                     }
                 } catch (error) {
                     console.error('Error fetching product:', error);
@@ -44,6 +40,7 @@ const ProductEditor: React.FC<ProductEditorProps> = ({ token, productId }) => {
             };
             fetchProduct();
         } else {
+            // New is no longer used for manual creation, but if hit, we stop loading
             setLoading(false);
         }
     }, [productId, token]);

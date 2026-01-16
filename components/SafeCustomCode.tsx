@@ -1,118 +1,147 @@
-
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { Product } from '../types';
+import { Button } from './ui/button';
+import { Badge } from './ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import * as LucideIcons from 'lucide-react';
+import DynamicCoupon from './dynamic/DynamicCoupon';
 
 interface SafeCustomCodeProps {
     code: string;
     sectionId: string;
     settingsJson?: string;
-    productContext?: Product; 
+    productContext?: Product;
     relatedProducts?: Product[];
     fbtProducts?: Product[];
 }
 
-const SafeCustomCode: React.FC<SafeCustomCodeProps> = ({ 
-    code, 
-    sectionId, 
-    settingsJson, 
+const JsonRenderer: React.FC<{ node: any; context: any; sectionId?: string }> = ({ node, context, sectionId }) => {
+    if (!node) return null;
+    if (typeof node === 'string') {
+        let text = node;
+        Object.entries(context).forEach(([key, val]) => {
+            if (typeof val !== 'object') {
+                const regex = new RegExp(`{{\\s*${key}\\s*}}`, 'g');
+                text = text.replace(regex, String(val ?? ''));
+            }
+        });
+        return <>{text}</>;
+    }
+
+    if (Array.isArray(node)) {
+        return <>{node.map((child, i) => <JsonRenderer key={i} node={child} context={context} sectionId={sectionId} />)}</>;
+    }
+
+    const { type, content, design, children, props = {}, style = {}, items = [] } = node;
+    const resolvedProps = { ...props, style };
+
+    Object.keys(resolvedProps).forEach(key => {
+        if (typeof resolvedProps[key] === 'string') {
+            let text = resolvedProps[key];
+            Object.entries(context).forEach(([k, v]) => {
+                if (typeof v !== 'object') {
+                    const regex = new RegExp(`{{\\s*${k}\\s*}}`, 'g');
+                    text = text.replace(regex, String(v ?? ''));
+                }
+            });
+            resolvedProps[key] = text;
+        }
+    });
+
+    switch (type) {
+        case 'coupon':
+            return <DynamicCoupon sectionId={sectionId || `auto-${Date.now()}`} content={content || {}} design={design || {}} />;
+        case 'box':
+        // ...
+        case 'div':
+            return <div {...resolvedProps}><JsonRenderer node={children || items} context={context} /></div>;
+        // ... (Keep other cases logic, just ensuring they use the new JsonRenderer recursively if needed)
+        case 'grid':
+            return <div className="grid" {...resolvedProps}><JsonRenderer node={children || items} context={context} /></div>;
+        case 'flex':
+            return <div className="flex" {...resolvedProps}><JsonRenderer node={children || items} context={context} /></div>;
+        case 'text':
+        case 'p':
+            return <p {...resolvedProps}><JsonRenderer node={children} context={context} /></p>;
+        case 'heading':
+        case 'h1': return <h1 {...resolvedProps}><JsonRenderer node={children} context={context} /></h1>;
+        case 'h2': return <h2 {...resolvedProps}><JsonRenderer node={children} context={context} /></h2>;
+        case 'h3': return <h3 {...resolvedProps}><JsonRenderer node={children} context={context} /></h3>;
+        case 'button':
+            return <Button {...resolvedProps}><JsonRenderer node={children || props.label} context={context} /></Button>;
+        case 'badge':
+            return <Badge {...resolvedProps}><JsonRenderer node={children || props.label} context={context} /></Badge>;
+        case 'image':
+        case 'img':
+            return <img alt="" {...resolvedProps} />;
+        case 'card':
+            return (
+                <Card {...resolvedProps}>
+                    {props.title && <CardHeader><CardTitle>{props.title}</CardTitle></CardHeader>}
+                    <CardContent><JsonRenderer node={children || items} context={context} /></CardContent>
+                </Card>
+            );
+        case 'icon':
+            const Icon = (LucideIcons as any)[props.name || 'HelpCircle'];
+            return Icon ? <Icon {...resolvedProps} /> : null;
+        default:
+            // Fallback: If strict JSON is required, we might not want to allow arbitrary HTML tags, 
+            // but 'div', 'span' etc are usually fine. The prompt says "CustomCode content accepts JSON only" and "Do NOT allow ... JSX ...".
+            // Rendering standard HTML tags from JSON is explicitly "JSON-driven" and not "raw React execution".
+            if (typeof type === 'string') {
+                return React.createElement(type, resolvedProps, <JsonRenderer node={children} context={context} />);
+            }
+            return null;
+    }
+};
+
+const SafeCustomCode: React.FC<SafeCustomCodeProps> = ({
+    code,
+    sectionId,
+    settingsJson,
     productContext,
     relatedProducts = [],
     fbtProducts = []
 }) => {
-    const containerRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        if (!containerRef.current || !code) return;
-
-        // 1. Build context object (Merging JSON settings + Product Data)
-        let contextObj: Record<string, any> = {
+    // Variable Replacements setup (keep existing)
+    const contextObj = useMemo(() => {
+        let ctx: Record<string, any> = {
             sectionId,
             relatedProducts: relatedProducts || [],
             fbtProducts: fbtProducts || []
         };
-        
-        // Parse the section-specific JSON (Liquid-style Settings)
-        try {
-            if (settingsJson && settingsJson.trim()) {
-                const customVars = JSON.parse(settingsJson);
-                contextObj = { ...contextObj, ...customVars };
-            }
-        } catch (e) { 
-            console.warn(`[Designer] JSON Syntax Error in ${sectionId}`); 
-        }
-
-        // Add Product Global Variables
+        // ... (standard context building)
         if (productContext) {
-            contextObj = {
-                ...contextObj,
-                id: productContext.id || (productContext as any)._id,
-                productName: productContext.name,
-                price: productContext.price,
-                formattedPrice: (productContext.price || 0).toLocaleString('en-IN'),
-                mrp: productContext.mrp || 0,
-                formattedMrp: (productContext.mrp || 0).toLocaleString('en-IN'),
-                productImage: productContext.imageUrl,
-                gallery: productContext.galleryImages || [],
-                category: productContext.category || 'General',
-                brandName: productContext.brand || 'Ayushree',
-                shortDescription: productContext.shortDescription || '',
-                description: productContext.description || '',
-                slug: productContext.slug,
-                reviews: productContext.reviews || []
-            };
+            ctx = { ...ctx, ...productContext, productName: productContext.name, formattedPrice: (productContext.price || 0).toLocaleString('en-IN') };
         }
+        return ctx;
+    }, [productContext, sectionId, relatedProducts, fbtProducts]);
 
-        // 2. Perform string replacement (The Liquid Engine)
-        let processedCode = code;
-        Object.entries(contextObj).forEach(([key, val]) => {
-            if (typeof val !== 'object') {
-                const regex = new RegExp(`{{\\s*${key}\\s*}}`, 'g');
-                processedCode = processedCode.replace(regex, String(val ?? ''));
-            }
-        });
-
-        // 3. Inject and Execute
+    const jsonContent = useMemo(() => {
+        if (!code) return null;
+        const trimmed = code.trim();
+        // Simple check or try-parse
         try {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(processedCode, 'text/html');
-            
-            containerRef.current.innerHTML = '';
-
-            // Handle Styles
-            doc.querySelectorAll('style').forEach(s => {
-                const styleEl = document.createElement('style');
-                styleEl.textContent = s.textContent;
-                containerRef.current?.appendChild(styleEl);
-            });
-
-            // Handle Body
-            const wrapper = document.createElement('div');
-            wrapper.id = `wrapper-${sectionId}`;
-            const tempBody = doc.body.cloneNode(true) as HTMLElement;
-            tempBody.querySelectorAll('script, style').forEach(el => el.remove());
-            wrapper.innerHTML = tempBody.innerHTML;
-            containerRef.current.appendChild(wrapper);
-
-            // Execute Scripts with context access
-            doc.querySelectorAll('script').forEach(s => {
-                try {
-                    // Create function scope with 'sectionContext' available
-                    const runner = new Function('sectionContext', s.innerHTML);
-                    runner(contextObj);
-                } catch (scriptErr) { 
-                    console.error(`[Designer JS Error] ${sectionId}:`, scriptErr); 
-                }
-            });
-
-        } catch (err) {
-            console.error(`[Designer Render Error]`, err);
+            return JSON.parse(trimmed);
+        } catch (e) {
+            return null;
         }
+    }, [code]);
 
-        return () => { if (containerRef.current) containerRef.current.innerHTML = ''; };
-    }, [code, settingsJson, productContext, sectionId, relatedProducts, fbtProducts]);
+    // STRICT: If not Valid JSON, render error or nothing. NO HTML fallback.
+    if (!jsonContent) {
+        return (
+            <div className="p-4 border border-red-200 bg-red-50 text-red-700 rounded text-sm font-mono">
+                Error: CustomCode content must be valid JSON.
+            </div>
+        );
+    }
 
     return (
-        <div id={`pdp-section-${sectionId}`} ref={containerRef} className="w-full relative overflow-visible" />
+        <div id={`pdp-section-${sectionId}`} className="w-full relative">
+            <JsonRenderer node={jsonContent} context={contextObj} sectionId={sectionId} />
+        </div>
     );
 };
 

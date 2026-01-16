@@ -279,3 +279,7 @@ export const MousePointer2 = (props: IconProps) => (
 export const Check = (props: IconProps) => (
     <BaseIcon {...props}><path d="M20 6 9 17l-5-5" /></BaseIcon>
 );
+
+export const AppWindow = (props: IconProps) => (
+    <BaseIcon {...props}><rect x="2" y="4" width="20" height="16" rx="2" /><path d="M10 4v4" /><path d="M2 8h20" /><path d="M6 4v4" /></BaseIcon>
+);

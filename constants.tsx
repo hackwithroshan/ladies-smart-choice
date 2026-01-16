@@ -10,7 +10,7 @@ export const COLORS = {
 };
 
 export const CLOUDINARY = {
-  UPLOAD_PRESET: 'ayushree',
+  UPLOAD_PRESET: 'ladiesh',
   CLOUD_NAME: 'djbv48acj',
   API_KEY: '985258492834513',
   UPLOAD_URL: `https://api.cloudinary.com/v1_1/djbv48acj/auto/upload`

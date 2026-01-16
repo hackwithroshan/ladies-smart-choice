@@ -1,37 +1,38 @@
-
 const express = require('express');
 const router = express.Router();
-const { protect, admin } = require('../middleware/authMiddleware');
 const { sendCapiEvent } = require('../utils/facebookCapiService');
+const SiteSettings = require('../models/SiteSettings');
+const { protect, admin } = require('../middleware/authMiddleware');
 
-// @desc    Send a test event to Meta CAPI
-// @route   POST /api/integrations/facebook/test-event
-// @access  Private/Admin
-router.post('/facebook/test-event', protect, admin, async (req, res) => {
-    const { testEventCode } = req.body;
-
-    if (!testEventCode) {
-        return res.status(400).json({ message: 'Test Event Code is required.' });
-    }
-
+router.post('/test-event', protect, admin, async (req, res) => {
     try {
+        const { testEventCode } = req.body;
+
+        if (!testEventCode) {
+            return res.status(400).json({ message: 'Test Event Code is required.' });
+        }
+
+        const settings = await SiteSettings.findOne();
+        if (!settings || !settings.metaAccessToken) {
+            return res.status(400).json({ message: 'Apps not configured properly.' });
+        }
+
         await sendCapiEvent({
-            eventName: 'TestEvent',
-            eventUrl: `${process.env.FRONTEND_URL}/admin`,
+            eventName: 'PageView',
+            eventUrl: 'https://example.com/test-event',
             eventId: `test_${Date.now()}`,
             userData: {
                 ip: req.ip,
                 userAgent: req.headers['user-agent'],
-                email: req.user.email, // Use admin's email for test
+                email: 'test@example.com' // Dummy data for test
             },
-            testEventCode: testEventCode,
+            testEventCode: testEventCode
         });
 
-        res.status(200).json({ message: 'Test event sent successfully! Check your Meta Events Manager.' });
-
+        res.json({ success: true, message: 'Test event sent to Meta.' });
     } catch (error) {
-        console.error('Failed to send test event:', error);
-        res.status(500).json({ message: 'Server error while sending test event.' });
+        console.error("Test Event Error:", error);
+        res.status(500).json({ message: 'Failed to send test event.' });
     }
 });
 

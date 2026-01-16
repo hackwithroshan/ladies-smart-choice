@@ -31,7 +31,7 @@ app.use(express.json());
 // Robust Connection Logic
 const connectDB = async () => {
     const mongoUri = process.env.MONGO_URI;
-    
+
     if (!mongoUri) {
         console.error('❌ FATAL ERROR: process.env.MONGO_URI is missing!');
         process.exit(1);
@@ -50,14 +50,14 @@ const connectDB = async () => {
         console.error('---------------------------------------------------------');
         console.error('Error Details:', err.message);
         console.error('---------------------------------------------------------');
-        
+
         if (err.message.includes('Could not connect to any servers')) {
             console.error('PRO TIP: This is usually an IP Whitelist issue.');
             console.error('1. Go to MongoDB Atlas -> Network Access.');
             console.error('2. Add "0.0.0.0/0" to allow access from everywhere for testing.');
             console.error('3. Check if your MONGO_URI in .env is exactly correct.');
         }
-        
+
         process.exit(1);
     }
 };
@@ -82,6 +82,11 @@ app.use('/api/app-data', require('./routes/appData'));
 app.use('/api/campaigns', require('./routes/campaigns'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/catalog', require('./routes/feed'));
+app.use('/api/automations', require('./routes/automations'));
+app.use('/api/apps', require('./routes/apps'));
+app.use('/api/analytics-tracking', require('./routes/analytics-tracking'));
+app.use('/api/integrations/facebook', require('./routes/integrations'));
+app.use('/api/meta-app', require('./routes/metaApp'));
 
 // Serve Static Frontend
 const distPath = path.resolve(__dirname, '..', 'dist');

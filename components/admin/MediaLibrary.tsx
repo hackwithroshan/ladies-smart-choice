@@ -37,7 +37,7 @@ const MediaLibrary: React.FC<{ token: string | null }> = ({ token }) => {
             const formData = new FormData();
             formData.append('file', file);
             formData.append('upload_preset', CLOUDINARY.UPLOAD_PRESET);
-            formData.append('api_key', CLOUDINARY.API_KEY);
+            // formData.append('api_key', CLOUDINARY.API_KEY); // Unsigned uploads don't need API Key
 
             try {
                 // 1. Upload to Cloudinary
@@ -127,10 +127,10 @@ const MediaLibrary: React.FC<{ token: string | null }> = ({ token }) => {
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-800">Media Library</h2>
                 <div className="relative">
-                    <input 
-                        type="file" 
-                        multiple 
-                        onChange={handleFileSelect} 
+                    <input
+                        type="file"
+                        multiple
+                        onChange={handleFileSelect}
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                         accept="image/*,video/*"
                     />
@@ -144,11 +144,11 @@ const MediaLibrary: React.FC<{ token: string | null }> = ({ token }) => {
             </div>
 
             {/* Drag Drop Area */}
-            <div 
+            <div
                 className={`relative border-2 border-dashed rounded-xl p-8 mb-8 transition-all flex flex-col items-center justify-center text-center ${dragActive ? 'border-rose-500 bg-rose-50 scale-[1.01]' : 'border-gray-300 bg-gray-50'}`}
-                onDragEnter={handleDrag} 
-                onDragLeave={handleDrag} 
-                onDragOver={handleDrag} 
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
                 onDrop={handleDrop}
             >
                 {uploading ? (
@@ -181,17 +181,17 @@ const MediaLibrary: React.FC<{ token: string | null }> = ({ token }) => {
                         ) : (
                             <img src={item.url} alt="Uploaded" className="w-full h-full object-cover bg-gray-50" />
                         )}
-                        
+
                         {/* Overlay Actions */}
                         <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all flex flex-col justify-end p-3 opacity-0 group-hover:opacity-100">
                             <div className="flex space-x-2">
-                                <button 
+                                <button
                                     onClick={() => copyToClipboard(item.url)}
                                     className="flex-1 bg-white text-gray-800 py-1.5 rounded text-xs font-bold hover:bg-gray-100"
                                 >
                                     {copyFeedback === item.url ? 'Copied!' : 'Copy URL'}
                                 </button>
-                                <button 
+                                <button
                                     onClick={() => deleteMedia(item.id)}
                                     className="bg-red-600 text-white p-1.5 rounded hover:bg-red-700"
                                 >
@@ -204,7 +204,7 @@ const MediaLibrary: React.FC<{ token: string | null }> = ({ token }) => {
                     </div>
                 ))}
             </div>
-            
+
             {media.length === 0 && !uploading && (
                 <div className="flex flex-col items-center justify-center h-64 text-gray-400">
                     <p>No files uploaded yet.</p>

@@ -5,6 +5,7 @@ const AnalyticsEvent = require('../models/AnalyticsEvent');
 const { protect, admin } = require('../middleware/authMiddleware');
 const geoip = require('geoip-lite');
 const UAParser = require('ua-parser-js');
+const fetch = require('node-fetch');
 
 // Utility: Get Date Range
 const getRange = (startDate, endDate) => {
@@ -163,16 +164,61 @@ router.get('/details', protect, admin, async (req, res) => {
             { $limit: 10 }
         ]);
 
-        // 4. Sessions by Referrer
+        // 4. Sessions by Referrer (Advanced Domain Parsing)
         const referrerStats = await AnalyticsEvent.aggregate([
             matchStage,
+            { $sort: { createdAt: 1 } }, // Prioritize the first referrer of the session
             { $group: { _id: "$sessionId", referrer: { $first: "$referrerUrl" } } },
             {
                 $addFields: {
-                    domain: { $ifNull: ["$referrer", "Direct / None"] }
+                    // Step 1: Extract basic hostname or handle empty
+                    rawDomain: {
+                        $cond: {
+                            if: { $or: [{ $eq: ["$referrer", ""] }, { $eq: ["$referrer", null] }] },
+                            then: "Direct",
+                            else: {
+                                $let: {
+                                    vars: {
+                                        // Regex to capture host: ignores http(s):// and www.
+                                        matches: { $regexFind: { input: "$referrer", regex: "(?:https?://)?(?:www\\.)?([^/:]+)" } }
+                                    },
+                                    in: {
+                                        $cond: {
+                                            if: { $ne: ["$$matches", null] },
+                                            then: { $arrayElemAt: ["$$matches.captures", 0] },
+                                            else: "$referrer" // Fallback to full string if parse fails
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             },
-            { $group: { _id: "$domain", count: { $sum: 1 } } },
+            {
+                $addFields: {
+                    // Step 2: Group Common Platforms
+                    finalDomain: {
+                        $switch: {
+                            branches: [
+                                { case: { $regexMatch: { input: "$rawDomain", regex: /google\./i } }, then: "Google Search" },
+                                { case: { $regexMatch: { input: "$rawDomain", regex: /bing\./i } }, then: "Bing Search" },
+                                { case: { $regexMatch: { input: "$rawDomain", regex: /yahoo\./i } }, then: "Yahoo Search" },
+                                { case: { $regexMatch: { input: "$rawDomain", regex: /facebook|fb\./i } }, then: "Facebook" },
+                                { case: { $regexMatch: { input: "$rawDomain", regex: /instagram\./i } }, then: "Instagram" },
+                                { case: { $regexMatch: { input: "$rawDomain", regex: /twitter|t\.co|x\.com/i } }, then: "Twitter / X" },
+                                { case: { $regexMatch: { input: "$rawDomain", regex: /linkedin|lnkd\.in/i } }, then: "LinkedIn" },
+                                { case: { $regexMatch: { input: "$rawDomain", regex: /pinterest/i } }, then: "Pinterest" },
+                                { case: { $regexMatch: { input: "$rawDomain", regex: /youtube|youtu\.be/i } }, then: "YouTube" },
+                                { case: { $regexMatch: { input: "$rawDomain", regex: /tiktok/i } }, then: "TikTok" },
+                                { case: { $regexMatch: { input: "$rawDomain", regex: /reddit/i } }, then: "Reddit" }
+                            ],
+                            default: "$rawDomain"
+                        }
+                    }
+                }
+            },
+            { $group: { _id: "$finalDomain", count: { $sum: 1 } } },
             { $sort: { count: -1 } },
             { $limit: 10 }
         ]);
@@ -238,27 +284,30 @@ router.get('/details', protect, admin, async (req, res) => {
 // @desc    Get Live Analytics (Active Users, Pages, Feed)
 router.get('/live', protect, admin, async (req, res) => {
     try {
-        const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000);
+        const now = Date.now();
+        const activeWindow = new Date(now - 60 * 1000); // 60 Seconds for "Active Now"
+        const streamWindow = new Date(now - 30 * 60 * 1000); // 30 Minutes for "Activity Stream"
 
-        // 1. Active Users
+        // 1. Active Users (Active in last 60s)
         const activeUsers = (await AnalyticsEvent.distinct('sessionId', {
-            createdAt: { $gte: thirtyMinAgo }
+            createdAt: { $gte: activeWindow }
         })).length;
 
-        // 2. Active Pages
+        // 2. Active Pages (Real-time view count - last 60s)
         const activePages = await AnalyticsEvent.aggregate([
-            { $match: { createdAt: { $gte: thirtyMinAgo }, eventType: 'PageView' } },
-            { $group: { _id: "$path", count: { $sum: 1 } } },
+            { $match: { createdAt: { $gte: activeWindow }, eventType: 'PageView' } },
+            { $group: { _id: "$path", sessions: { $addToSet: "$sessionId" } } },
+            { $project: { count: { $size: "$sessions" } } },
             { $sort: { count: -1 } },
             { $limit: 10 },
             { $project: { path: "$_id", count: 1, _id: 0 } }
         ]);
 
-        // 3. Recent Activity
-        const recentEvents = await AnalyticsEvent.find({ createdAt: { $gte: thirtyMinAgo } })
+        // 3. Recent Activity Stream (Keep broader history for context)
+        const recentEvents = await AnalyticsEvent.find({ createdAt: { $gte: streamWindow } })
             .sort({ createdAt: -1 })
             .limit(20)
-            .select('eventType path createdAt location device');
+            .select('eventType path createdAt location device source');
 
         res.json({
             activeUsers,
@@ -276,7 +325,7 @@ router.get('/live', protect, admin, async (req, res) => {
 router.post('/track', async (req, res) => {
     try {
         const { eventType, path, sessionId, referrer, utm } = req.body;
-        const fetch = require('node-fetch');
+        // fetch is imported globally
 
         // 1. Capture Client IP (Robust Real IP detection)
         // Check Cloudflare, Nginx, and standard headers
@@ -299,8 +348,8 @@ router.post('/track', async (req, res) => {
         // Helper to fetch from ip-api.com (HTTP, fast, reliable)
         const fetchIpApi = async (queryIp) => {
             try {
-                // Request specific fields: District is the key for "Area"
-                const fields = 'status,country,regionName,city,district,query';
+                // Request specific fields: District, Zip, Lat, Lon
+                const fields = 'status,country,regionName,city,district,zip,lat,lon,query';
                 // If Localhost, query without IP to get Server's Public IP (Dev's Real Location)
                 const url = queryIp ? `http://ip-api.com/json/${queryIp}?fields=${fields}` : `http://ip-api.com/json/?fields=${fields}`;
 
@@ -308,15 +357,33 @@ router.post('/track', async (req, res) => {
                 if (response.ok) {
                     const data = await response.json();
                     if (data.status === 'success') {
-                        // Strict Filter: Only allow text-based Areas (No Zip Codes)
+                        // Intelligent Area Detection: Prefer District, fallback to Zip
                         let area = data.district || '';
-                        if (/^\d+$/.test(area) || area === data.city) area = ''; // Remove zips and duplicates
+
+                        // Format Area
+                        if (area && data.zip) {
+                            // "Rohini (110085)"
+                            area = `${area} (${data.zip})`;
+                        } else if (!area && data.zip) {
+                            // "Zip 110085"
+                            area = `Zip ${data.zip}`;
+                        } else if (!area && data.city !== data.regionName) {
+                            // Fallback: If no district/zip, but City != Region (State), use City as Area context
+                            // (This avoids redundancy like "Delhi, Delhi, Delhi")
+                            // Actually, let's leave it empty if strictly no district/zip to match typical usage
+                        }
+
+                        // Remove numeric-only area if it somehow slipped through without prefix (Safety)
+                        if (/^\d+$/.test(area)) area = `Zip ${area}`;
 
                         return {
                             country: data.country,
                             state: data.regionName,
                             city: data.city,
                             area: area,
+                            zip: data.zip,
+                            latitude: data.lat,
+                            longitude: data.lon,
                             ip: data.query
                         };
                     }

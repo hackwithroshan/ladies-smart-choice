@@ -115,7 +115,7 @@ router.get('/search', async (req, res) => {
     try {
         const query = req.query.q || '';
         const category = req.query.category || '';
-        
+
         // If query is empty, return latest 5 active products
         if (!query && !category) {
             const latest = await Product.find({ status: 'Active' }).sort({ createdAt: -1 }).limit(5);
@@ -216,7 +216,7 @@ router.post('/categories', protect, admin, async (req, res) => {
             isActive: true,
             displayStyle: 'Rectangle'
         });
-        
+
         await newCollection.save();
         res.status(201).json({ id: newCollection._id, name: newCollection.title });
     } catch (err) {
@@ -240,6 +240,21 @@ router.get('/all', protect, admin, async (req, res) => {
         const products = await Product.find({}).sort({ createdAt: -1 });
         res.json(products);
     } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+router.get('/:id', async (req, res) => {
+    try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            // Check if it might be a slug or other route handled above, but since this is :id, we expect ObjectId
+            // However, since we placed this at the end, previous routes like /search, /featured should have caught their cases.
+            return res.status(404).json({ message: 'Product not found' });
+        }
+        const product = await Product.findById(req.params.id);
+        if (!product) return res.status(404).json({ message: 'Product not found' });
+        res.json(product);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
 });
 
 module.exports = router;

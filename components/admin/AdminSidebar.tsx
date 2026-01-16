@@ -6,7 +6,7 @@ import {
     LayoutDashboard, Activity, ShoppingCart, Package, Users,
     LayoutTemplate, Settings, Video, Image, FileText,
     Truck, CreditCard, BadgePercent, ChevronDown, ChevronRight,
-    StarIcon, SearchIcon, Megaphone, Smartphone, Wand2
+    StarIcon, SearchIcon, Megaphone, Smartphone, Wand2, AppWindow
 } from '../Icons';
 import { User, AdminView } from '../../types';
 import {
@@ -27,7 +27,8 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentView, setCurrentView
         'products': true,
         'orders': true,
         'content': false,
-        'store-builder': true
+        'store-builder': true,
+        'marketing': true
     });
 
     const toggleSubmenu = (key: string) => {
@@ -162,8 +163,19 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentView, setCurrentView
                             </div>
                         )}
 
-                        <NavItem icon={Megaphone} label="Facebook & Instagram" view="marketing" path="/app/marketing" />
-                        <NavItem icon={SearchIcon} label="Google Ads" view="marketing" path="/app/marketing" />
+                        <SubMenuTrigger icon={Megaphone} label="Marketing" subKey="marketing" view="marketing" path="/app/marketing" />
+                        {openSubmenus['marketing'] && (
+                            <div className="space-y-0.5 mb-2">
+                                <NavItem label="Automations" view="marketing-automations" path="/app/marketing/automations" isSubItem />
+                            </div>
+                        )}
+                        <SubMenuTrigger icon={AppWindow} label="Apps" subKey="apps" view="apps" path="/app/apps" />
+                        {openSubmenus['apps'] && (
+                            <div className="space-y-0.5 mb-2">
+                                <NavItem label="Facebook & Instagram" view="app-meta" path="/app/apps/meta" isSubItem />
+                                <NavItem label="Google Ads" view="app-google" path="/app/apps/google" isSubItem />
+                            </div>
+                        )}
                         <NavItem icon={Settings} label="Settings" view="settings" path="/app/settings" />
                     </SidebarMenu>
                 </SidebarGroup>

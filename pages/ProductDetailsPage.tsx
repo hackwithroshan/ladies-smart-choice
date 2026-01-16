@@ -9,6 +9,7 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import SEO from '../components/SEO';
 import SafeCustomCode from '../components/SafeCustomCode';
+import { generateSectionCss } from '../utils/responsiveStyles';
 import Accordion from '../components/Accordion';
 import ProductStickyBar from '../components/ProductStickyBar';
 import ProductCard from '../components/ProductCard';
@@ -21,8 +22,27 @@ import {
     AccordionContent,
     AccordionItem,
     AccordionTrigger,
-} from "../components/ui/accordion"
-import { Heart, ShoppingBag, Truck, RotateCcw, ShieldCheck, Share2, Star } from 'lucide-react';
+} from "../components/ui/accordion";
+import {
+    Card, CardContent, CardDescription, CardHeader, CardTitle
+} from "../components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "../components/ui/select";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "../components/ui/dialog";
+import { Heart, ShoppingBag, Truck, RotateCcw, ShieldCheck, Share2, Star, ChevronLeft, ChevronRight, User } from 'lucide-react';
 
 
 const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user, logout }) => {
@@ -45,6 +65,11 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
     const [reviewRating, setReviewRating] = useState(5);
     const [reviewComment, setReviewComment] = useState('');
     const [submittingReview, setSubmittingReview] = useState(false);
+
+    // Voices Section State
+    const [filterRating, setFilterRating] = useState<string>("all");
+    const [page, setPage] = useState(1);
+    const reviewsPerPage = 4;
 
     const heroRef = useRef<HTMLDivElement>(null);
     const { addToCart } = useCart();
@@ -177,6 +202,13 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
         finally { setSubmittingReview(false); }
     };
 
+    // Auto-scroll to top when page changes
+    useEffect(() => {
+        if (page > 1) {
+            document.getElementById('recent-feedbacks')?.scrollIntoView({ behavior: 'smooth' });
+        }
+    }, [page]);
+
     if (loading) return <div className="h-screen flex items-center justify-center bg-white"><div className="w-12 h-12 border-4 border-black border-t-transparent rounded-full animate-spin"></div></div>;
     if (!product) return <div className="h-screen flex items-center justify-center font-bold uppercase text-gray-400 tracking-widest">Product Not Found</div>;
 
@@ -192,32 +224,23 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
                     layout?.sections.map(sec => {
                         if (!sec.isActive) return null;
 
-                        const commonStyles: React.CSSProperties = {
-                            paddingTop: `${sec.style?.paddingTop}px`,
-                            paddingBottom: `${sec.style?.paddingBottom}px`,
-                            paddingLeft: `${sec.style?.paddingLeft}px`,
-                            paddingRight: `${sec.style?.paddingRight}px`,
-                            marginTop: `${sec.style?.marginTop}px`,
-                            marginBottom: `${sec.style?.marginBottom}px`,
-                            marginLeft: `${sec.style?.marginLeft}px`,
-                            marginRight: `${sec.style?.marginRight}px`,
-                            backgroundColor: sec.style?.backgroundColor,
-                            color: sec.style?.textColor
-                        };
+                        const uniqueClass = `sec-${sec.id}`;
+                        const styleBlock = generateSectionCss(sec.id, sec.style);
 
                         return (
-                            <section key={sec.id} style={commonStyles}>
-                                <div style={{ maxWidth: sec.style?.containerMaxWidth || '1200px', width: '100%' }} className="mx-auto">
+                            <section key={sec.id} id={`sec-${sec.id}`} className={uniqueClass}>
+                                <style>{styleBlock}</style>
+                                <div className="dynamic-container mx-auto">
                                     {sec.type === 'Hero' && (
                                         <div className="w-full" ref={heroRef}>
                                             <div className="text-xs text-gray-500 mb-6 px-4">Home / {product.category} / <span className="text-gray-900">{product.name}</span></div>
 
                                             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 px-0 lg:px-4">
                                                 {/* Image Gallery - Left Side */}
-                                                <div className="lg:col-span-7">
+                                                <div className="lg:col-span-7 img-wrapper">
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
-                                                        {[product.imageUrl, ...(product.galleryImages || [])].slice(0, 4).map((img, i) => (
-                                                            <div key={i} className="aspect-[3/4] overflow-hidden bg-gray-100 relative group cursor-pointer" onClick={() => setMainImage(img)}>
+                                                        {[product.imageUrl, ...(product.galleryImages || [])].map((img, i) => (
+                                                            <div key={i} className="dynamic-img aspect-[3/4] overflow-hidden bg-gray-100 relative group cursor-pointer" onClick={() => setMainImage(img)}>
                                                                 <img
                                                                     src={img}
                                                                     alt={`${product.name} view ${i + 1}`}
@@ -231,8 +254,8 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
                                                 {/* Product Info - Right Side */}
                                                 <div className="lg:col-span-5 space-y-6 pt-4 px-4 lg:px-0">
                                                     <div>
-                                                        <h1 className="text-2xl lg:text-3xl font-normal text-gray-900 mb-2 leading-tight">{product.name}</h1>
-                                                        <p className="text-gray-500 text-sm mb-4">{product.shortDescription}</p>
+                                                        <h1 className="dynamic-title text-2xl lg:text-3xl font-normal text-gray-900 mb-2 leading-tight">{product.name}</h1>
+                                                        <p className="dynamic-desc text-gray-500 text-sm mb-4">{product.shortDescription}</p>
 
                                                         {/* Ratings */}
                                                         <div className="flex items-center gap-2 mb-4 border-b border-gray-100 pb-4">
@@ -248,7 +271,7 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
                                                     {/* Price */}
                                                     <div>
                                                         <div className="flex items-baseline gap-3 mb-1">
-                                                            <span className="text-2xl font-bold text-gray-900">
+                                                            <span className="dynamic-price text-2xl font-bold text-gray-900">
                                                                 ₹{product.hasVariants && product.variants?.some(v => v.name === 'Size' && selectedVariants['Size'])
                                                                     ? (product.variants.find(v => v.name === 'Size')?.options.find(o => o.value === selectedVariants['Size'])?.price || product.price).toLocaleString('en-IN')
                                                                     : product.price.toLocaleString('en-IN')
@@ -447,21 +470,19 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
                                                 {(sec.content?.blocks || []).map((b: any, i: number) => (
                                                     <div key={i} className="space-y-6 animate-fade-in text-center">
                                                         {b.img && (
-                                                            <div className="relative overflow-hidden mx-auto" style={{ borderRadius: `${sec.style?.imageBorderRadius || 0}px`, width: sec.style?.imageWidth || '100%' }}>
+                                                            <div className="dynamic-img relative overflow-hidden mx-auto">
                                                                 {b.link ? (
                                                                     <a href={b.link}>
                                                                         <img
                                                                             src={b.img}
-                                                                            style={{ width: '100%', height: sec.style?.imageHeight || 'auto' }}
-                                                                            className={`object-cover ${sec.style?.imageAlign === 'left' ? 'mr-auto ml-0' : sec.style?.imageAlign === 'right' ? 'ml-auto mr-0' : 'mx-auto'}`}
+                                                                            className="w-full h-full object-cover"
                                                                             alt={b.title || 'Product Feature'}
                                                                         />
                                                                     </a>
                                                                 ) : (
                                                                     <img
                                                                         src={b.img}
-                                                                        style={{ width: '100%', height: sec.style?.imageHeight || 'auto' }}
-                                                                        className={`object-cover ${sec.style?.imageAlign === 'left' ? 'mr-auto ml-0' : sec.style?.imageAlign === 'right' ? 'ml-auto mr-0' : 'mx-auto'}`}
+                                                                        className="w-full h-full object-cover"
                                                                         alt={b.title || 'Product Feature'}
                                                                     />
                                                                 )}
@@ -481,8 +502,8 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
                                     )}
 
                                     {sec.type === 'FAQ' && (
-                                        <div className="max-w-3xl mx-auto px-4">
-                                            <h2 className="text-3xl font-black italic uppercase tracking-tighter text-center mb-12">Care & Guidance</h2>
+                                        <div className="dynamic-container max-w-3xl mx-auto px-4">
+                                            <h2 className="dynamic-title text-3xl font-black italic uppercase tracking-tighter text-center mb-12">Care & Guidance</h2>
                                             <div className="space-y-2 text-left">
                                                 {(sec.content?.faqs || []).map((f: any, i: number) => (
                                                     <Accordion key={i} title={f.q}>{f.a}</Accordion>
@@ -492,75 +513,261 @@ const ProductDetailsPage: React.FC<{ user: any; logout: () => void }> = ({ user,
                                     )}
 
                                     {sec.type === 'Reviews' && (
-                                        <div className="px-4">
-                                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-20">
-                                                <div className="space-y-12">
-                                                    <div className="space-y-4">
-                                                        <h2 className="text-4xl font-black italic uppercase tracking-tighter leading-none">Customer Voices</h2>
-                                                        <div className="flex items-center gap-6">
-                                                            <div className="text-5xl font-black text-brand-primary">{averageRating}</div>
-                                                            <div className="space-y-1">
-                                                                <div className="flex text-yellow-400">{[...Array(5)].map((_, i) => <svg key={i} className={`w-5 h-5 fill-current ${i < Math.floor(Number(averageRating)) ? 'text-yellow-400' : 'text-gray-200'}`} viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>)}</div>
-                                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Based on {product.reviews?.length || 0} reviews</p>
-                                                            </div>
+                                        <div className="dynamic-container px-4 lg:px-8 max-w-7xl mx-auto w-full">
+                                            {/* Top Section: Ratings & CTA */}
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-16">
+                                                {/* Left: Customer Ratings */}
+                                                <Card className="border-none shadow-sm bg-white ring-1 ring-gray-100">
+                                                    <CardContent className="p-8">
+                                                        <h3 className="dynamic-title text-xl font-bold text-gray-900 mb-1">Customer Ratings</h3>
+                                                        <p className="text-sm text-gray-500 mb-8">See what others are saying about our products</p>
+
+                                                        <div className="space-y-4">
+                                                            {[5, 4, 3, 2, 1].map((star) => {
+                                                                const count = product.reviews?.filter(r => Math.floor(r.rating) === star).length || 0;
+                                                                const total = product.reviews?.length || 0;
+                                                                const percent = total > 0 ? (count / total) * 100 : 0;
+
+                                                                return (
+                                                                    <div key={star} className="flex items-center gap-4">
+                                                                        <div className="flex items-center gap-1 w-8">
+                                                                            <span className="text-sm font-medium text-gray-700">{star}</span>
+                                                                            <Star className="w-3 h-3 text-gray-400" />
+                                                                        </div>
+                                                                        <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                                                                            <div
+                                                                                className="h-full bg-black rounded-full"
+                                                                                style={{ width: `${percent}%` }}
+                                                                            />
+                                                                        </div>
+                                                                        <span className="text-sm text-gray-400 w-8 text-right font-medium">
+                                                                            {count > 999 ? (count / 1000).toFixed(1) + 'K' : count}
+                                                                        </span>
+                                                                    </div>
+                                                                );
+                                                            })}
                                                         </div>
+                                                    </CardContent>
+                                                </Card>
+
+                                                {/* Right: Feedback CTA */}
+                                                <Card className="border-none shadow-sm bg-white ring-1 ring-gray-100 flex flex-col justify-between">
+                                                    <CardContent className="p-8 flex flex-col h-full justify-between">
+                                                        <div>
+                                                            <h3 className="dynamic-title text-2xl font-bold text-gray-900 mb-4">Customer Ratings & Feedback</h3>
+                                                            <p className="text-gray-500 leading-relaxed text-sm mb-8">
+                                                                Our customers love our products and we value their feedback. Each review helps us improve and provide better service. The intuitive interface and thoughtful design make shopping with us a seamless experience. Join thousands of satisfied customers who trust our products.
+                                                            </p>
+                                                        </div>
+                                                        <div className="flex gap-4 mt-auto">
+                                                            <Dialog>
+                                                                <DialogTrigger asChild>
+                                                                    <Button className="flex-1 bg-black text-white hover:bg-gray-800 h-11 font-medium">
+                                                                        Write a Review
+                                                                    </Button>
+                                                                </DialogTrigger>
+                                                                <DialogContent className="sm:max-w-[425px]">
+                                                                    <DialogHeader>
+                                                                        <DialogTitle>Write a Review</DialogTitle>
+                                                                        <DialogDescription>
+                                                                            Share your experience with this product.
+                                                                        </DialogDescription>
+                                                                    </DialogHeader>
+                                                                    <form onSubmit={handleReviewSubmit} className="space-y-4 py-4">
+                                                                        <div className="flex justify-center gap-2 mb-4">
+                                                                            {[1, 2, 3, 4, 5].map((s) => (
+                                                                                <button
+                                                                                    key={s}
+                                                                                    type="button"
+                                                                                    onClick={() => setReviewRating(s)}
+                                                                                    className={`text-2xl transition-transform ${reviewRating >= s ? 'scale-110' : 'opacity-30'}`}
+                                                                                >
+                                                                                    <Star className={`w-8 h-8 ${reviewRating >= s ? 'fill-yellow-400 text-yellow-400' : 'text-gray-400'}`} />
+                                                                                </button>
+                                                                            ))}
+                                                                        </div>
+                                                                        <textarea
+                                                                            value={reviewComment}
+                                                                            onChange={(e) => setReviewComment(e.target.value)}
+                                                                            placeholder="Write your review here..."
+                                                                            className="w-full min-h-[100px] p-3 rounded-md border text-sm"
+                                                                            required
+                                                                        />
+                                                                        <Button type="submit" className="w-full bg-black text-white" disabled={submittingReview}>
+                                                                            {submittingReview ? 'Submitting...' : 'Submit Review'}
+                                                                        </Button>
+                                                                    </form>
+                                                                </DialogContent>
+                                                            </Dialog>
+
+                                                            <Button variant="outline" className="flex-1 border-gray-200 text-gray-900 h-11 font-medium hover:bg-gray-50" onClick={() => {
+                                                                setFilterRating("all");
+                                                                document.getElementById('recent-feedbacks')?.scrollIntoView({ behavior: 'smooth' });
+                                                            }}>
+                                                                View All Reviews
+                                                            </Button>
+                                                        </div>
+                                                    </CardContent>
+                                                </Card>
+                                            </div>
+
+                                            {/* Bottom Section: Feedbacks List */}
+                                            <div id="recent-feedbacks" className="space-y-8">
+                                                <div className="flex flex-col sm:flex-row justify-between items-end sm:items-center gap-4 border-b border-gray-100 pb-6">
+                                                    <h3 className="dynamic-title text-xl font-bold text-gray-900">Recent Feedbacks</h3>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm text-gray-500 font-medium">Filter by:</span>
+                                                        <Select value={filterRating} onValueChange={setFilterRating}>
+                                                            <SelectTrigger className="w-[140px] border-gray-200 bg-white shadow-sm h-9">
+                                                                <SelectValue placeholder="All Ratings" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="all">All Ratings</SelectItem>
+                                                                <SelectItem value="5">5 Stars</SelectItem>
+                                                                <SelectItem value="4">4 Stars</SelectItem>
+                                                                <SelectItem value="3">3 Stars</SelectItem>
+                                                                <SelectItem value="2">2 Stars</SelectItem>
+                                                                <SelectItem value="1">1 Star</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
                                                     </div>
+                                                </div>
 
-                                                    {user ? (
-                                                        <form onSubmit={handleReviewSubmit} className="bg-gray-50 p-10 rounded-[3rem] border border-gray-100 space-y-6">
-                                                            <h4 className="text-xl font-black uppercase italic">Write a Review</h4>
-                                                            <div className="flex gap-2">
-                                                                {[1, 2, 3, 4, 5].map(s => (
-                                                                    <button key={s} type="button" onClick={() => setReviewRating(s)} className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${reviewRating === s ? 'bg-black text-white shadow-xl scale-110' : 'bg-white border-2 border-gray-100 text-gray-300'}`}>
-                                                                        {s}★
-                                                                    </button>
-                                                                ))}
-                                                            </div>
-                                                            <textarea
-                                                                value={reviewComment}
-                                                                onChange={e => setReviewComment(e.target.value)}
-                                                                placeholder="Tell us your experience..."
-                                                                className="w-full bg-white border-2 border-gray-100 rounded-3xl p-6 outline-none focus:border-black transition-all h-32 resize-none"
-                                                            />
-                                                            <button type="submit" disabled={submittingReview} className="w-full h-14 bg-black text-white rounded-full font-black uppercase text-xs tracking-widest">Submit Feedback</button>
-                                                        </form>
-                                                    ) : (
-                                                        <div className="bg-gray-900 text-white p-10 rounded-[3rem] text-center space-y-6">
-                                                            <p className="text-lg font-black italic uppercase tracking-tighter">Share your experience!</p>
-                                                            <button onClick={() => navigate('/login')} className="bg-white text-black px-10 py-3 rounded-full font-black uppercase text-[10px] tracking-widest">Login to Review</button>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                    {(product.reviews || [])
+                                                        .filter(r => filterRating === "all" || Math.floor(r.rating).toString() === filterRating)
+                                                        .slice((page - 1) * reviewsPerPage, page * reviewsPerPage)
+                                                        .map((rev, idx) => (
+                                                            <Card key={idx} className="border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                                                                <CardContent className="p-6">
+                                                                    <div className="flex justify-between items-start mb-4">
+                                                                        <div className="flex items-center gap-3">
+                                                                            <Avatar className="h-10 w-10 border border-gray-100">
+                                                                                {/* Using generic avatar if no user image in review */}
+                                                                                <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${rev.name}`} />
+                                                                                <AvatarFallback className="bg-gray-100 text-gray-500">
+                                                                                    <User className="w-5 h-5" />
+                                                                                </AvatarFallback>
+                                                                            </Avatar>
+                                                                            <div>
+                                                                                <p className="text-sm font-bold text-gray-900 leading-none mb-1">{rev.name}</p>
+                                                                                <div className="flex text-black">
+                                                                                    {[...Array(5)].map((_, i) => (
+                                                                                        <Star
+                                                                                            key={i}
+                                                                                            className={`w-3.5 h-3.5 ${i < rev.rating ? 'fill-black text-black' : 'fill-gray-100 text-gray-100'}`}
+                                                                                        />
+                                                                                    ))}
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                        <span className="text-xs text-gray-400 font-medium">{new Date(rev.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                                                                    </div>
+                                                                    <p className="text-gray-600 text-sm leading-relaxed">
+                                                                        {rev.comment}
+                                                                    </p>
+                                                                </CardContent>
+                                                            </Card>
+                                                        ))}
+
+                                                    {(!product.reviews || product.reviews.length === 0) && (
+                                                        <div className="col-span-full py-12 text-center text-gray-400 bg-gray-50 rounded-lg">
+                                                            No reviews match your filter.
                                                         </div>
                                                     )}
                                                 </div>
 
-                                                <div className="space-y-8 max-h-[600px] overflow-y-auto admin-scroll pr-4">
-                                                    {product.reviews && product.reviews.length > 0 ? (
-                                                        [...product.reviews].reverse().map((rev, idx) => (
-                                                            <div key={idx} className="bg-white border-b border-gray-100 pb-8 animate-fade-in">
-                                                                <div className="flex justify-between items-start mb-4">
-                                                                    <div>
-                                                                        <p className="text-sm font-black uppercase tracking-tight text-gray-900">{rev.name}</p>
-                                                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{new Date(rev.date).toLocaleDateString()}</p>
-                                                                    </div>
-                                                                    <div className="flex text-yellow-400">
-                                                                        {[...Array(5)].map((_, i) => <svg key={i} className={`w-3 h-3 fill-current ${i < rev.rating ? 'text-yellow-400' : 'text-gray-100'}`} viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>)}
-                                                                    </div>
-                                                                </div>
-                                                                <p className="text-sm text-gray-600 font-medium leading-relaxed italic">"{rev.comment}"</p>
-                                                            </div>
-                                                        ))
-                                                    ) : (
-                                                        <p className="text-gray-400 italic">No reviews yet.</p>
-                                                    )}
-                                                </div>
+                                                {/* Pagination */}
+                                                {(product.reviews || []).filter(r => filterRating === "all" || Math.floor(r.rating).toString() === filterRating).length > reviewsPerPage && (
+                                                    <div className="flex justify-center items-center gap-2 pt-8">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => setPage(p => Math.max(1, p - 1))}
+                                                            disabled={page === 1}
+                                                            className="text-gray-500 hover:text-black gap-1"
+                                                        >
+                                                            <ChevronLeft className="w-4 h-4" /> Previous
+                                                        </Button>
+
+                                                        {Array.from({ length: Math.ceil(((product.reviews || []).filter(r => filterRating === "all" || Math.floor(r.rating).toString() === filterRating).length) / reviewsPerPage) }).map((_, i) => (
+                                                            <Button
+                                                                key={i}
+                                                                variant={page === i + 1 ? "secondary" : "ghost"}
+                                                                size="sm"
+                                                                className={`w-8 h-8 rounded-md font-medium ${page === i + 1 ? 'bg-black text-white hover:bg-black/90' : 'text-gray-500 hover:text-black'}`}
+                                                                onClick={() => setPage(i + 1)}
+                                                            >
+                                                                {i + 1}
+                                                            </Button>
+                                                        ))}
+
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => setPage(p => Math.min(Math.ceil(((product.reviews || []).filter(r => filterRating === "all" || Math.floor(r.rating).toString() === filterRating).length) / reviewsPerPage), p + 1))}
+                                                            disabled={page >= Math.ceil(((product.reviews || []).filter(r => filterRating === "all" || Math.floor(r.rating).toString() === filterRating).length) / reviewsPerPage)}
+                                                            className="text-gray-500 hover:text-black gap-1"
+                                                        >
+                                                            Next <ChevronRight className="w-4 h-4" />
+                                                        </Button>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     )}
 
+                                    {sec.type === 'CustomCode' && <SafeCustomCode code={sec.content?.html || sec.code || ''} sectionId={sec.id} settingsJson={JSON.stringify(sec.settings || {})} productContext={product} />}
                                     {sec.type === 'RelatedProducts' && relatedProducts.length > 0 && (
                                         <div className="px-4">
+                                            {/* Dynamic Style for Grid & Limits */}
+                                            {(() => {
+                                                const design = sec.settings?.design || {};
+                                                const sId = sec.id;
+
+                                                // Resolve values
+                                                const dAll = sec.settings?.limit || 12; // Fetch max
+
+                                                const dLim = design.desktop?.totalProducts ?? sec.settings?.limit ?? 4;
+                                                const dRow = design.desktop?.productsPerRow ?? sec.settings?.itemsPerRow ?? 4;
+
+                                                const tLim = design.tablet?.totalProducts ?? dLim;
+                                                const tRow = design.tablet?.productsPerRow ?? dRow; // Fallback to desktop
+
+                                                const mLim = design.mobile?.totalProducts ?? dLim;
+                                                const mRow = design.mobile?.productsPerRow ?? dRow; // Fallback to desktop
+
+                                                // Max fetch limit (we render this many, hide rest with css)
+                                                const maxRender = Math.max(dLim, tLim, mLim);
+
+                                                return (
+                                                    <style>{`
+                                                        .related-grid-${sId} { 
+                                                            display: grid; 
+                                                            gap: 1.5rem; 
+                                                            grid-template-columns: repeat(${dRow}, 1fr); 
+                                                        }
+                                                        /* Desktop Limit Hiding */
+                                                        .related-grid-${sId} > div:nth-child(n+${dLim + 1}) { display: none; }
+
+                                                        @media (max-width: 1024px) {
+                                                            .related-grid-${sId} { grid-template-columns: repeat(${tRow}, 1fr); }
+                                                            .related-grid-${sId} > div:nth-child(n+${dLim + 1}) { display: block; } /* Reset */
+                                                            .related-grid-${sId} > div:nth-child(n+${tLim + 1}) { display: none !important; }
+                                                        }
+
+                                                        @media (max-width: 768px) {
+                                                            .related-grid-${sId} { grid-template-columns: repeat(${mRow}, 1fr); }
+                                                            .related-grid-${sId} > div:nth-child(n+${tLim + 1}) { display: block; } /* Reset */
+                                                            .related-grid-${sId} > div:nth-child(n+${mLim + 1}) { display: none !important; }
+                                                        }
+                                                    `}</style>
+                                                );
+                                            })()}
+
                                             <h2 className="text-3xl font-black italic uppercase tracking-tighter text-center mb-12">Discover More</h2>
-                                            <div className="grid grid-cols-2 gap-6" style={{ gridTemplateColumns: `repeat(${sec.settings?.itemsPerRow || 4}, minmax(0, 1fr))` }}>
-                                                {relatedProducts.slice(0, sec.settings?.limit || 4).map(p => (
+                                            <div className={`related-grid-${sec.id}`}>
+                                                {relatedProducts.slice(0, 12).map(p => (
                                                     <ProductCard key={p.id || p._id} product={p} onProductClick={(slug) => navigate(`/product/${slug}`)} />
                                                 ))}
                                             </div>

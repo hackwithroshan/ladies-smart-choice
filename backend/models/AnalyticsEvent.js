@@ -20,7 +20,10 @@ const AnalyticsEventSchema = new mongoose.Schema({
         country: String,
         state: String,
         city: String,
-        area: String, // Added for detailed location tracking
+        area: String, // District/Sub-locality
+        zip: String,  // Postal Code
+        latitude: Number,
+        longitude: Number,
         ip: String
     },
     referrerUrl: String,

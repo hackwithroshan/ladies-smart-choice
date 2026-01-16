@@ -12,6 +12,9 @@ export type AdminView =
     | 'create-order'
     | 'customers'
     | 'marketing'
+    | 'marketing-automations'
+    | 'app-meta'
+    | 'app-google'
     | 'discounts'
     | 'settings'
     | 'cms'
@@ -388,34 +391,39 @@ export interface FooterSettings {
 
 export type PDPSectionType = 'Hero' | 'A+Content' | 'FAQ' | 'Reviews' | 'RelatedProducts' | 'CustomCode' | 'ProductDetails';
 
+export interface PDPSectionStyle {
+    paddingTop?: number;
+    paddingBottom?: number;
+    paddingLeft?: number;
+    paddingRight?: number;
+    marginTop?: number;
+    marginBottom?: number;
+    marginLeft?: number;
+    marginRight?: number;
+    backgroundColor?: string;
+    textColor?: string;
+    titleFontSize?: number;
+    priceFontSize?: number;
+    shortDescFontSize?: number;
+    imageWidth?: string;
+    imageHeight?: string;
+    imageAlign?: string;
+    containerMaxWidth?: string;
+    textAlign?: string;
+    imageBorderRadius?: number;
+    customClasses?: string;
+    desktop?: Partial<PDPSectionStyle>; // Explicit overrides if needed
+    laptop?: Partial<PDPSectionStyle>;
+    mobile?: Partial<PDPSectionStyle>;
+}
+
 export interface PDPSection {
     id: string;
     type: PDPSectionType;
     isActive: boolean;
     content?: any;
     settings?: any;
-    style?: {
-        paddingTop?: number;
-        paddingBottom?: number;
-        paddingLeft?: number;
-        paddingRight?: number;
-        marginTop?: number;
-        marginBottom?: number;
-        marginLeft?: number;
-        marginRight?: number;
-        backgroundColor?: string;
-        textColor?: string;
-        titleFontSize?: number;
-        priceFontSize?: number;
-        shortDescFontSize?: number;
-        imageWidth?: string;
-        imageHeight?: string;
-        imageAlign?: string;
-        containerMaxWidth?: string;
-        textAlign?: string;
-        imageBorderRadius?: number;
-        customClasses?: string;
-    };
+    style?: PDPSectionStyle;
     code?: string;
     children?: PDPSection[];
 }

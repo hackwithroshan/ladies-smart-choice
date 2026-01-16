@@ -10,6 +10,10 @@ const User = require('../models/User'); // Import User model
 const { protect, optionalProtect, admin } = require('../middleware/authMiddleware');
 const { createShipment } = require('../services/shippingService');
 const { sendCapiEvent } = require('../utils/facebookCapiService');
+const { generateInvoice } = require('../utils/generateInvoice');
+const { sendOrderConfirmationEmail } = require('../utils/emailService');
+const { triggerAutomation } = require('../services/emailService');
+const { sendGoogleEvent } = require('../utils/googleAdsService');
 
 const razorpay = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID,
@@ -102,6 +106,14 @@ router.post('/verify-standard', optionalProtect, async (req, res) => {
         });
         await newOrder.save();
 
+        // AUTOMATION: Send Confirmation Email
+        if (newOrder.customerEmail) {
+            try {
+                const pdfBuffer = await generateInvoice(newOrder);
+                await sendOrderConfirmationEmail(newOrder, pdfBuffer);
+            } catch (e) { console.error("Order Confirmation Email Failed:", e); }
+        }
+
         // CLEANUP: Remove from Abandoned Checkouts if payment is successful
         // This ensures "orders" has PAID orders, and "abandoned" has UNPAID leads only.
         try {
@@ -135,6 +147,21 @@ router.post('/verify-standard', optionalProtect, async (req, res) => {
                 order_id: newOrder._id,
                 contents: newOrder.items.map(item => ({ id: item.productId, quantity: item.quantity }))
             }
+        });
+
+        // Send Google Ads Conversion
+        sendGoogleEvent({
+            eventName: 'Purchase',
+            eventId: newOrder._id.toString(),
+            value: newOrder.total,
+            currency: 'INR',
+            userData: {
+                email: orderDetails.customerInfo.email,
+                phone: orderDetails.customerInfo.phone,
+                ip: req.ip,
+                userAgent: req.headers['user-agent']
+            },
+            items: newOrder.items
         });
 
         res.status(200).json({ success: true, orderId: newOrder._id });
@@ -174,6 +201,14 @@ router.post('/verify-magic', optionalProtect, async (req, res) => {
         });
         await newOrder.save();
 
+        // AUTOMATION: Send Confirmation Email
+        if (newOrder.customerEmail && !newOrder.customerEmail.includes("magic-guest")) {
+            try {
+                const pdfBuffer = await generateInvoice(newOrder);
+                await sendOrderConfirmationEmail(newOrder, pdfBuffer);
+            } catch (e) { console.error("Order Confirmation Email Failed:", e); }
+        }
+
         // CLEANUP: Remove from Abandoned Checkouts if payment is successful
         try {
             await AbandonedCart.deleteMany({
@@ -201,6 +236,21 @@ router.post('/verify-magic', optionalProtect, async (req, res) => {
                 order_id: newOrder._id,
                 contents: newOrder.items.map(item => ({ id: item.productId, quantity: item.quantity }))
             }
+        });
+
+        // Send Google Ads Conversion (Magic)
+        sendGoogleEvent({
+            eventName: 'Purchase',
+            eventId: newOrder._id.toString(),
+            value: newOrder.total,
+            currency: 'INR',
+            userData: {
+                email: payment.email,
+                phone: payment.contact,
+                ip: req.ip,
+                userAgent: req.headers['user-agent']
+            },
+            items: newOrder.items
         });
 
         res.status(200).json({ success: true, orderId: newOrder._id });
@@ -277,6 +327,23 @@ router.put('/:id/tracking', protect, admin, async (req, res) => {
             $push: { trackingHistory: { status: 'Shipped', message: `Order shipped via ${carrier}`, date: new Date() } }
         }, { new: true });
         res.json(order);
+
+        // AUTOMATION: Order Shipped
+        if (order.customerEmail) {
+            try {
+                triggerAutomation('ORDER_SHIPPED',
+                    { email: order.customerEmail },
+                    {
+                        customer_name: order.customerName,
+                        order_number: order._id.toString().substring(0, 8),
+                        tracking_number: trackingNumber,
+                        carrier: carrier,
+                        tracking_url: `https://www.google.com/search?q=${carrier}+tracking+${trackingNumber}` // Simple fallback
+                    },
+                    { context: { orderId: order._id } }
+                );
+            } catch (e) { console.error("Shipping Email Failed:", e); }
+        }
     } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
